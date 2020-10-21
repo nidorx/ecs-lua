@@ -31,10 +31,18 @@ end
 local EPSILON = 1e-5 -- precision
 
 local function floatEQ(n0, n1)
-    return math.abs(n1 - n0) < EPSILON
+   if n0 == n1 then 
+      return true
+   end
+   
+   return math.abs(n1 - n0) < EPSILON
 end
 
 local function vectorEQ(v0, v1)
+   if v0 == v1 then
+      return true
+   end
+
    if not floatEQ(v0.X, v1.X) or not floatEQ(v0.Y, v1.Y) or not floatEQ(v0.Z, v1.Z) then
       return false
    else
@@ -301,6 +309,10 @@ local COMPONENTS_NAME            = {}
 local COMPONENTS_CONSTRUCTOR     = {}
 local COMPONENTS_INDEX_BY_NAME   = {}
 
+local function DEFAULT_CONSTRUCOTR(value)
+   return value
+end
+
 local Component  = {
    --[[
       Register a new component
@@ -322,6 +334,10 @@ local Component  = {
 
       if constructor ~= nil and type(constructor) ~= 'function' then
          error('The component constructor must be a function, or nil')
+      end
+
+      if constructor == nil then
+         constructor = DEFAULT_CONSTRUCOTR
       end
 
       if COMPONENTS_INDEX_BY_NAME[name] ~= nil then
@@ -708,6 +724,9 @@ function EntityManager:setValue(entityID, component, value)
    end
 
    local chunk = self.ARCHETYPES[entity.archetype].chunks[entity.chunk]
+
+  
+
    chunk:setValue(entity.chunkIndex, component, value)
 end
 
@@ -1298,7 +1317,7 @@ function ECS.newWorld(systems)
 
          Essa alteração
       ]]
-      set = function(entity, component, value)
+      set = function(entity, component, ...)
          local archetype = entitiesArchetypes[entity]
          if archetype == nil then
             -- entity doesn exist
@@ -1310,6 +1329,8 @@ function ECS.newWorld(systems)
          if archetypeChanged then
             entitiesArchetypes[entity] = archetypeNew
          end
+
+         local value = COMPONENTS_CONSTRUCTOR[component](table.unpack({...}))
 
          if entitiesNew[entity] == true then
             if archetypeChanged then
@@ -1653,8 +1674,10 @@ function ECS.newWorld(systems)
 
    -- add default systems
    world.addSystem(ECS.Util.MoveForwardSystem)
-   world.addSystem(ECS.Util.EntityToBasePartSystem)
-   world.addSystem(ECS.Util.BasePartToEntitySystem)
+   world.addSystem(ECS.Util.EntityToBasePartLogicSystem)
+   world.addSystem(ECS.Util.EntityToBasePartPrePhysicsSystem)
+   world.addSystem(ECS.Util.BasePartToEntityLogicSystem)
+   world.addSystem(ECS.Util.BasePartToEntityPrePhysicsSystem)
 
 	if systems ~= nil then
 		for i, system in pairs(systems) do
@@ -1691,8 +1714,8 @@ ECS.Util.newBasePartEntity = function(world, part)
    local entityID = world.create()
 
    world.set(entityID, ECS.Util.BasePartComponent, part)
-   world.set(entityID, ECS.Util.PositionComponent)
-   world.set(entityID, ECS.Util.DirectionComponent)
+   world.set(entityID, ECS.Util.PositionComponent, part.CFrame.Position)
+   world.set(entityID, ECS.Util.RotationComponent, part.CFrame.RightVector, part.CFrame.UpVector, part.CFrame.LookVector)
 
    return entityID
 end
@@ -1706,7 +1729,6 @@ ECS.Util.MetadataPartComponent = Component.register('Metadata', function(object)
    return object
 end)
 
-
 -- A component that facilitates access to BasePart
 ECS.Util.BasePartComponent = Component.register('BasePart', function(object)
    if object == nil or object['IsA'] == nil or object:IsA('BasePart') == false then 
@@ -1718,7 +1740,7 @@ end)
 
 -- Component that works with a position Vector3
 ECS.Util.PositionComponent = Component.register('Position', function(position)
-   if position ~= nil and (position['IsA'] == nil or position:IsA('Vector3') == false) then 
+   if position ~= nil and typeof(position) ~= 'Vector3' then       
       error("This component only works with Vector3 objects")
    end
 
@@ -1729,17 +1751,50 @@ ECS.Util.PositionComponent = Component.register('Position', function(position)
    return position
 end)
 
--- Component that works with a direction Vector3 (CFrame.lookVector)
-ECS.Util.DirectionComponent = Component.register('Direction', function(direction)
-   if direction ~= nil and (direction['IsA'] == nil or direction:IsA('Vector3') == false) then 
-      error("This component only works with Vector3 objects")
+local VEC3_R = Vector3.new(1, 0, 0)
+local VEC3_U = Vector3.new(0, 1, 0)
+local VEC3_F = Vector3.new(0, 0, 1)
+
+--[[
+   Rotational vectors that represents the object in the 3d world. 
+   To transform into a CFrame use CFrame.fromMatrix(pos, rot[1], rot[2], rot[3])
+
+   Params
+      lookVector  {Vector3}   @See CFrame.LookVector
+      rightVector {Vector3}   @See CFrame.RightVector
+      upVector    {Vector3}   @See CFrame.UpVector
+
+   @See 
+      https://devforum.roblox.com/t/understanding-cframe-frommatrix-the-replacement-for-cframe-new/593742
+      https://devforum.roblox.com/t/handling-the-edge-cases-of-cframe-frommatrix/632465
+]]
+ECS.Util.RotationComponent = Component.register('Rotation', function(rightVector, upVector, lookVector)
+
+   if rightVector ~= nil and typeof(rightVector) ~= 'Vector3' then 
+      error("This component only works with Vector3 objects [param=rightVector]")
    end
 
-   if direction == nil then 
-      direction = Vector3.new(0, 0, -1)
+   if upVector ~= nil and typeof(upVector) ~= 'Vector3' then 
+      error("This component only works with Vector3 objects [param=upVector]")
    end
 
-   return direction
+   if lookVector ~= nil and typeof(lookVector) ~= 'Vector3' then 
+      error("This component only works with Vector3 objects [param=lookVector]")
+   end
+
+   if rightVector == nil then 
+      rightVector = VEC3_R
+   end
+
+   if upVector == nil then 
+      upVector = VEC3_U
+   end
+
+   if lookVector == nil then 
+      lookVector = VEC3_F
+   end
+
+   return {rightVector, upVector, lookVector}
 end)
 
 -- Moviment 
@@ -1755,84 +1810,131 @@ ECS.Util.MoveSpeedComponent = Component.register('MoveSpeed', function(speed)
    return speed
 end)
 
--- Copy data from a basepart to ECS components
-ECS.Util.BasePartToEntitySystem = System.register({
-   name  = 'BasePartToEntity',
+------------------------------------------
+--[[
+   Utility system that copies the direction and position of a Roblox BasePart to the ECS entity
+
+   Executed in two moments: At the beginning of the "pre_physics" step and at the beginning of the "logic" step
+]] 
+---------------------------------------->>
+local function BasePartToEntityUpdate(time, delta, world, dirty, entity, index, parts, positions, rotations)
+      
+   local changed = false
+   local part = parts[index]
+
+   if part ~= nil then
+
+      local position = positions[index]
+      local basePos = part.CFrame.Position
+      if position == nil or not vectorEQ(basePos, position) then
+         positions[index] = basePos
+         changed = true
+      end
+
+      local rotation    = rotations[index]        
+      local rightVector =  part.CFrame.RightVector
+      local upVector    =  part.CFrame.UpVector
+      local lookVector  =  part.CFrame.LookVector
+      if rotation == nil or not vectorEQ(rightVector, rotation[1]) or not vectorEQ(upVector, rotation[2]) or not vectorEQ(lookVector, rotation[3]) then
+         rotations[index] = {rightVector, upVector, lookVector}
+         changed = true
+      end
+   end
+
+   return changed
+end
+
+ECS.Util.BasePartToEntityPrePhysicsSystem = System.register({
+   name  = 'BasePartToEntityPrePhysics',
+   step  = 'pre_physics',
+   order = 10,
+   requireAll = {
+      ECS.Util.BasePartComponent,
+      ECS.Util.PositionComponent,
+      ECS.Util.RotationComponent
+   },
+   update = BasePartToEntityUpdate
+})
+
+ECS.Util.BasePartToEntityLogicSystem = System.register({
+   name  = 'BasePartToEntityLogic',
    step  = 'logic',
    frequence = 90,
    order = 10,
    requireAll = {
       ECS.Util.BasePartComponent,
       ECS.Util.PositionComponent,
-      ECS.Util.DirectionComponent
+      ECS.Util.RotationComponent
    },
-   update = function (time, delta, world, dirty, entity, index, baseParts, positions, directions)
-      local changed = false
-      local basePart = baseParts[index]
-      if basePart ~= nil then
+   update = BasePartToEntityUpdate
+})
+----------------------------------------<<
 
-         local position = positions[index]
-         local basePos = basePart.CFrame.Position
-         if position == nil or not vectorEQ(basePos, position) then
-            positions[index] = basePos
-            changed = true
-         end
+------------------------------------------
+--[[
+   Utility system that copies the direction and position from ECS entity to a Roblox BasePart 
 
-         local direction = directions[index]
-         local lookVector =  basePart.CFrame.lookVector
-         if direction == nil or not vectorEQ(lookVector, direction) then
-            directions[index] = lookVector
+   Executed in two moments: At the end of the "pre_physics" step and at the end of the "logic" step
+]] 
+---------------------------------------->>
+local function EntityToBasePartUpdate(time, delta, world, dirty, entity, index, parts, positions, rotations)
+
+   if not dirty then
+      return false
+   end
+
+   local changed  = false
+   local part     = parts[index]
+   local position = positions[index]
+   local rotation = rotations[index]
+   if part ~= nil then
+      
+      local basePos     = part.CFrame.Position
+      local rightVector = part.CFrame.RightVector
+      local upVector    = part.CFrame.UpVector
+      local lookVector  = part.CFrame.LookVector
+
+      if position ~= nil and not vectorEQ(basePos, position) then
+         part.CFrame = CFrame.fromMatrix(position, rightVector, upVector, lookVector)
+         changed = true
+      end
+
+      if rotation ~= nil then
+         if not vectorEQ(rightVector, rotation[1]) or not vectorEQ(upVector, rotation[2]) or not vectorEQ(lookVector, rotation[3]) then
+            part.CFrame = CFrame.fromMatrix(basePos, rotation[1], rotation[2], rotation[3])
             changed = true
          end
       end
-
-      return changed
    end
+
+   return changed
+end
+
+ECS.Util.EntityToBasePartPrePhysicsSystem = System.register({
+   name  = 'EntityToBasePartPrePhysics',
+   step  = 'pre_physics',
+   order = 100,
+   requireAll = {
+      ECS.Util.BasePartComponent,
+      ECS.Util.PositionComponent,
+      ECS.Util.RotationComponent
+   },
+   update = EntityToBasePartUpdate
 })
 
--- Copy data from ECS components to basepart
-ECS.Util.EntityToBasePartSystem = System.register({
-   name  = 'EntityToBasePart',
+ECS.Util.EntityToBasePartLogicSystem = System.register({
+   name  = 'EntityToBasePartLogic',
    step  = 'logic',
    frequence = 90,
    order = 100,
    requireAll = {
       ECS.Util.BasePartComponent,
       ECS.Util.PositionComponent,
-      ECS.Util.DirectionComponent
+      ECS.Util.RotationComponent
    },
-   update = function (time, delta, world, dirty, entity, index, baseParts, positions, directions)
-
-      if not dirty then
-         return false
-      end
-
-      local changed = false
-      local basePart = baseParts[index]
-      local position = positions[index]
-      local rotation = directions[index]
-      if basePart ~= nil and position ~= nil and rotation ~= nil  then
-
-         -- position -> BasePart         
-         -- Position changed, replica on object
-         local basePos = basePart.CFrame.Position
-         if not vectorEQ(basePos, position) then
-            local rotx, roty, rotz = basePart.CFrame:toEulerAnglesXYZ()
-            basePart.CFrame = CFrame.new(position) * CFrame.Angles(rotx, roty, rotz)
-            changed = true
-         end
-
-         -- rotation -> BasePart
-         -- Rotation changed, replica on object
-         if not vectorEQ(rotation, Vector3.new(basePart.CFrame:toEulerAnglesXYZ())) then
-            basePart.CFrame = CFrame.new(position, position + rotation)
-            changed = true
-         end
-      end
-
-      return changed
-   end
+   update = EntityToBasePartUpdate
 })
+----------------------------------------<<
 
 -- Generic system that acts on entities that have basepart,
 -- position and rotation (updates Position and rotation)
@@ -1842,20 +1944,21 @@ ECS.Util.MoveForwardSystem = System.register({
    requireAll = {
       ECS.Util.MoveSpeedComponent,
       ECS.Util.PositionComponent,
-      ECS.Util.DirectionComponent,
+      ECS.Util.RotationComponent,
       ECS.Util.MoveForwardComponent,
    },
-   update = function (time, delta, world, dirty, entity, index, speeds, positions, directions, forwards)
+   update = function (time, delta, world, dirty, entity, index, speeds, positions, rotations, forwards)
 
-      local position  = positions[index]
+      local position = positions[index]
       if position ~= nil then
 
-         local direction  = directions[index]
-         if direction ~= nil then
+         local rotation = rotations[index]
+         if rotation ~= nil then
 
-            local speed     = speeds[index]
+            local speed = speeds[index]
             if speed ~= nil then
-               positions[index] = position + (delta * speed * direction)
+               -- rotation[3] == forward/lookVector
+               positions[index] = position + (delta * speed * rotation[3])
                return true
             end
          end

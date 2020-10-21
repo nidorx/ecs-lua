@@ -13,32 +13,32 @@ return ECS.System.register({
    requireAll = {
       FiringComponent,
       ECS.Util.PositionComponent,
-      ECS.Util.DirectionComponent
+      ECS.Util.RotationComponent
    },
    --[[
       Waits for player input to fire a shot (mark the entity with FiringComponent)
    ]]
-   onEnter = function(world, entity, index, firings, positions, directions)
+   onEnter = function(world, entity, index, firings, positions, rotations)
 
       -- weapon firing position and rotation
-      local position = positions[index]
-      local direction = directions[index]
+      local position    = positions[index]
+      local rotation   = rotations[index]
       
-      if position ~= nil and direction ~= nil then
+      if position ~= nil and rotation ~= nil then
+
          -- can be made in a utility script, or clone a preexistece model
          local bulletPart = Instance.new("Part")
          bulletPart.Anchored     = true
          bulletPart.CanCollide   = false
-         bulletPart.Position = position
-         bulletPart.CFrame = CFrame.new(position, position + direction)
+         bulletPart.Position     = position
+         bulletPart.CastShadow   = false
+         bulletPart.Shape        = Enum.PartType.Ball
+         bulletPart.Size         = Vector3.new(0.6, 0.6, 0.6)
+         bulletPart.CFrame       = CFrame.fromMatrix(position, rotation[1], rotation[2], rotation[3])
 
          local bulletEntity = ECS.Util.newBasePartEntity(world, bulletPart)
          world.set(bulletEntity, ECS.Util.MoveForwardComponent)
-         world.set(bulletEntity, ECS.Util.MoveSpeedComponent, 0.01)
-
-         -- bullet current position and rotation components (from newBasePartEntity)
-         --world.set(bulletEntity, ECS.Util.PositionComponent, position)
-         --world.set(bulletEntity, ECS.Util.DirectionComponent, direction)
+         world.set(bulletEntity, ECS.Util.MoveSpeedComponent, 0.03)
 
          bulletPart.Parent = game.Workspace
       end
