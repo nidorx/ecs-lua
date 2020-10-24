@@ -27,7 +27,7 @@ return ECS.System.register({
    --[[
       Waits for player input to fire a shot (mark the entity with FiringComponent)
    ]]
-   update = function (time, delta, world, dirty, entity, index, weapons)
+   update = function (time, world, dirty, entity, index, weapons)
 
       local isFiring = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 

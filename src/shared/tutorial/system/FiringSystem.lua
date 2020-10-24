@@ -18,7 +18,7 @@ return ECS.System.register({
    --[[
       Waits for player input to fire a shot (mark the entity with FiringComponent)
    ]]
-   onEnter = function(world, entity, index, firings, positions, rotations)
+   onEnter = function(time, world, entity, index, firings, positions, rotations)
 
       -- weapon firing position and rotation
       local position    = positions[index]
@@ -35,12 +35,13 @@ return ECS.System.register({
          bulletPart.Shape        = Enum.PartType.Ball
          bulletPart.Size         = Vector3.new(0.6, 0.6, 0.6)
          bulletPart.CFrame       = CFrame.fromMatrix(position, rotation[1], rotation[2], rotation[3])
+         bulletPart.Parent       = game.Workspace
 
-         local bulletEntity = ECS.Util.newBasePartEntity(world, bulletPart)
+         local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true, true)
          world.set(bulletEntity, ECS.Util.MoveForwardComponent)
-         world.set(bulletEntity, ECS.Util.MoveSpeedComponent, 0.03)
+         world.set(bulletEntity, ECS.Util.MoveSpeedComponent, 1.0)
 
-         bulletPart.Parent = game.Workspace
+         
       end
 
       return false

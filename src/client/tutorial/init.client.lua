@@ -23,10 +23,24 @@ local PlayerShootingSystem = require(Systems:WaitForChild("PlayerShootingSystem"
 local CleanupFiringSystem  = require(Systems:WaitForChild("CleanupFiringSystem"))
 
 -- Our world
-local World = ECS.newWorld()
-World.addSystem(FiringSystem)
-World.addSystem(PlayerShootingSystem)
-World.addSystem(CleanupFiringSystem)
+local world = ECS.newWorld(nil, { disableDefaultSystems = true })
+world.addSystem(FiringSystem)
+world.addSystem(PlayerShootingSystem)
+world.addSystem(CleanupFiringSystem)
+
+
+local FREQ = 5
+
+world.addSystem(ECS.Util.MoveForwardSystem, nil, FREQ)
+
+world.addSystem(ECS.Util.BasePartToEntityProcessSystem, nil, FREQ)
+world.addSystem(ECS.Util.EntityToBasePartProcessSystem, nil, FREQ)
+
+world.addSystem(ECS.Util.BasePartToEntityTransformInSystem, nil, FREQ)
+world.addSystem(ECS.Util.EntityToBasePartTransformOutSystem, nil, FREQ)
+
+world.addSystem(ECS.Util.EntityToBasePartInterpolationTransformOutSystem)
+-- ECS.Util.EntityToBasePartInterpolationTransformOutSystem 
 
 -- Our weapon
 local rightHand = Character:WaitForChild("RightHand")
@@ -34,38 +48,27 @@ local weapon = Instance.new("Part", Character)
 weapon.CanCollide = false
 weapon.CastShadow = false
 weapon.Size       = Vector3.new(0.2, 0.2, 2)
-weapon.CFrame     = rightHand.CFrame
+weapon.CFrame     = rightHand.CFrame + Vector3.new(0, 0, -1)
 weapon.Color      = Color3.fromRGB(255, 0, 255)
 
 local weldWeapon = Instance.new("WeldConstraint", weapon)
 weldWeapon.Part0 = weapon
 weldWeapon.Part1 = rightHand
---[[
-   
+
 local BulletSpawnPart   = Instance.new("Part", weapon)
--- BulletSpawnPart.Anchored   = true
 BulletSpawnPart.CanCollide = false
 BulletSpawnPart.CastShadow = false
 BulletSpawnPart.Color      = Color3.fromRGB(255, 255, 0)
 BulletSpawnPart.Size       = Vector3.new(0.6, 0.6, 0.6)
 BulletSpawnPart.Shape      = Enum.PartType.Ball
+BulletSpawnPart.CFrame     = (weapon.CFrame + Vector3.new(0, 0, -1)) * CFrame.Angles(math.rad(180), 0, 0)
 
-]]
--- BulletSpawnPart.CFrame     = weapon.CFrame
---[[
-   
-local weldBulletSpawn = Instance.new("Weld", BulletSpawnPart)
+local weldBulletSpawn = Instance.new("WeldConstraint", BulletSpawnPart)
 weldBulletSpawn.Part0 = BulletSpawnPart
 weldBulletSpawn.Part1 = weapon
 
-]]
---[[
-
-]]
-
-
 -- Create our entity
-local bulletSpawnEntity = ECS.Util.newBasePartEntity(World, weapon)
+local bulletSpawnEntity = ECS.Util.NewBasePartEntity(world, BulletSpawnPart, true, false)
 
 -- Mark as weapon
-World.set(bulletSpawnEntity, WeaponComponent)
+world.set(bulletSpawnEntity, WeaponComponent)

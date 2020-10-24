@@ -11,15 +11,15 @@ local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 ]]
 return ECS.System.register({
    name = 'CleanupFiring',
-   step = 'logic',
+   step = 'transform',
    requireAll = {
       FiringComponent
    },
-   update = function (time, delta, world, dirty, entity, index, firings)
+   update = function (time, world, dirty, entity, index, firings)
 
       local data = firings[index]
       if data ~= nil then
-         if time - data.FiredAt < 500 then
+         if time - data.FiredAt < 0.5 then
             return false
          end
 

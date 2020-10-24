@@ -11,7 +11,8 @@ local RunService = game:GetService('RunService')
    https://www.youtube.com/watch?v=W5lUCeAu_2k&feature=emb_logo&ab_channel=Battle%28non%29sense
    https://www.raywenderlich.com/7630142-entity-component-system-for-unity-getting-started
    https://levelup.gitconnected.com/a-simple-guide-to-get-started-with-unity-ecs-b0e6a036e707
-   
+   https://www.raywenderlich.com/7630142-entity-component-system-for-unity-getting-started
+
    Remover closures, transformar funções em locais
 
    @TODO
@@ -24,14 +25,34 @@ local RunService = game:GetService('RunService')
       - SharedComponent?
 ]]
 
+
 local function NOW()
 	return DateTime.now().UnixTimestampMillis
 end
 
-local EPSILON = 1e-5 -- precision
+local PRINT_LIMIT_LAST_TIME = {}
+local PRINT_LIMIT_COUNT = {}
+local function debugF(message)
+   local t =  PRINT_LIMIT_LAST_TIME[message]
+   if t ~= nil then
+      if (t + 1000) < NOW() then
+         print(PRINT_LIMIT_COUNT[message],' times > ', message)
+         PRINT_LIMIT_LAST_TIME[message] = NOW()
+         PRINT_LIMIT_COUNT[message] = 0
+         return
+      end
+      PRINT_LIMIT_COUNT[message] =  PRINT_LIMIT_COUNT[message] + 1
+   else
+      PRINT_LIMIT_LAST_TIME[message] = NOW()
+      PRINT_LIMIT_COUNT[message] = 1
+   end
+end
+
+-- precision
+local EPSILON = 0.0000000001
 
 local function floatEQ(n0, n1)
-   if n0 == n1 then 
+   if n0 == n1 then
       return true
    end
    
@@ -836,11 +857,11 @@ local System  = {}
          frequence: number,
             The maximum times per second this system should be updated. Defaults 60
 
-         step: render|pre_physics|logic Defaults to logic
+         step: render|process|transform Defaults to process
             Em qual momento, durante a execução de um Frame do Roblox, este sistema deverá ser executado (https://developer.roblox.com/en-us/articles/task-scheduler)
-            render      : (RunService.RenderStepped event)
-            pre_physics : (RunService.Stepped event)
-            logic       : (RunService.Heartbeat event)
+            render      : RunService.RenderStepped
+            process     : RunService.Stepped
+            transform   : RunService.Heartbeat
 
          order: number,
             Allows you to define the execution priority level for this system
@@ -850,7 +871,7 @@ local System  = {}
             in parallel with other systems in same step and order
 
          -- Versionamento, ver https://gametorrahod.com/designing-an-efficient-system-with-version-numbers/
-         update: function(time, delta, world, dirty, entity, index, [component_N_items...]) -> boolean
+         update: function(time, world, dirty, entity, index, [component_N_items...]) -> boolean
             Invoked in updates, limited to the value set in the "frequency" attribute			
          			 	
 			beforeUpdate(time: number): void
@@ -938,20 +959,20 @@ function System.register(config)
    end
 
    if config.step == nil then
-      config.step = 'logic'
+      config.step = 'process'
    end
 
-   if config.step ~= 'render' and config.step ~= 'pre_physics' and config.step ~= 'logic' then
-      error('The "step" parameter must be "render", "pre_physics" or "logic"')
+   if config.step ~= 'render' and config.step ~= 'process' and config.step ~= 'transform' and config.step ~= 'transformIn' and config.step ~= 'transformOut' then
+      error('The "step" parameter must be "render", "process", "transform", "transformIn" or "transformOut"')
    end
 
-   if config.frequence ~= nil and config.step ~= 'logic' then
-      error('The "frequency" parameter is only accepted for the "logic" step')
+   if config.frequence ~= nil and config.step ~= 'transform' then
+      error('The "frequency" parameter is only accepted for the "transform" step')
    end
 
    -- uses only a multiple of 5, in order to guarantee deterministic execution
    local msPerUpdate = nil
-   if config.step == 'logic' then
+   if config.step == 'transform' then
 
       if config.frequence == nil then
          config.frequence = 60
@@ -967,7 +988,7 @@ function System.register(config)
          print(string.format(">>> ATTENTION! The execution frequency of system %s has been changed to %d <<<", config.name, safeFrequency))
       end
 
-      msPerUpdate  = 1000/config.frequence
+      msPerUpdate  = 1000/config.frequence/1000
    end
 
    if config.order == nil or config.order < 0 then
@@ -976,19 +997,20 @@ function System.register(config)
 
    -- imutable
    table.insert(SYSTEM, {
-      name        = config.name,
-      requireAll  = config.requireAll,
-      requireAny  = config.requireAny,
-      requireAllOriginal  = config.requireAllOriginal,
-      requireAnyOriginal  = config.requireAnyOriginal,
-      rejectAll   = config.rejectAll,
-      rejectAny   = config.rejectAny,
-      update      = config.update,
-      onEnter     = config.onEnter,
-      step        = config.step,
-      frequence   = config.frequence,
-      msPerUpdate = msPerUpdate,
-      order       = config.order
+      name                 = config.name,
+      requireAll           = config.requireAll,
+      requireAny           = config.requireAny,
+      requireAllOriginal   = config.requireAllOriginal,
+      requireAnyOriginal   = config.requireAnyOriginal,
+      rejectAll            = config.rejectAll,
+      rejectAny            = config.rejectAny,
+      beforeUpdate         = config.beforeUpdate,
+      update               = config.update,
+      onEnter              = config.onEnter,
+      step                 = config.step,
+      frequence            = config.frequence,
+      msPerUpdate          = msPerUpdate,
+      order                = config.order
    })
 
    local ID = table.getn(SYSTEM)
@@ -1005,9 +1027,11 @@ end
 local function NewExecutionPlan(world, systems)
 
    local updateSteps = {
-      render      = {},
-      pre_physics = {},
-      logic       = {},
+      render         = {},
+      process        = {},
+      transform      = {},
+      transformIn    = {},
+      transformOut   = {},
    }
 
    --[[      
@@ -1044,31 +1068,21 @@ local function NewExecutionPlan(world, systems)
    --updateStepsOrder.heartbeat = safeNumberTable(updateStepsOrder.render)
 
    -- Update systems
-   local onUpdate = function(step, entityManager, gameTime)
-      
+   local onUpdate = function(step, entityManager, gameTime, interpolation)
       for i, stepSystems  in pairs(updateSteps[step]) do
          for j, system  in pairs(stepSystems) do
             -- execute system update
 
-            -- mantain constant frequence
-            local msPerUpdate = system.msPerUpdate
-            local elapsed = gameTime - system.lastUpdate
+            local elapsed = (gameTime + EPSILON) - system.lastUpdate
 
             --[[
-               Each system in the "logic" step is executed at a predetermined frequency (in Hz).
+               Each system in "process" and "transform" step is executed at a predetermined frequency (in Hz).
 
                Ex. If the game is running on the client at 60 FPS but a system needs to be run 
                at 120Hz or 240Hz, this logic will ensure that this frequency is reached
             ]]
-            if step == 'logic' then
-               if elapsed < msPerUpdate then
-                  continue
-               end
-            end
-
-            -- render and pre_physics
-            if msPerUpdate == nil then
-               msPerUpdate = elapsed
+            if step == 'transform' and elapsed < system.msPerUpdate then
+               continue
             end
 
             system.lastUpdate = gameTime
@@ -1085,12 +1099,14 @@ local function NewExecutionPlan(world, systems)
             -- Gets all the chunks that apply to this system
             local chunks = entityManager:filterChunks(system.filter)
 
-            -- update: function(time, delta, world, dirty, entity, index, [component_N_items...]) -> boolean
+            -- update: function(time, world, dirty, entity, index, [component_N_items...]) -> boolean
             local updateFn = system.update
 
             -- increment Global System Version (GSV), before system update
-            if step == 'render' then
-               world.version = world.version + 1
+            world.version = world.version + 1
+
+            if system.beforeUpdate ~= nil then
+               system.beforeUpdate(gameTime, elapsed, interpolation, world, system)
             end
 
             for k, chunk in pairs(chunks) do
@@ -1112,7 +1128,7 @@ local function NewExecutionPlan(world, systems)
                end
 
                for index = 1, chunk.count do
-                  if updateFn(gameTime, msPerUpdate, world, dirty, entityIDBuffer[index], index, table.unpack(componentsData)) then
+                  if updateFn(gameTime, world, dirty, entityIDBuffer[index], index, table.unpack(componentsData)) then
                      hasChangeThisChunk = true
                   end
                end
@@ -1130,7 +1146,7 @@ local function NewExecutionPlan(world, systems)
       end
    end
 
-   local onEnter = function(onEnterEntities, entityManager)
+   local onEnter = function(onEnterEntities, entityManager, gameTime)
       -- increment Global System Version (GSV), before system update
       world.version = world.version + 1
 
@@ -1180,7 +1196,7 @@ local function NewExecutionPlan(world, systems)
             end
 
             -- onEnter: function(world, entity, index, [component_N_items...]) -> boolean
-            if system.onEnter(world, entityID, index, table.unpack(componentsData)) then
+            if system.onEnter(gameTime, world, entityID, index, table.unpack(componentsData)) then
                -- If any system execution informs you that it has changed data in
                -- this chunk, it then performs the versioning of the chunk
                chunk.version = world.version
@@ -1204,7 +1220,11 @@ local ECS = {
 }
 
 -- constructor
-function ECS.newWorld(systems)
+function ECS.newWorld(systems, config)
+
+   if config == nil then
+      config = {}
+   end
 
    local SEQ_ENTITY 	= 1
 
@@ -1215,9 +1235,34 @@ function ECS.newWorld(systems)
    local updateExecPlan, enterExecPlan
 
    -- Deve ser o mesmo valor do sistema com a maior frequencia (msPerUpdate = 1000/frequencia.)
-   local updateMSPerFrame = 1000/15
+   local updateMSPerFrame = 1000/15/1000
 
-   local updateLastTime = NOW()
+   -- INTERPOLATION: The proportion of time since the previous transform relative to updateMSPerFrame
+   local interpolation           = 1
+
+   -- INTERPOLATION: Stores the last two times at which a FixedTimestap Update occured (transform).
+   local lastFixedUpdateTimes    = {0, 0}
+
+   -- INTERPOLATION: Keeps track of which index is storing the newest value.
+   local newTimeIndex            = 1
+
+   -- INTERPOLATION: The index of the older stored time
+   local function oldTimeIndex()
+      return newTimeIndex == 1 and 2 or 1
+   end
+
+   -- INTERPOLATION: Sets the interpolation factor
+   local function calculateInterpolation(time)
+      local newerTime = lastFixedUpdateTimes[newTimeIndex]
+      local olderTime = lastFixedUpdateTimes[oldTimeIndex()]
+      
+      if newerTime ~= olderTime then         
+         interpolation = (time - newerTime)/(newerTime - olderTime)
+         print(time, newerTime, olderTime, (time - newerTime), (newerTime - olderTime), interpolation)
+      else
+         interpolation = 1
+      end
+   end
 
    -- incrementa em updateMSPerFrame
    local gameTime = 0
@@ -1225,9 +1270,9 @@ function ECS.newWorld(systems)
    -- lag na atualização
    local updateAccumulatedTime = 0.0
 
-   -- se a execução ficar lenta, realiza até 3 updates simultaneos no evento Heartbeat 
+   -- se a execução ficar lenta, realiza até 10 updates simultaneos
    -- afim de manter o fixrate
-   local updateMaxSkipFrames = 5
+   local updateMaxSkipFrames = 10
 
    local lastKnownArchetypeInstant = 0
 
@@ -1266,10 +1311,6 @@ function ECS.newWorld(systems)
    -- serão transportadas do "entityManagerNew" para o "entityManager"
    local entitiesNew = {}
 
-   -- lista dos componentes que uma entidade possa ter recebido ou perdido em um frame de execução
-   local entitiesReceived = {}
-   local entitiesLost = {}
-
    -- referencia do arquétipo mais atualizado de uma entidade (sujo)
    -- A alteração do arquétipo nao reflete na execução atual dos scripts, é usado apenas para a atualização dos 
    -- dados no entity manager principal
@@ -1279,6 +1320,9 @@ function ECS.newWorld(systems)
 
    -- 
    local cleanupEnvironment
+
+   -- True when environment has been modified while a system is running
+   local dirtyEnvironment = false
 
 	world = {
 
@@ -1297,6 +1341,8 @@ function ECS.newWorld(systems)
          entitiesNew[ID] = true
 
          entitiesArchetypes[ID] = ARCHETYPE_EMPTY
+
+         dirtyEnvironment = true
 
          return ID
       end,
@@ -1323,6 +1369,8 @@ function ECS.newWorld(systems)
             -- entity doesn exist
             return
          end
+
+         dirtyEnvironment = true
 
          local archetypeNew = archetype:with(component)
          local archetypeChanged = archetype ~= archetypeNew
@@ -1393,6 +1441,8 @@ function ECS.newWorld(systems)
             return
          end
 
+         dirtyEnvironment = true
+
          if component == nil then
             -- remove entity
             if entitiesNew[entity] == true then
@@ -1417,7 +1467,7 @@ function ECS.newWorld(systems)
                end
             else
                if archetypeChanged then
-                  
+
                   -- entidade sofreu alteração de arquétipo. Registra uma cópia em outro entity manager, que será
                   -- processado após a execução dos scripts atuais
                   if entitiesUpdated[entity] == nil then
@@ -1473,7 +1523,7 @@ function ECS.newWorld(systems)
       --[[
          Remove an entity from this world
       ]]
-      addSystem = function (systemID)
+      addSystem = function (systemID, order, frequence, config)
          if systemID == nil then
             return
          end
@@ -1491,27 +1541,53 @@ function ECS.newWorld(systems)
             error('Adding systems is not allowed after adding entities in the world')
          end
 
-         local system = SYSTEM[systemID]
+         if config == nil then
+            config = {}
+         end
 
-         worldSystems[systemID] = {
-            id          = systemID, 
-            name        = system.name,
-            requireAll  = system.requireAll,
-            requireAny  = system.requireAny,
-            requireAllOriginal  = system.requireAllOriginal,
-            requireAnyOriginal  = system.requireAnyOriginal,
-            rejectAll   = system.rejectAll,
-            rejectAny   = system.rejectAny,
-            update      = system.update,
-            onEnter     = system.onEnter,
-            step        = system.step,
-            frequence   = system.frequence,
-            msPerUpdate = system.msPerUpdate,
-            order       = system.order,
+         local system = {
+            id                   = systemID,
+            name                 = SYSTEM[systemID].name,
+            requireAll           = SYSTEM[systemID].requireAll,
+            requireAny           = SYSTEM[systemID].requireAny,
+            requireAllOriginal   = SYSTEM[systemID].requireAllOriginal,
+            requireAnyOriginal   = SYSTEM[systemID].requireAnyOriginal,
+            rejectAll            = SYSTEM[systemID].rejectAll,
+            rejectAny            = SYSTEM[systemID].rejectAny,
+            beforeUpdate         = SYSTEM[systemID].beforeUpdate,
+            update               = SYSTEM[systemID].update,
+            onEnter              = SYSTEM[systemID].onEnter,
+            step                 = SYSTEM[systemID].step,
+            frequence            = SYSTEM[systemID].frequence,
+            msPerUpdate          = SYSTEM[systemID].msPerUpdate,
+            order                = SYSTEM[systemID].order,
             -- instance properties
-            version           = 0,
-            lastUpdate        = gameTime
+            version              = 0,
+            lastUpdate           = gameTime,
+            config               = config
          }
+
+         if frequence ~= nil and system.step == 'transform'then
+
+            -- uses only a multiple of 5, in order to guarantee deterministic execution
+            local safeFrequency  = math.round(math.abs(frequence)/5)*5
+            if safeFrequency < 5 then
+               safeFrequency = 5
+            end
+
+            if frequence ~= safeFrequency then
+               frequence = safeFrequency
+               print(string.format(">>> ATTENTION! The execution frequency of system %s has been changed to %d <<<", config.name, safeFrequency))
+            end
+
+            system.msPerUpdate  = 1000/frequence/1000
+         end
+
+         if order ~= nil and order < 0 then
+            system.order = 50
+         end
+
+         worldSystems[systemID] = system
 
          if system.msPerUpdate ~= nil then
              -- o sistema com maior frequencia tem o menor ms por update
@@ -1560,10 +1636,14 @@ function ECS.newWorld(systems)
       --[[
          Realizes world update
       ]]
-      update = function(step)
-         --if not RunService:IsRunning() then
-         --   return
-         --end
+      update = function(step, elapsed, time)
+         if not RunService:IsRunning() then
+            return
+         end
+
+         --print(elapsed)
+
+         --debugF("World: Update : "..step)
 
          -- need to update execution plan?
          if lastKnownArchetypeInstant < LAST_ARCHETYPE_INSTANT then
@@ -1571,29 +1651,32 @@ function ECS.newWorld(systems)
             lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
          end
 
-         if step ~= 'logic' then
-            -- "render" and "pre_physics" are executed only once per frame
-            updateExecPlan(step, entityManager, gameTime)
+         calculateInterpolation(time)
+
+         if step ~= 'transform' then
+            -- executed only once per frame
+            updateExecPlan(step, entityManager, gameTime, interpolation)
             cleanupEnvironment()
          else
 
+            -- executed only once per frame
+            updateExecPlan('transformIn', entityManager, gameTime, interpolation)
+            cleanupEnvironment()
+
             -- accumulate the elapsed time since the last frame
-            local now = NOW()
-            local elapsed = now - updateLastTime
-            updateLastTime = now
-            updateAccumulatedTime = updateAccumulatedTime + elapsed
+            updateAccumulatedTime += elapsed
 
             --[[
                Adjusting the framerate, the world must run on the same frequency as the
                system that has the highest frequency, this ensures determinism in the
                execution of the scripts
 
-               Each system in the "logic" step is executed at a predetermined frequency (in Hz).
+               Each system in "transform" step is executed at a predetermined frequency (in Hz).
 
                Ex. If the game is running on the client at 30FPS but a system needs to be run at
                120Hz or 240Hz, this logic will ensure that this frequency is reached
 
-               @see 
+               @see
                   https://gafferongames.com/post/fix_your_timestep/
                   https://gameprogrammingpatterns.com/game-loop.html
                   https://bell0bytes.eu/the-game-loop/
@@ -1608,19 +1691,39 @@ function ECS.newWorld(systems)
                   lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
                end
 
-               updateExecPlan('logic', entityManager, gameTime)
+               updateExecPlan(step, entityManager, gameTime, 1)
                cleanupEnvironment()
 
                nLoops += 1
                gameTime += updateMSPerFrame
+               time     += updateMSPerFrame
                updateAccumulatedTime -= updateMSPerFrame
+               if updateAccumulatedTime < EPSILON then
+                  updateAccumulatedTime = 0
+               end
             end
+
+            newTimeIndex = oldTimeIndex()
+            lastFixedUpdateTimes[newTimeIndex] = time
+            -- interpolation = updateAccumulatedTime/updateMSPerFrame
+
+            -- executed only once per frame
+            calculateInterpolation(time)
+            updateExecPlan('transformOut', entityManager, gameTime, interpolation)
+            cleanupEnvironment()
          end
       end
    }
 
    -- realiza a limpeza após a execução dos scripts
    cleanupEnvironment = function()
+
+      if not dirtyEnvironment then
+         -- fast exit
+         return
+      end
+
+      dirtyEnvironment = false
 
       -- 1: remove entities
       -- @TODO: Event onRemove?
@@ -1668,36 +1771,61 @@ function ECS.newWorld(systems)
       end
    end
 
+   -- all managers in this world
    entityManager        = EntityManager.new(world)
    entityManagerNew     = EntityManager.new(world)
    entityManagerUpdated = EntityManager.new(world)
 
-   -- add default systems
-   world.addSystem(ECS.Util.MoveForwardSystem)
-   world.addSystem(ECS.Util.EntityToBasePartLogicSystem)
-   world.addSystem(ECS.Util.EntityToBasePartPrePhysicsSystem)
-   world.addSystem(ECS.Util.BasePartToEntityLogicSystem)
-   world.addSystem(ECS.Util.BasePartToEntityPrePhysicsSystem)
-
-	if systems ~= nil then
+   -- add user systems
+   if systems ~= nil then
 		for i, system in pairs(systems) do
 			world.addSystem(system)
 		end
    end
 
-   -- initialize updates
-   world._renderConn = RunService.RenderStepped:Connect(function()
-      -- @TODO: Check if is server
-		world.update('render')
-   end)
+   -- add default systems
+   if not config.disableDefaultSystems then
+      world.addSystem(ECS.Util.MoveForwardSystem)
 
-   world._prePhysicsConn = RunService.Stepped:Connect(function()
-		world.update('pre_physics')
-   end)
+      world.addSystem(ECS.Util.EntityToBasePartProcessSystem)
+      world.addSystem(ECS.Util.BasePartToEntityProcessSystem)
 
-   world._logicConn = RunService.Heartbeat:Connect(function()
-		world.update('logic')
-   end)
+      world.addSystem(ECS.Util.BasePartToEntityTransformInSystem)
+      world.addSystem(ECS.Util.EntityToBasePartTransformOut)
+   end
+
+   if not config.disableAutoUpdate then
+
+      -- não usa o valor step dos eventos, afim de manter consistencia
+      local step    = 0
+      local now     = 0
+      local lastFrameTick = tick()  -- lastframe
+      local currentFrameTick           -- current frame
+
+      -- initialize updates
+      world._steppedConn = RunService.Stepped:Connect(function()
+         now               = tick()
+         currentFrameTick  = now
+         step              = currentFrameTick-lastFrameTick
+
+         world.update('process', step, now)
+      end)
+
+      world._heartbeatConn = RunService.Heartbeat:Connect(function()
+         now  = tick()
+         step = now - lastFrameTick
+
+         world.update('transform', step, now)
+      end)
+
+      world._renderSteppedConn = RunService.RenderStepped:Connect(function()
+         now  = tick()
+         step = now - lastFrameTick
+         lastFrameTick = currentFrameTick
+
+         world.update('render', step, now)
+      end)
+   end
 
 	return world
 end
@@ -1710,37 +1838,51 @@ end
 ECS.Util = {}
 
 -- Creates an entity related to a BasePart
-ECS.Util.newBasePartEntity = function(world, part)
+function ECS.Util.NewBasePartEntity(world, part, syncBasePartToEntity, syncEntityToBasePart, interpolate)
    local entityID = world.create()
 
    world.set(entityID, ECS.Util.BasePartComponent, part)
    world.set(entityID, ECS.Util.PositionComponent, part.CFrame.Position)
    world.set(entityID, ECS.Util.RotationComponent, part.CFrame.RightVector, part.CFrame.UpVector, part.CFrame.LookVector)
 
+   if interpolate then
+      world.set(entityID, ECS.Util.InterpolationComponent)
+      world.set(entityID, ECS.Util.PositionInterpolationComponent, part.CFrame.Position)
+      world.set(entityID, ECS.Util.RotationInterpolationComponent, part.CFrame.UpVector, part.CFrame.LookVector)
+   end
+
+   if syncBasePartToEntity then 
+      world.set(entityID, ECS.Util.BasePartToEntitySyncComponent)
+   end
+
+   if syncEntityToBasePart then 
+      world.set(entityID, ECS.Util.EntityToBasePartSyncComponent)
+   end
+
    return entityID
 end
 
--- Component that facilitates the interaction of systems with entities, allowing to define metadata for a specific entity
-ECS.Util.MetadataPartComponent = Component.register('Metadata', function(object)
-   if object == nil then
-      object = {}
-   end
+-- Tag para sincronização
+ECS.Util.BasePartToEntitySyncComponent = Component.register('BasePartToEntitySync')
+ECS.Util.EntityToBasePartSyncComponent = Component.register('EntityToBasePartSync')
 
-   return object
-end)
+
+ECS.Util.EntityFromToBasePartSyncInterpolatedComponent = Component.register('EntityFromToBasePartSyncInterpolated')
 
 -- A component that facilitates access to BasePart
 ECS.Util.BasePartComponent = Component.register('BasePart', function(object)
-   if object == nil or object['IsA'] == nil or object:IsA('BasePart') == false then 
+   if object == nil or object['IsA'] == nil or object:IsA('BasePart') == false then
       error("This component only works with BasePart objects")
    end
 
    return object
 end)
 
+ECS.Util.InterpolationComponent = Component.register('Interpolation')
+
 -- Component that works with a position Vector3
 ECS.Util.PositionComponent = Component.register('Position', function(position)
-   if position ~= nil and typeof(position) ~= 'Vector3' then       
+   if position ~= nil and typeof(position) ~= 'Vector3' then
       error("This component only works with Vector3 objects")
    end
 
@@ -1751,13 +1893,27 @@ ECS.Util.PositionComponent = Component.register('Position', function(position)
    return position
 end)
 
+ECS.Util.PositionInterpolationComponent = Component.register('PositionInterpolation', function(position)
+   if position ~= nil and typeof(position) ~= 'Vector3' then
+      error("This component only works with Vector3 objects")
+   end
+
+   if position == nil then 
+      position = Vector3.new(0, 0, 0)
+   end
+
+   return position
+end)
+
+
+
 local VEC3_R = Vector3.new(1, 0, 0)
 local VEC3_U = Vector3.new(0, 1, 0)
 local VEC3_F = Vector3.new(0, 0, 1)
 
 --[[
    Rotational vectors that represents the object in the 3d world. 
-   To transform into a CFrame use CFrame.fromMatrix(pos, rot[1], rot[2], rot[3])
+   To transform into a CFrame use CFrame.fromMatrix(pos, rot[1], rot[2], rot[3] * -1)
 
    Params
       lookVector  {Vector3}   @See CFrame.LookVector
@@ -1770,27 +1926,56 @@ local VEC3_F = Vector3.new(0, 0, 1)
 ]]
 ECS.Util.RotationComponent = Component.register('Rotation', function(rightVector, upVector, lookVector)
 
-   if rightVector ~= nil and typeof(rightVector) ~= 'Vector3' then 
+   if rightVector ~= nil and typeof(rightVector) ~= 'Vector3' then
       error("This component only works with Vector3 objects [param=rightVector]")
    end
 
-   if upVector ~= nil and typeof(upVector) ~= 'Vector3' then 
+   if upVector ~= nil and typeof(upVector) ~= 'Vector3' then
       error("This component only works with Vector3 objects [param=upVector]")
    end
 
-   if lookVector ~= nil and typeof(lookVector) ~= 'Vector3' then 
+   if lookVector ~= nil and typeof(lookVector) ~= 'Vector3' then
       error("This component only works with Vector3 objects [param=lookVector]")
    end
 
-   if rightVector == nil then 
+   if rightVector == nil then
       rightVector = VEC3_R
    end
 
-   if upVector == nil then 
+   if upVector == nil then
       upVector = VEC3_U
    end
 
-   if lookVector == nil then 
+   if lookVector == nil then
+      lookVector = VEC3_F
+   end
+
+   return {rightVector, upVector, lookVector}
+end)
+
+ECS.Util.RotationInterpolationComponent = Component.register('RotationInterpolation', function(rightVector, upVector, lookVector)
+
+   if rightVector ~= nil and typeof(rightVector) ~= 'Vector3' then
+      error("This component only works with Vector3 objects [param=rightVector]")
+   end
+
+   if upVector ~= nil and typeof(upVector) ~= 'Vector3' then
+      error("This component only works with Vector3 objects [param=upVector]")
+   end
+
+   if lookVector ~= nil and typeof(lookVector) ~= 'Vector3' then
+      error("This component only works with Vector3 objects [param=lookVector]")
+   end
+
+   if rightVector == nil then
+      rightVector = VEC3_R
+   end
+
+   if upVector == nil then
+      upVector = VEC3_U
+   end
+
+   if lookVector == nil then
       lookVector = VEC3_F
    end
 
@@ -1814,11 +1999,11 @@ end)
 --[[
    Utility system that copies the direction and position of a Roblox BasePart to the ECS entity
 
-   Executed in two moments: At the beginning of the "pre_physics" step and at the beginning of the "logic" step
+   Executed in two moments: At the beginning of the "process" step and at the beginning of the "transform" step
 ]] 
 ---------------------------------------->>
-local function BasePartToEntityUpdate(time, delta, world, dirty, entity, index, parts, positions, rotations)
-      
+local function BasePartToEntityUpdate(time, world, dirty, entity, index, parts, positions, rotations)
+
    local changed = false
    local part = parts[index]
 
@@ -1831,7 +2016,7 @@ local function BasePartToEntityUpdate(time, delta, world, dirty, entity, index, 
          changed = true
       end
 
-      local rotation    = rotations[index]        
+      local rotation    = rotations[index]
       local rightVector =  part.CFrame.RightVector
       local upVector    =  part.CFrame.UpVector
       local lookVector  =  part.CFrame.LookVector
@@ -1844,27 +2029,28 @@ local function BasePartToEntityUpdate(time, delta, world, dirty, entity, index, 
    return changed
 end
 
-ECS.Util.BasePartToEntityPrePhysicsSystem = System.register({
-   name  = 'BasePartToEntityPrePhysics',
-   step  = 'pre_physics',
+ECS.Util.BasePartToEntityProcessSystem = System.register({
+   name  = 'BasePartToEntityProcess',
+   step  = 'process',
    order = 10,
    requireAll = {
       ECS.Util.BasePartComponent,
       ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent
+      ECS.Util.RotationComponent,
+      ECS.Util.BasePartToEntitySyncComponent
    },
    update = BasePartToEntityUpdate
 })
 
-ECS.Util.BasePartToEntityLogicSystem = System.register({
-   name  = 'BasePartToEntityLogic',
-   step  = 'logic',
-   frequence = 90,
+ECS.Util.BasePartToEntityTransformInSystem = System.register({
+   name  = 'BasePartToEntityTransformIn',
+   step  = 'transform',
    order = 10,
    requireAll = {
       ECS.Util.BasePartComponent,
       ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent
+      ECS.Util.RotationComponent,
+      ECS.Util.BasePartToEntitySyncComponent
    },
    update = BasePartToEntityUpdate
 })
@@ -1872,12 +2058,13 @@ ECS.Util.BasePartToEntityLogicSystem = System.register({
 
 ------------------------------------------
 --[[
-   Utility system that copies the direction and position from ECS entity to a Roblox BasePart 
+   Utility system that copies the direction and position from ECS entity to a Roblox BasePart
 
-   Executed in two moments: At the end of the "pre_physics" step and at the end of the "logic" step
+   Executed in two moments: At the end of the "process" step and at the end of the "transform" step
 ]] 
 ---------------------------------------->>
-local function EntityToBasePartUpdate(time, delta, world, dirty, entity, index, parts, positions, rotations)
+
+local function EntityToBasePartUpdate(time, world, dirty, entity, index, parts, positions, rotations)
 
    if not dirty then
       return false
@@ -1888,66 +2075,148 @@ local function EntityToBasePartUpdate(time, delta, world, dirty, entity, index, 
    local position = positions[index]
    local rotation = rotations[index]
    if part ~= nil then
-      
       local basePos     = part.CFrame.Position
       local rightVector = part.CFrame.RightVector
       local upVector    = part.CFrame.UpVector
       local lookVector  = part.CFrame.LookVector
 
+      -- goal cframe, allow interpolation
+      local cframe = part.CFrame
+
       if position ~= nil and not vectorEQ(basePos, position) then
-         part.CFrame = CFrame.fromMatrix(position, rightVector, upVector, lookVector)
+         cframe = CFrame.fromMatrix(position, rightVector, upVector, lookVector * -1)
          changed = true
       end
 
       if rotation ~= nil then
          if not vectorEQ(rightVector, rotation[1]) or not vectorEQ(upVector, rotation[2]) or not vectorEQ(lookVector, rotation[3]) then
-            part.CFrame = CFrame.fromMatrix(basePos, rotation[1], rotation[2], rotation[3])
+            cframe = CFrame.fromMatrix(cframe.Position, rotation[1], rotation[2], rotation[3] * -1)
             changed = true
          end
+      end
+
+      if changed then
+         part.CFrame = cframe
       end
    end
 
    return changed
 end
 
-ECS.Util.EntityToBasePartPrePhysicsSystem = System.register({
-   name  = 'EntityToBasePartPrePhysics',
-   step  = 'pre_physics',
+ECS.Util.EntityToBasePartProcessSystem = System.register({
+   name  = 'EntityToBasePartProcess',
+   step  = 'process',
    order = 100,
    requireAll = {
       ECS.Util.BasePartComponent,
       ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent
+      ECS.Util.RotationComponent,
+      ECS.Util.EntityToBasePartSyncComponent
    },
-   update = EntityToBasePartUpdate
+   update         = EntityToBasePartUpdate
 })
 
-ECS.Util.EntityToBasePartLogicSystem = System.register({
-   name  = 'EntityToBasePartLogic',
-   step  = 'logic',
-   frequence = 90,
+ECS.Util.EntityToBasePartTransformOutSystem = System.register({
+   name  = 'EntityToBasePartTransformOut',
+   step  = 'transformOut',
    order = 100,
    requireAll = {
       ECS.Util.BasePartComponent,
       ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent
+      ECS.Util.RotationComponent,
+      ECS.Util.EntityToBasePartSyncComponent
    },
-   update = EntityToBasePartUpdate
+   rejectAny = {
+      ECS.Util.PositionInterpolationComponent,
+      ECS.Util.RotationInterpolationComponent
+   },
+   update         = EntityToBasePartUpdate
+})
+
+-- Interpolates BasePart to the latest Fixed Update transform
+local interpolationFactor = 1
+ECS.Util.EntityToBasePartInterpolationTransformOutSystem = System.register({
+   name  = 'EntityToBasePartInterpolationTransformOut',
+   step  = 'transformOut',
+   order = 100,
+   requireAll = {
+      ECS.Util.BasePartComponent,
+      ECS.Util.PositionComponent,
+      ECS.Util.RotationComponent,
+      ECS.Util.PositionInterpolationComponent,
+      ECS.Util.RotationInterpolationComponent,
+      ECS.Util.InterpolationComponent,
+      ECS.Util.EntityToBasePartSyncComponent
+   },
+   beforeUpdate = function(gameTime, elapsed, interpolation, world, system)
+      print('here', interpolation)
+      interpolationFactor = interpolation
+   end,
+   update = function(time, world, dirty, entity, index, parts, positions, rotations, positionsOld, rotationsOld)
+
+      if not dirty then
+         return false
+      end
+   
+      local changed  = false
+      local part     = parts[index]
+      local newPosition = positions[index]
+      local oldPosition = positionsOld[index]
+      local newRotation = rotations[index]
+      local oldRotation = rotationsOld[index]
+      if part ~= nil then
+
+         local basePos     = part.CFrame.Position
+         local rightVector = part.CFrame.RightVector
+         local upVector    = part.CFrame.UpVector
+         local lookVector  = part.CFrame.LookVector
+   
+         -- goal cframe, allow interpolation
+         local cframe = part.CFrame
+   
+         if newPosition ~= nil and oldPosition ~= nil and not vectorEQ(basePos, newPosition) then
+            cframe = CFrame.fromMatrix(oldPosition:Lerp(newPosition, interpolationFactor), rightVector, upVector, lookVector * -1)
+            changed = true
+         end
+   
+         --[[
+            
+         if rotation ~= nil then
+            if not vectorEQ(rightVector, rotation[1]) or not vectorEQ(upVector, rotation[2]) or not vectorEQ(lookVector, rotation[3]) then
+               cframe = CFrame.fromMatrix(cframe.Position, rotation[1], rotation[2], rotation[3] * -1)
+               changed = true
+            end
+         end
+         
+         ]]
+   
+         if changed then
+            part.CFrame = cframe
+         end
+      end
+   
+      return changed
+   end
 })
 ----------------------------------------<<
 
 -- Generic system that acts on entities that have basepart,
 -- position and rotation (updates Position and rotation)
+local moveForwardSpeedFactor = 1
 ECS.Util.MoveForwardSystem = System.register({
    name = 'MoveForward',
-   frequence = 90,
+   step = 'transform',
+   frequence = 30,
    requireAll = {
       ECS.Util.MoveSpeedComponent,
       ECS.Util.PositionComponent,
       ECS.Util.RotationComponent,
       ECS.Util.MoveForwardComponent,
    },
-   update = function (time, delta, world, dirty, entity, index, speeds, positions, rotations, forwards)
+   beforeUpdate = function(gameTime, elapsed, interpolation, world, system)
+      moveForwardSpeedFactor = system.frequence/60
+   end,
+   update = function (time, world, dirty, entity, index, speeds, positions, rotations, forwards)
 
       local position = positions[index]
       if position ~= nil then
@@ -1957,8 +2226,8 @@ ECS.Util.MoveForwardSystem = System.register({
 
             local speed = speeds[index]
             if speed ~= nil then
-               -- rotation[3] == forward/lookVector
-               positions[index] = position + (delta * speed * rotation[3])
+               -- speed/2 = 1 studs per second (120 = frequence)
+               positions[index] = position + speed/moveForwardSpeedFactor  * rotation[3]
                return true
             end
          end
