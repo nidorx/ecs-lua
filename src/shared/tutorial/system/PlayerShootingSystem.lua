@@ -33,7 +33,7 @@ return ECS.System.register({
 
       if isFiring  then
          -- Add a firing component to all entities when mouse button is pressed
-         world.set(entity, FiringComponent, { FiredAt = time })
+         world.set(entity, FiringComponent, { FiredAt = time.frame })
          return true
       end
 

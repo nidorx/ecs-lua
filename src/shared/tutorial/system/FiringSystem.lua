@@ -39,7 +39,7 @@ return ECS.System.register({
 
          local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true, true)
          world.set(bulletEntity, ECS.Util.MoveForwardComponent)
-         world.set(bulletEntity, ECS.Util.MoveSpeedComponent, 1.0)
+         world.set(bulletEntity, ECS.Util.MoveSpeedComponent, 0.1)
 
          
       end

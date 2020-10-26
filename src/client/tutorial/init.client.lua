@@ -23,24 +23,10 @@ local PlayerShootingSystem = require(Systems:WaitForChild("PlayerShootingSystem"
 local CleanupFiringSystem  = require(Systems:WaitForChild("CleanupFiringSystem"))
 
 -- Our world
-local world = ECS.newWorld(nil, { disableDefaultSystems = true })
+local world = ECS.newWorld(nil, { disableDefaultSystems = false, frequence = 20 })
 world.addSystem(FiringSystem)
 world.addSystem(PlayerShootingSystem)
 world.addSystem(CleanupFiringSystem)
-
-
-local FREQ = 5
-
-world.addSystem(ECS.Util.MoveForwardSystem, nil, FREQ)
-
-world.addSystem(ECS.Util.BasePartToEntityProcessSystem, nil, FREQ)
-world.addSystem(ECS.Util.EntityToBasePartProcessSystem, nil, FREQ)
-
-world.addSystem(ECS.Util.BasePartToEntityTransformInSystem, nil, FREQ)
-world.addSystem(ECS.Util.EntityToBasePartTransformOutSystem, nil, FREQ)
-
-world.addSystem(ECS.Util.EntityToBasePartInterpolationTransformOutSystem)
--- ECS.Util.EntityToBasePartInterpolationTransformOutSystem 
 
 -- Our weapon
 local rightHand = Character:WaitForChild("RightHand")

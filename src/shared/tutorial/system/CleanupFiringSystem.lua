@@ -19,7 +19,7 @@ return ECS.System.register({
 
       local data = firings[index]
       if data ~= nil then
-         if time - data.FiredAt < 0.5 then
+         if time.frame - data.FiredAt < 0.5 then
             return false
          end
 
