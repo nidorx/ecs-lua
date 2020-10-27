@@ -1,44 +1,8 @@
 ![](repository-open-graph.jpg)
 
-**roblox-ecs-lib** is a tiny and easy to use [ECS _(Entity Component System)_](https://en.wikipedia.org/wiki/Entity_component_system) library for game programming on the Roblox platform (It is written in Lua easy to adapt to other platforms)
+**Roblox-ECS** is a tiny and easy to use [ECS _(Entity Component System)_](https://en.wikipedia.org/wiki/Entity_component_system) engine for game development on the Roblox platform
 
-## Table of contents
-   * [Documentation](#documentation)
-      * [World](#world)
-      * [Component](#component)
-         * [Raw data access](#raw-data-access)
-         * [Secondary attributes](#secondary-attributes)
-      * [Entity](#entity)
-         * [Adding and removing from the world](#adding-and-removing-from-the-world)
-         * [Adding and removing components](#adding-and-removing-components)
-         * [Subscribing to changes](#subscribing-to-changes)
-         * [Accessing components](#accessing-components)
-      * [System](#system)
-         * [Adding and removing from the world](#adding-and-removing-from-the-world-1)
-         * [Limiting frequency (FPS)](#limiting-frequency-fps)
-         * [Time Scaling - Slow motion effect](#time-scaling---slow-motion-effect)
-             * [Pausing](#pausing)
-         * [Global systems - all entities](#global-systems---all-entities)
-         * [Before and After update](#before-and-after-update)
-         * [Enter - When adding new entities](#enter---when-adding-new-entities)
-         * [Change - When you add or remove components](#change---when-you-add-or-remove-components)
-         * [Exit - When removing entities](#exit---when-removing-entities)
-   * [API](#api)
-      * [ECS](#ecs)
-      * [Component](#component-1)
-         * [Component&lt;T&gt;](#componentt)
-      * [Entity](#entity-1)
-      * [System](#system-1)
-   * [Feedback, Requests and Roadmap](#feedback-requests-and-roadmap)
-   * [Contributing](#contributing)
-      * [Translating and documenting](#translating-and-documenting)
-      * [Reporting Issues](#reporting-issues)
-      * [Fixing defects and adding improvements](#fixing-defects-and-adding-improvements)
-   * [License](#license)
-
-## Documentation
-
-Entity-Component-System (ECS) is a distributed and compositional architectural design pattern that is mostly used in game development. It enables flexible decoupling of domain-specific behaviour, which overcomes many of the drawbacks of traditional object-oriented inheritance.
+Entity-Component-System (ECS) is a distributed and compositional architectural design pattern that is mostly used in game development. It enables flexible decoupling of domain-specific behaviour, which overcomes many of the drawbacks of traditional object-oriented inheritance
 
 For further details:
 
@@ -49,205 +13,193 @@ For further details:
 
 ## Roblox Pipeline
 
-Before going into the details, let's review some important concepts about how the Roblox game engine works.
+Before going into the details, let's review some important concepts about how the Roblox game engine works
 
 Most likely you have seen the illustration below, made by zeuxcg and enriched by Fractality_alt. It describes the roblox rendering pipeline. Let's redraw it so that it is clearer what happens in each frame of a game in roblox
 
 [![](docs/pipeline_old.png)](https://devforum.roblox.com/t/runservice-heartbeat-switching-to-variable-frequency/23509/7)
 
-Ready: In the new image, we have a clear separation (gap between CPU1 and CPU2) of the roblox rendering process, which occurs in parallel with the simulation and processing (game logic) of the next screen.
+In the new image, we have a clear separation (gap between CPU1 and CPU2) of the roblox rendering process, which occurs in parallel with the simulation and processing (game logic) of the next screen
 
-The green arrows indicate the start of processing of the new frame and the return of execution after the completion of the two processes that are being executed in parallel (rendering of the previous screen and processing of the current frame).
+The green arrows indicate the start of processing of the new frame and the return of execution after the completion of the two processes that are being executed in parallel (rendering of the previous screen and processing of the current frame)
 
 The complete information on the order of execution can be seen at https://developer.roblox.com/en-us/articles/task-scheduler
 
+> **note** the distance between the initialization of the two processes in the image is just to facilitate understanding, in Roblox both threads are started at the same time
+
 [![](docs/pipeline.png)](https://developer.roblox.com/en-us/articles/task-scheduler)
 
-Based on this model, roblox-ecs-lib organizes the execution of the systems in the following events. We call them steps
+Based on this model, Roblox-ECS organizes the execution of the systems in the following events. We call them **steps**
 
 ![](docs/pipeline_ecs_resume.png)
 
+## Roblox-ECS steps
+
+Roblox-ECS allows you to configure your systems to perform in the steps defined below.
+
+In addition to defining the execution step, you can also define the execution order within that step. By default, the order of execution of a system is 50. When two or more systems have the same order of execution, they will be executed following the order of insertion in the world
+
 ![](docs/pipeline_ecs_steps.png)
 
-### processIn
-Executed once per frame.
+- **processIn** - Executed once per frame
 
-This is the first step to be executed in a frame. Use this step to run systems that translate the user's input or the current state of the workspace to entity components, which can be processed by specialized systems in the next steps
+   This is the first step to be executed in a frame. Use this step to run systems that translate the user's input or the current state of the workspace to entity components, which can be processed by specialized systems in the next steps
 
-Eg. Use the UserInputService to register the player's inputs in the current frame in a pool of inputs, and, in the PROCESS_IN step, translate these commands to the player's components. Realize that the same logic can be used to receive entries from the server and update local entities that represent other players
+   Eg. Use the UserInputService to register the player's inputs in the current frame in a pool of inputs, and, in the PROCESS_IN step, translate these commands to the player's components. Realize that the same logic can be used to receive entries from the server and update local entities that represent other players
 
-```lua
+   ```lua
+   -- InputHandlerUtils.lua
+   local UserInputService = game:GetService("UserInputService")
 
--- InputHandlerUtils.lua
-local UserInputService = game:GetService("UserInputService")
+   local pool = { FIRE = false }
 
-local pool = {
-   FIRE = false
-}
-
--- clear frame inputs
-function pool.clear()
-   pool = {
-      FIRE = false
-   }
-end
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		pool.FIRE = true
-	end
-end)
-
-return pool
-
----------------------------------------------------------------------------------------
-
--- InputMapSystem.lua
-local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
-local FiringComponent = require(game.ReplicatedStorage:WaitForChild("FiringComponent"))
-
-local pool = require(game.ReplicatedStorage:WaitForChild("InputHandlerUtils"))
-
-return ECS.System.register({
-   name = 'InputMap',
-   step = 'processIn',
-   order = 5,
-   requireAll = {
-      PlayerComponent
-   },
-   update = function (time, world, dirty, entity, index, players)
-      local changed = false
-
-      if pool.FIRE then
-         world.set(entity, FiringComponent, { FiredAt = time.frame })
-         changed = true
+   UserInputService.InputBegan:Connect(function(input, gameProcessed)
+      if input.UserInputType == Enum.UserInputType.MouseButton1 then
+         pool.FIRE = true
       end
+   end)
 
-      pool.clear()
+   return pool
 
-      return changed
-   end
-})
-```
+   --------------------------------
 
-### process
-Executed 0 or more times per frame
+   -- InputMapSystem.lua
+   local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
+   local FiringComponent = require(game.ReplicatedStorage:WaitForChild("FiringComponent"))
 
-This step allows the execution of systems for game logic independent of Frame-Rate, obtaining determinism in the simulation of the rules of the game
+   local pool = require(game.ReplicatedStorage:WaitForChild("InputHandlerUtils"))
 
-Independent Frame-Rate games are games that run at the same speed, no matter the frame rate. For example, a game can run at 30 FPS (frames per second) on a slow computer and 60 FPS on a fast one. A game independent of the frame rate progresses at the same speed on both computers (the objects appear to move at the same speed). On the other hand, a frame rate-dependent game advances at half the speed of the slow computer, in a kind of slow motion effect (read more at https://gafferongames.com/post/fix_your_timestep/).
+   return ECS.System.register({
+      name = 'InputMap',
+      step = 'processIn',
+      order = 5,
+      requireAll = {
+         PlayerComponent
+      },
+      update = function (time, world, dirty, entity, index, players)
+         local changed = false
 
-Making frame rate independent games is important to ensure that your game is enjoyable and playable for everyone, no matter what type of computer they have. Games that slow down when the frame rate drops can seriously affect gameplay, making players frustrated and giving up! In addition, some systems have screens with different refresh rates, such as 120 Hz, so independence of the frame rate is important to ensure that the game does not accelerate and is impossibly fast on these devices.
+         if pool.FIRE then
+            world.set(entity, FiringComponent, { FiredAt = time.frame })
+            changed = true
+         end
 
-This step can also be used to perform some physical simulations that are not met (or should not be performed) by the roblox internal physics engine.
+         pool.clear()
 
-The standard frequency for executing this step in a world is 30Hz, which can be configured when creating a world.
+         return changed
+      end
+   })
+   ```
+- **process** - Executed 0 or more times per frame
 
-In the tutorial topic there is a demonstration of the use of interpolation for smooth rendering display even when updating the simulation in just 10Hz
+   This step allows the execution of systems for game logic independent of Frame-Rate, obtaining determinism in the simulation of the rules of the game
 
-### processOut
-Executed once for the frame
+   Independent Frame-Rate games are games that run at the same speed, no matter the frame rate. For example, a game can run at 30 FPS (frames per second) on a slow computer and 60 FPS on a fast one. A game independent of the frame rate progresses at the same speed on both computers (the objects appear to move at the same speed). On the other hand, a frame rate-dependent game advances at half the speed of the slow computer, in a kind of slow motion effect (read more at https://gafferongames.com/post/fix_your_timestep/)
 
-Use this step when your systems make changes to the components and these changes imply the behavior of the roblox internal physics simulations, therefore, the workspace needs to receive the update for the correct physics engine simulation
+   Making frame rate independent games is important to ensure that your game is enjoyable and playable for everyone, no matter what type of computer they have. Games that slow down when the frame rate drops can seriously affect gameplay, making players frustrated and giving up! In addition, some systems have screens with different refresh rates, such as 120 Hz, so independence of the frame rate is important to ensure that the game does not accelerate and is impossibly fast on these devices
 
-### transform
-Executed once per frame.
+   This step can also be used to perform some physical simulations that are not met (or should not be performed) by the roblox internal physics engine.
 
-Use this step for systems that react to changes made by the roblox physics engine or to perform transformations on game objects based on entity components (ECS to Workspace).
+   The standard frequency for executing this step in a world is 30Hz, which can be configured when creating a world
 
-Ex. In a soccer game, after running the physics engine, check if the ball touched the net, scoring a point
+   In the tutorial topic there is a demonstration of the use of interpolation for smooth rendering display even when updating the simulation in just 10Hz
 
-Ex2. In a game that is not based on the roblox physics engine, perform the interpolation of objects based on the positions calculated by the specialized systems that were executed in the PROCESS step
+- **processOut** - Executed once per frame
 
-### render
-Executed once per frame.
+   Use this step when your systems make changes to the components and these changes imply the behavior of the roblox internal physics simulations, therefore, the workspace needs to receive the update for the correct physics engine simulation
 
-Use this step to run systems that perform updates on things related to the camera and user interface.
+- **transform** - Executed once per frame
 
-IMPORTANT! Only run light systems here, as the screen design and the processing of the next frame will only happen after the completion of this step. If it is necessary to make transformations on world objects (interpolations, complex calculations), use the TRANSFORM step
+   Use this step for systems that react to changes made by the roblox physics engine or to perform transformations on game objects based on entity components (ECS to Workspace)
 
+   Ex. In a soccer game, after running the physics engine, check if the ball touched the net, scoring a point
 
+   Ex2. In a game that is not based on the roblox physics engine, perform the interpolation of objects based on the positions calculated by the specialized systems that were executed in the PROCESS step
 
-## roblox-ecs-lib
+- **render** - Executed once per frame
+
+   Use this step to run systems that perform updates on things related to the camera and user interface.
+
+   **IMPORTANT!** Only run light systems here, as the screen design and the processing of the next frame will only happen after the completion of this step. If it is necessary to make transformations on world objects (interpolations, complex calculations), use the TRANSFORM step
+
+## Roblox-ECS
+
+We will now know how to create Worlds, Components, Entities and Systems in Roblox-ECS
 
 ### World
 
-A ECS instance is used to describe you game world or **Entity System** if you will. The World is a container for Entities, Components, and Systems. You can optionally enter the list of systems you already want to add in the world, as well as change some settings in this world
+The World is a container for Entities, Components, and Systems.
+
+To create a new world, use the Roblox-ECS `newWorld` method.
 
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-local world = ECS.newWorld({SystemA, SystemB}, { frequence = 30, disableDefaultSystems = false, disableAutoUpdate = false})
+local world = ECS.newWorld(
+
+   -- [Optional] systems
+   {SystemA, SystemB}, 
+
+   -- [Optional] config
+   { 
+      frequence = 30, 
+      disableDefaultSystems = false, 
+      disableAutoUpdate = false
+   }
+)
 ```
 
 ### Component
 
-Represents the different facets of an entity, such as position, velocity, geometry, physics, and hit points for example. Components store only raw data for one aspect of the object, and how it interacts with the world.
+Represents the different facets of an entity, such as position, velocity, geometry, physics, and hit points for example. Components store only raw data for one aspect of the object, and how it interacts with the world
 
-In other words, the component labels the entity as having this particular aspect.
+In other words, the component labels the entity as having this particular aspect
 
-
-```lua
-local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
-
-return ECS.Component.register('Box')
-```
-
-The register method generates a new component type, which is a unique identifier. 
-
-#### Constructor
-
-If desired, you can pass a constructor to the component. The constructor will be invoked whenever the component is added to an entity
 
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.Component.register('Box', function( width, height, depth)
-   -- validations 
-   if width == nil then width = 1 end
+return ECS.Component.register(
+   -- name
+   'Box',
 
-   return {width, height, depth}
-end)
+   -- [Optional] constructor
+   function( width, height, depth)
+      if width == nil then width = 1 end
+
+      return {width, height, depth}
+   end,
+
+   -- [Optional] is tag? Defaults false
+   false
+)
 ```
 
-#### Tag component
+The register method generates a new component type, which is a unique identifier
 
-The tag component or "zero size component" is a special case where a component does not contain any data.
+- **constructor** - you can pass a constructor to the component register. The constructor will be invoked whenever the component is added to an entity
+- **Tag component** - The tag component or "zero size component" is a special case where a component does not contain any data. (Eg: **EnemyComponent** can indicate that an entity is an enemy, with no data, just a marker)
 
-Example: EnemyComponent can indicate that an entity is an enemy, with no data, just a marker
-
-```lua
-local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
-
-return ECS.Component.register('Enemy', nil, true)
-```
 
 ### Entity
 
-The entity is a general purpose object. An entity is what you use to describe an object in your game. e.g. a player, a gun, etc. It consists only of a unique ID and the list of components that make up this entity.
+The entity is a general purpose object. An entity is what you use to describe an object in your game. e.g. a player, a gun, etc. It consists only of a unique ID and the list of components that make up this entity
 
 ```lua
-local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
-
-local world = ECS.newWorld()
-
--- create a entity
 local cubeEntity = world.create()
-
 ```
 
 #### Adding and removing components 
 
-At any point in the entity's life cycle, you can add or remove components, using `set` and `remove` methods.
+At any point in the entity's life cycle, you can add or remove components, using `set` and `remove` methods
 
 ```lua
-
-local ColorComponent = require(game.ReplicatedStorage:WaitForChild("ColorComponent"))
-local BoxComponent = require(game.ReplicatedStorage:WaitForChild("BoxComponent"))
+local BoxComponent = require(path.to.BoxComponent)
+local ColorComponent = require(path.to.ColorComponent)
 
 -- add components to entity
-world.set(cubeEntity, ColorComponent, Color3.new(1, 0, 0))
 world.set(cubeEntity, BoxComponent, 10, 10, 10)
+world.set(cubeEntity, ColorComponent, Color3.new(1, 0, 0))
 
 
 -- remove component
@@ -256,7 +208,7 @@ world.remove(cubeEntity, BoxComponent)
 
 #### Accessing components data
 
-To gain access to the components data of an entity, simply use the `get` method of the `world`.
+To gain access to the components data of an entity, simply use the `get` method of the `world`
 
 ```lua
 local color = world.get(cubeEntity, ColorComponent)
@@ -268,12 +220,12 @@ To find out if an entity has a specific component, use the `has` method of the `
 
 ```lua
 if world.has(cubeEntity, ColorComponent) then
-   -- ...
+   -- your code
 end
 ```
 #### Remove an entity
 
-To remove an entity, use the "remove" method from the world, this time without informing the component.
+To remove an entity, use the "remove" method from the `world`, this time without informing the component.
 
 ```lua
 world.remove(cubeEntity)
@@ -283,49 +235,64 @@ world.remove(cubeEntity)
 
 ```lua
 if not world.alive(cubeEntity) then
-   -- ...
+   -- your code
 end
 ```
-
 
 ### System
 
 Represents the logic that transforms component data of an entity from its current state to its next state. A system runs on entities that have a specific set of component types.
 
-In **ecs-lib**, a system has a strong connection with component types. You must define which components this system works on in the `System` registry.
+In **Roblox-ECS**, a system has a strong connection with component types. You must define which components this system works on in the `System` registry.
 
 If the `update` method is implemented, it will be invoked respecting the order parameter within the configured step. Whenever an entity with the characteristics expected by this system is added on world, the system is informed via the `enter` method.
 
 ```lua
-local UserInputService = game:GetService("UserInputService")
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
 -- Components
-local Components = game.ReplicatedStorage:WaitForChild("Components")
-local FiringComponent = require(Components:WaitForChild("FiringComponent"))
-local WeaponComponent = require(Components:WaitForChild("WeaponComponent"))
+local FiringComponent = require(path.to.FiringComponent)
+local WeaponComponent = require(path.to.WeaponComponent)
 
 return ECS.System.register({
    name = 'PlayerShooting',
+
+   -- [Optional] defaults to transform
    step = 'processIn',
+
+   -- [Optional] Order of execution within that step. defaults to 50
+   order = 10,
+
+   -- requireAll or requireAny
    requireAll = {
       WeaponComponent
    },
+
+   --  [Optional] rejectAll or rejectAny
    rejectAny = {
       FiringComponent
    },
+
+   --  [Optional] Invoked when an entity with these characteristics appears
    enter = function(time, world, entity, index, weapons)
       -- on new entity
       print('New entity added ', entity)
       return false
    end,
+
+   --  [Optional] Invoked before executing the update method
    beforeUpdate = function(time, interpolation, world, system)
       -- called before update
       print(system.config.customConfig)
    end,
+
+   -- [Optional] Invoked for each entity that has the characteristics 
+   -- expected by this system
    update = function (time, world, dirty, entity, index, weapons)
 
-      local isFiring = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+      local isFiring = UserInputService:IsMouseButtonPressed(
+         Enum.UserInputType.MouseButton1
+      )
 
       if isFiring  then
          -- Add a firing component to all entities when mouse button is pressed
@@ -338,12 +305,12 @@ return ECS.System.register({
 })
 ```
 
-#### UPDATE method
+#### update
 
-The update method has the following signature:
+The `update` method has the following signature:
 
 ```lua
-update = function (time, world, dirty, entity, index, [component_A_data, component_N_data...])
+update = function (time, world, dirty, entity, index, [component_N_data...])
 
    local changed = false
 
@@ -357,7 +324,9 @@ end
 - **dirty** : Informs that the chunk (see performance topic) currently being processed has entities that have been modified since the last execution of this system
 - **entity** : Entity ID being processed
 - **index** : Index, in the chunk being processed, that has the data of the current entity.
-- **component_N_data** : The component arrays that are processed by this system. The ordering of the parameters follows the order defined in the `requireAll` or `requireAny` attributes of the system. As in this architecture you have direct access to the data of the components, it is necessary to inform on the return of the function if any changes were made to this data.
+- **component_N_data** : The component arrays that are processed by this system. The ordering of the parameters follows the order defined in the `requireAll` or `requireAny` attributes of the system.
+
+As in this architecture you have direct access to the data of the components, it is necessary to inform on the return of the function if any changes were made to this data.
 
 
 #### Adding to the world
@@ -365,51 +334,125 @@ end
 To add a system to the world, simply use the `addSystem` method. You can optionally change the order of execution and pass any configuration parameters that are expected by your system
 
 ```lua
-local PlayerShootingSystem = require(game.ReplicatedStorage:WaitForChild("PlayerShootingSystem"))
-
+local PlayerShootingSystem = require(path.to.PlayerShootingSystem)
 
 world.addSystem(PlayerShootingSystem, newOrder, { customConfig = 'Hello' })
 ```
+## Utility Systems and Components
 
-## Architectural decisions, Performance and Benchmarks
+Roblox-ECS provides (and already starts the world) with some basic systems and components, described below
 
-Taking into account that on the Roblox platform the development of the logic of our game is done in an interpreted language, roblox-ecs-lib seeks to guarantee the maximum performance of its systems.
-
-Without reinventing the wheel, roblox-ecs-lib mirrors the implementation of the Unity Engine in the following ways:
-
-1. Data oriented design
-2. Chunk data storage
-3. Efficient systems using version numbers
-
-On the other hand, roblox-ecs-lib does not bring to its implementation all that complexity that exists in the Unity ECS Engine for creating Components or Systems.
-
-The first reason that makes implementation simpler is that roblox-ecs-lib hides the complexities related to Archetypes, Chunks management and EntityManager from the developer.
-
-The second reason for simplification is the fact that Roblox's script execution is Single Thread (there are promises for parallel execution for 2021, let's wait). Although the Lua language allows the use of coroutines, these are only performaticas for processes with high Input / Output consumption, (such as http calls, disk access, etc.), for heavy processing there is no advantage in using coroutines.
-
-A third reason is the difference in the execution flow, which in Roblox is already predefined and roblox-ecs-lib makes use of these events, in its own way, as steps for running systems.
-
-### Data Oriented Design
-
-Data-oriented design is an approach to optimising programs by carefully considering the memory layout of data structures, and their implications for auto-vectorisation and use of the CPU cache (see [An introduction to Data Oriented Design with Rust](http://jamesmcm.github.io/blog/2020/07/25/intro-dod/)).
-
-Roblox-ecs-lib takes into account the organization of data and good practices in order to achieve the maximum performance possible in the execution of the systems. Despite running in interpreted language, many of the performance rules applicable to a C program also have an effect on a Lua program (even if in a smaller proportion). For more details see the scripts available in the `benchmark` directory
-
-**Benchmark: Struct of Arrays vs. Array of Structs**
-![](docs/bench_soa.png)
-
-### Chunk data storage
+### Components
+- _ECS.Util._**BasePartComponent**
+   - A component that facilitates access to BasePart
+- _ECS.Util._**PositionComponent**
+   - Component that works with a position `Vector3`
+- _ECS.Util._**RotationComponent**
+   - Rotational vectors _(right, up, look)_ that represents the object in the 3d world. To transform into a CFrame use `CFrame.fromMatrix(pos, rot[1], rot[2], rot[3] * -1)`
+- _ECS.Util._**PositionInterpolationComponent**
+   - Allows to register two last positions (`Vector3`) to allow interpolation
+- _ECS.Util._**RotationInterpolationComponent**
+   - Allows to record two last rotations (`rightVector`, `upVector`, `lookVector`) to allow interpolation
+- _ECS.Util._**BasePartToEntitySyncComponent**
+   - Tag, indicates that the `Entity` _(ECS)_ must be synchronized with the data from the `BasePart` _(workspace)_
+- _ECS.Util._**EntityToBasePartSyncComponent**
+   - Tag, indicates that the `BasePart` _(workspace)_ must be synchronized with the existing data in the `Entity` _(ECS)_
+- _ECS.Util._**MoveForwardComponent**
+   - Tag, indicates that the forward movement system must act on this entity
+- _ECS.Util._**MoveSpeedComponent**
+   - Allows you to define a movement speed for specialized handling systems
 
 
-see [The Chunk data structure in Unity](https://gametorrahod.com/the-chunk-data-structure/)
+### Systems
+- _ECS.Util._**BasePartToEntityProcessInSystem**
+   - Synchronizes the `Entity` _(ECS)_ with the data of a `BasePart` _(workspace)_ at the beginning of the `processIn` step
+   -  ```lua
+      step  = 'processIn',
+      order = 10,
+      requireAll = {
+         ECS.Util.BasePartComponent,
+         ECS.Util.PositionComponent,
+         ECS.Util.RotationComponent,
+         ECS.Util.BasePartToEntitySyncComponent
+      },
+      rejectAny = {
+         ECS.Util.PositionInterpolationComponent,
+         ECS.Util.RotationInterpolationComponent
+      }
+      ```
+- _ECS.Util._**BasePartToEntityTransformSystem**
+   - Synchronizes the `Entity` _(ECS)_ with the data of a `BasePart` _(workspace)_ at the beginning of the `transform` step _(After running the Roblox physics engine)_
+   -  ```lua
+      step  = 'transform',
+      order = 10,
+      requireAll = {
+         ECS.Util.BasePartComponent,
+         ECS.Util.PositionComponent,
+         ECS.Util.RotationComponent,
+         ECS.Util.BasePartToEntitySyncComponent
+      },
+      rejectAny = {
+         ECS.Util.PositionInterpolationComponent,
+         ECS.Util.RotationInterpolationComponent
+      }
+      ```
+- _ECS.Util._**EntityToBasePartProcessOutSystem**
+   - Synchronizes the `BasePart` _(workspace)_ with the `Entity` _(ECS)_ data at the end of the `processOut` step _(before Roblox's physics engine runs)_
+   -  ```lua
+      step  = 'processOut',
+      order = 100,
+      requireAll = {
+         ECS.Util.BasePartComponent,
+         ECS.Util.PositionComponent,
+         ECS.Util.RotationComponent,
+         ECS.Util.EntityToBasePartSyncComponent
+      }
+      ```
+- _ECS.Util._**EntityToBasePartTransformSystem**
+   - Synchronizes the `BasePart` _(workspace)_ with the `Entity` _(ECS)_ data at the end of the `transform` step _(last step of the current frame in multi-thread execution)_
+   -  ```lua
+      step  = 'transform',
+      order = 100,
+      requireAll = {
+         ECS.Util.BasePartComponent,
+         ECS.Util.PositionComponent,
+         ECS.Util.RotationComponent,
+         ECS.Util.EntityToBasePartSyncComponent
+      },
+      rejectAny = {
+         ECS.Util.PositionInterpolationComponent,
+         ECS.Util.RotationInterpolationComponent
+      }
+      ```
+- _ECS.Util._**EntityToBasePartInterpolationTransformSystem**
+   - Interpolates the position and rotation of a BasePart in the `transform` step. Allows the `process` step to be performed at low frequency with smooth rendering
+   -  ```lua
+      step  = 'transform',
+      order = 100,
+      requireAll = {
+         ECS.Util.BasePartComponent,
+         ECS.Util.PositionComponent,
+         ECS.Util.RotationComponent,
+         ECS.Util.PositionInterpolationComponent,
+         ECS.Util.RotationInterpolationComponent,
+         ECS.Util.EntityToBasePartSyncComponent
+      }
+      ```
+- _ECS.Util._**MoveForwardSystem**
+   - Simple forward movement system (position = position + speed * lookVector)
+   -  ```lua
+      step = 'process',
+      requireAll = {
+         ECS.Util.MoveSpeedComponent,
+         ECS.Util.PositionComponent,
+         ECS.Util.RotationComponent,
+         ECS.Util.MoveForwardComponent,
+      }
+      ```
 
-### Efficient systems using version numbers
+## Tutorial - Shooting Game
 
-![](docs/version.png)
-
-see [Designing an efficient system with version numbers])(https://gametorrahod.com/designing-an-efficient-system-with-version-numbers/)
-
-
+@TODO
 
 ## Feedback, Requests and Roadmap
 
@@ -425,7 +468,7 @@ You can contribute in many ways to this project.
 
 I'm not a native speaker of the English language, so you may have noticed a lot of grammar errors in this documentation.
 
-You can FORK this project and suggest improvements to this document (https://github.com/nidorx/ecs-lib/edit/master/README.md).
+You can FORK this project and suggest improvements to this document (https://github.com/nidorx/roblox-ecs/edit/master/README.md).
 
 If you find it more convenient, report a issue with the details on [GitHub issues].
 
@@ -437,7 +480,7 @@ Describe as much detail as possible to get the problem reproduced and eventually
 
 ### Fixing defects and adding improvements
 
-1. Fork it (<https://github.com/nidorx/ecs-lib/fork>)
+1. Fork it (<https://github.com/nidorx/roblox-ecs/fork>)
 2. Commit your changes (`git commit -am 'Add some fooBar'`)
 3. Push to your master branch (`git push`)
 4. Create a new Pull Request
@@ -447,7 +490,7 @@ Describe as much detail as possible to get the problem reproduced and eventually
 This code is distributed under the terms and conditions of the [MIT license](LICENSE).
 
 
-[GitHub issues]: https://github.com/nidorx/ecs-lib/issues
+[GitHub issues]: https://github.com/nidorx/roblox-ecs/issues
 
 
 

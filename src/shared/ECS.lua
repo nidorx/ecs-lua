@@ -1827,10 +1827,6 @@ function ECS.Util.NewBasePartEntity(world, part, syncBasePartToEntity, syncEntit
    return entityID
 end
 
--- Tag para sincronização
-ECS.Util.BasePartToEntitySyncComponent = Component.register('BasePartToEntitySync', nil, true)
-ECS.Util.EntityToBasePartSyncComponent = Component.register('EntityToBasePartSync', nil, true)
-
 -- A component that facilitates access to BasePart
 ECS.Util.BasePartComponent = Component.register('BasePart', function(object)
    if object == nil or object['IsA'] == nil or object:IsA('BasePart') == false then
@@ -1839,6 +1835,12 @@ ECS.Util.BasePartComponent = Component.register('BasePart', function(object)
 
    return object
 end)
+
+-- Tag, indicates that the entity must be synchronized with the data from the BasePart (workspace)
+ECS.Util.BasePartToEntitySyncComponent = Component.register('BasePartToEntitySync', nil, true)
+
+-- Tag, indicates that the BasePart (workspace) must be synchronized with the existing data in the Entity (ECS)
+ECS.Util.EntityToBasePartSyncComponent = Component.register('EntityToBasePartSync', nil, true)
 
 -- Component that works with a position Vector3
 ECS.Util.PositionComponent = Component.register('Position', function(position)
@@ -1853,6 +1855,7 @@ ECS.Util.PositionComponent = Component.register('Position', function(position)
    return position
 end)
 
+-- Allows to register two last positions (Vector3) to allow interpolation
 ECS.Util.PositionInterpolationComponent = Component.register('PositionInterpolation', function(position)
    if position ~= nil and typeof(position) ~= 'Vector3' then
       error("This component only works with Vector3 objects")
@@ -1911,6 +1914,7 @@ ECS.Util.RotationComponent = Component.register('Rotation', function(rightVector
    return {rightVector, upVector, lookVector}
 end)
 
+-- Allows to record two last rotations (rightVector, upVector, lookVector) to allow interpolation
 ECS.Util.RotationInterpolationComponent = Component.register('RotationInterpolation', function(rightVector, upVector, lookVector)
 
    if rightVector ~= nil and typeof(rightVector) ~= 'Vector3' then
@@ -1940,11 +1944,10 @@ ECS.Util.RotationInterpolationComponent = Component.register('RotationInterpolat
    return {{rightVector, upVector, lookVector}, {rightVector, upVector, lookVector}}
 end)
 
--- Moviment 
-ECS.Util.MoveForwardComponent = Component.register('MoveForward')
+-- Tag, indicates that the forward movement system must act on this entity
+ECS.Util.MoveForwardComponent = Component.register('MoveForward', nil, true)
 
--- This component requests that if another component is moving the PositionComponent
--- it should respect this value and move the position at the constant speed specified.
+-- Allows you to define a movement speed for specialized handling systems
 ECS.Util.MoveSpeedComponent = Component.register('MoveSpeed', function(speed)
    if speed == nil or typeof(speed) ~= 'number' then 
       error("This component only works with number value")
@@ -2103,7 +2106,8 @@ ECS.Util.EntityToBasePartTransformSystem = System.register({
    update = EntityToBasePartUpdate
 })
 
--- Interpolates BasePart to the latest Fixed Update transform
+-- Interpolates the position and rotation of a BasePart in the transform step.
+-- Allows the process step to be performed at low frequency and with smooth rendering
 local interpolationFactor = 1
 ECS.Util.EntityToBasePartInterpolationTransformSystem = System.register({
    name  = 'EntityToBasePartInterpolationTransform',
@@ -2173,8 +2177,7 @@ ECS.Util.EntityToBasePartInterpolationTransformSystem = System.register({
 })
 ----------------------------------------<<
 
--- Generic system that acts on entities that have basepart,
--- position and rotation (updates Position and rotation)
+-- Simple forward movement system (position = position + speed * lookVector)
 local moveForwardSpeedFactor = 1
 ECS.Util.MoveForwardSystem = System.register({
    name = 'MoveForward',
