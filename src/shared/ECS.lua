@@ -1117,7 +1117,7 @@ local function NewExecutionPlan(world, systems)
       end
    end
 
-   local onEnter = function(onEnterEntities, entityManager, timeProcess)
+   local onEnter = function(onEnterEntities, entityManager, time)
       -- increment Global System Version (GSV), before system update
       world.version = world.version + 1
 
@@ -1167,7 +1167,7 @@ local function NewExecutionPlan(world, systems)
             end
 
             -- onEnter: function(world, entity, index, [component_N_items...]) -> boolean
-            if system.onEnter(timeProcess, world, entityID, index, table.unpack(componentsData)) then
+            if system.onEnter(time, world, entityID, index, table.unpack(componentsData)) then
                -- If any system execution informs you that it has changed data in
                -- this chunk, it then performs the versioning of the chunk
                chunk.version = world.version
