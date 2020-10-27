@@ -1,9 +1,6 @@
-<div align="center">   
-    <img src="https://github.com/nidorx/ecs-lib/raw/master/logo.jpg" width="882" />
-</div>
+![](repository-open-graph.jpg)
 
 **roblox-ecs-lib** is a tiny and easy to use [ECS _(Entity Component System)_](https://en.wikipedia.org/wiki/Entity_component_system) library for game programming on the Roblox platform (It is written in Lua easy to adapt to other platforms)
-
 
 ## Table of contents
    * [Documentation](#documentation)
@@ -38,7 +35,6 @@
       * [Reporting Issues](#reporting-issues)
       * [Fixing defects and adding improvements](#fixing-defects-and-adding-improvements)
    * [License](#license)
-
 
 ## Documentation
 
