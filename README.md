@@ -1,4 +1,4 @@
-![](repository-open-graph.jpg)
+![](repository-open-graph.png)
 
 **Roblox-ECS** is a tiny and easy to use [ECS _(Entity Component System)_](https://en.wikipedia.org/wiki/Entity_component_system) engine for game development on the Roblox platform
 
@@ -121,6 +121,24 @@ In addition to defining the execution step, you can also define the execution or
    Use this step to run systems that perform updates on things related to the camera and user interface.
 
    **IMPORTANT!** Only run light systems here, as the screen design and the processing of the next frame will only happen after the completion of this step. If it is necessary to make transformations on world objects (interpolations, complex calculations), use the TRANSFORM step
+
+### Cleaning phase
+
+At the end of each step, as long as there is dirt, Roblox-ECS sanitizes the environment.
+
+In order to increase performance and maintain the determinism of the simulation, changes that modify the organization of the environment (change in chunks) are applied only in this phase.
+
+At this stage, the following procedures are performed, in that order
+
+1. **Removing entities**
+   - If during the execution of the step your system requests the removal of an entity from the world, Roblox-ECS clears the data of that entity in memory but does not immediately remove the entity from Chunk, it only marks the entity for removal, which happens at the moment current (cleaning phase)
+2. **Changing the entity's archetype**
+   - Entities are grouped in chunk based on their archetype (types of existing components). When you add or remove components from an entity you are modifying its archetype, which should modify the chunk of that entity. When this happens, Roblox-ECS starts to work internally with a copy of that entity, without removing it from the original chunk. This chunk change only occurs during this cleaning phase
+3. **Creation of new entities**
+   - When a new entity is added to the world by its systems, Roblox-ECS houses that entity in specific chunks of new entities, and only at that moment these entities are copied to their definitive chunk
+4. **Invocation of the systems "enter" method**
+   - After cleaning the environment, Roblox-ECS invokes the enter method for each entity that has been added (or that has undergone component changes and now matches the signature expected by some system)
+
 
 ## Roblox-ECS
 
@@ -327,6 +345,18 @@ end
 - **component_N_data** : The component arrays that are processed by this system. The ordering of the parameters follows the order defined in the `requireAll` or `requireAny` attributes of the system.
 
 As in this architecture you have direct access to the data of the components, it is necessary to inform on the return of the function if any changes were made to this data.
+
+##### Performance TIP, dirty version
+
+As with Unity ECS, Roblox-ECS systems are processed in batch.
+
+Component data is saved in chunks, which allows queries by entities with the expected characteristics to be made more quickly.
+
+In the `update` method, your system is able to know if this chunk being processed at the moment has entities that have changed, through the `dirty` parameter. Using this parameter you can skip the execution of your system when there has been no change since the last execution of your system for this specific chunk
+
+See that this parameter says only if there are any entities modified in this chunk, but it does not say exactly which entity is
+
+For more details, see the links [The Chunk data structure in Unity](https://gametorrahod.com/the-chunk-data-structure/) and [Designing an efficient system with version numbers](https://gametorrahod.com/designing-an-efficient-system-with-version-numbers/)
 
 
 #### Adding to the world

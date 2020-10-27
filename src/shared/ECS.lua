@@ -1638,7 +1638,9 @@ function ECS.newWorld(systems, config)
                delta          = timeDelta
             }, interpolation)
 
-            cleanupEnvironment()
+            while dirtyEnvironment do
+               cleanupEnvironment()
+            end
          else
 
             local timeProcessOldTmp = timeProcess
@@ -1677,7 +1679,10 @@ function ECS.newWorld(systems, config)
                   frame          = timeCurrentFrame,
                   delta          = timeDelta
                }, 1)
-               cleanupEnvironment()
+               
+               while dirtyEnvironment do
+                  cleanupEnvironment()
+               end
 
                nLoops   += 1
                timeProcess += proccessDeltaTime
@@ -1730,7 +1735,7 @@ function ECS.newWorld(systems, config)
       end
       entitiesUpdated = {}
 
-      -- 3: Add new entities              
+      -- 3: Add new entities     
       for entityID, V in pairs(entitiesNew) do
          entityManager:set(entityID, entitiesArchetypes[entityID])        
          entityManager:setData(entityID,  entityManagerNew:getData(entityID))
