@@ -1,17 +1,11 @@
 
+
 -- Services
 local RunService = game:GetService('RunService')
 
 --[[
 
-   https://www.youtube.com/watch?v=W3aieHjyNvw&ab_channel=GDC
-   https://developer.roblox.com/en-us/articles/task-scheduler
-   https://medium.com/@timonpost/game-networking-1-interval-and-ticks-b39bb51ccca9
-   http://clintonbrennan.com/2013/12/lockstep-implementation-in-unity3d/
-   https://www.youtube.com/watch?v=W5lUCeAu_2k&feature=emb_logo&ab_channel=Battle%28non%29sense
-   https://www.raywenderlich.com/7630142-entity-component-system-for-unity-getting-started
-   https://levelup.gitconnected.com/a-simple-guide-to-get-started-with-unity-ecs-b0e6a036e707
-   https://www.raywenderlich.com/7630142-entity-component-system-for-unity-getting-started
+   
 
    Remover closures, transformar funções em locais
 

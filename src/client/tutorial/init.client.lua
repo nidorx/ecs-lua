@@ -7,7 +7,8 @@ local Character	= Player.Character
 local Humanoid    = Character:WaitForChild("Humanoid")
 local Camera 	   = workspace.CurrentCamera
 
-
+--[[
+   
 -- services
 local TweenService   = game:GetService("TweenService")
 local ECS            = require(game.ReplicatedStorage:WaitForChild("ECS"))
@@ -58,3 +59,5 @@ local bulletSpawnEntity = ECS.Util.NewBasePartEntity(world, BulletSpawnPart, tru
 
 -- Mark as weapon
 world.set(bulletSpawnEntity, WeaponComponent)
+
+]]

@@ -371,6 +371,46 @@ local PlayerShootingSystem = require(game.ReplicatedStorage:WaitForChild("Player
 world.addSystem(PlayerShootingSystem, newOrder, { customConfig = 'Hello' })
 ```
 
+## Architectural decisions, Performance and Benchmarks
+
+Taking into account that on the Roblox platform the development of the logic of our game is done in an interpreted language, roblox-ecs-lib seeks to guarantee the maximum performance of its systems.
+
+Without reinventing the wheel, roblox-ecs-lib mirrors the implementation of the Unity Engine in the following ways:
+
+1. Data oriented design
+2. Chunk data storage
+3. Efficient systems using version numbers
+
+On the other hand, roblox-ecs-lib does not bring to its implementation all that complexity that exists in the Unity ECS Engine for creating Components or Systems.
+
+The first reason that makes implementation simpler is that roblox-ecs-lib hides the complexities related to Archetypes, Chunks management and EntityManager from the developer.
+
+The second reason for simplification is the fact that Roblox's script execution is Single Thread (there are promises for parallel execution for 2021, let's wait). Although the Lua language allows the use of coroutines, these are only performaticas for processes with high Input / Output consumption, (such as http calls, disk access, etc.), for heavy processing there is no advantage in using coroutines.
+
+A third reason is the difference in the execution flow, which in Roblox is already predefined and roblox-ecs-lib makes use of these events, in its own way, as steps for running systems.
+
+### Data Oriented Design
+
+Data-oriented design is an approach to optimising programs by carefully considering the memory layout of data structures, and their implications for auto-vectorisation and use of the CPU cache (see [An introduction to Data Oriented Design with Rust](http://jamesmcm.github.io/blog/2020/07/25/intro-dod/)).
+
+Roblox-ecs-lib takes into account the organization of data and good practices in order to achieve the maximum performance possible in the execution of the systems. Despite running in interpreted language, many of the performance rules applicable to a C program also have an effect on a Lua program (even if in a smaller proportion). For more details see the scripts available in the `benchmark` directory
+
+**Benchmark: Struct of Arrays vs. Array of Structs**
+![](docs/bench_soa.png)
+
+### Chunk data storage
+
+
+see [The Chunk data structure in Unity](https://gametorrahod.com/the-chunk-data-structure/)
+
+### Efficient systems using version numbers
+
+![](docs/version.png)
+
+see [Designing an efficient system with version numbers])(https://gametorrahod.com/designing-an-efficient-system-with-version-numbers/)
+
+
+
 ## Feedback, Requests and Roadmap
 
 Please use [GitHub issues] for feedback, questions or comments.
@@ -408,3 +448,15 @@ This code is distributed under the terms and conditions of the [MIT license](LIC
 
 
 [GitHub issues]: https://github.com/nidorx/ecs-lib/issues
+
+
+
+
+https://www.youtube.com/watch?v=W3aieHjyNvw&ab_channel=GDC
+https://developer.roblox.com/en-us/articles/task-scheduler
+https://medium.com/@timonpost/game-networking-1-interval-and-ticks-b39bb51ccca9
+http://clintonbrennan.com/2013/12/lockstep-implementation-in-unity3d/
+https://www.youtube.com/watch?v=W5lUCeAu_2k&feature=emb_logo&ab_channel=Battle%28non%29sense
+https://www.raywenderlich.com/7630142-entity-component-system-for-unity-getting-started
+https://levelup.gitconnected.com/a-simple-guide-to-get-started-with-unity-ecs-b0e6a036e707
+https://www.raywenderlich.com/7630142-entity-component-system-for-unity-getting-started
