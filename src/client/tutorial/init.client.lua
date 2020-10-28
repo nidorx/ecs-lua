@@ -19,7 +19,7 @@ local PlayerShootingSystem = require(Systems:WaitForChild("PlayerShootingSystem"
 local CleanupFiringSystem  = require(Systems:WaitForChild("CleanupFiringSystem"))
 
 -- Our world
-local world = ECS.newWorld(nil, { frequence = 10 })
+local world = ECS.newWorld(nil, { frequency = 10 })
 world.addSystem(FiringSystem)
 world.addSystem(PlayerShootingSystem)
 world.addSystem(CleanupFiringSystem)

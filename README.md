@@ -169,7 +169,7 @@ local world = ECS.newWorld(
 
    -- [Optional] config
    { 
-      frequence = 30, 
+      frequency = 30, 
       disableDefaultSystems = false, 
       disableAutoUpdate = false
    }
@@ -825,7 +825,7 @@ Another problem is if you increase the frequency of the simulation on your serve
 Just for the sake of experimentation, we will increase the frequency of execution of our world. Change the `tutorial` script to the following world boot configuration:
 
 ```lua
-local world = ECS.newWorld(nil, { frequence = 60 })
+local world = ECS.newWorld(nil, { frequency = 60 })
 ```
 
 ![](docs/tut_03.gif)
@@ -853,7 +853,7 @@ We will then make the changes to verify the use of interpolation and decrease th
 In the `tutorial` script, we will decrease the execution frequency of the world, say for 10Hz
 
 ```lua
-local world = ECS.newWorld(nil, { frequence = 10 })
+local world = ECS.newWorld(nil, { frequency = 10 })
 ```
 
 ![](docs/tut_04.gif)

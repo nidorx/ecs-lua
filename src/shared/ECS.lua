@@ -1,10 +1,36 @@
 --[[
-   Roblox-ECS v1.0
+	Roblox-ECS v1.1
 
-   Roblox-ECS is a tiny and easy to use ECS (Entity Component System)
-   engine for game development on the Roblox platform
+	Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
+   game development on the Roblox platform
 
-   https://github.com/nidorx/roblox-ecs
+	https://github.com/nidorx/roblox-ecs
+
+	Discussions about this script are at https://devforum.roblox.com/t/841175
+
+	------------------------------------------------------------------------------
+
+	MIT License
+
+	Copyright (c) 2020 Alex Rodin
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
 ]]
 
 -- Services
@@ -1168,19 +1194,19 @@ function ECS.newWorld(systems, config)
       config = {}
    end
 
-   -- frequence: number,
+   -- frequency: number,
    -- The maximum times per second this system should be updated. Defaults 30
-   if config.frequence == nil then
-      config.frequence = 30
+   if config.frequency == nil then
+      config.frequency = 30
    end
 
-   local safeFrequency  = math.round(math.abs(config.frequence)/5)*5
+   local safeFrequency  = math.round(math.abs(config.frequency)/5)*5
    if safeFrequency < 5 then
       safeFrequency = 5
    end
 
-   if config.frequence ~= safeFrequency then
-      config.frequence = safeFrequency
+   if config.frequency ~= safeFrequency then
+      config.frequency = safeFrequency
       print(string.format(">>> ATTENTION! The execution frequency of world has been changed to %d <<<", safeFrequency))
    end
    
@@ -1192,7 +1218,7 @@ function ECS.newWorld(systems, config)
    -- System execution plan
    local updateExecPlan, enterExecPlan
 
-   local proccessDeltaTime = 1000/config.frequence/1000
+   local proccessDeltaTime = 1000/config.frequency/1000
 
    -- INTERPOLATION: The proportion of time since the previous transform relative to proccessDeltaTime
    local interpolation = 1
@@ -1267,7 +1293,7 @@ function ECS.newWorld(systems, config)
 	world = {
 
       version = 0,
-      frequence = config.frequence,
+      frequency = config.frequency,
 
       --[[
          Create a new entity
@@ -2160,7 +2186,7 @@ ECS.Util.MoveForwardSystem = System.register({
       ECS.Util.MoveForwardComponent,
    },
    beforeUpdate = function(time, interpolation, world, system)
-      moveForwardSpeedFactor = world.frequence/60
+      moveForwardSpeedFactor = world.frequency/60
    end,
    update = function (time, world, dirty, entity, index, speeds, positions, rotations, forwards)
 
@@ -2172,7 +2198,7 @@ ECS.Util.MoveForwardSystem = System.register({
 
             local speed = speeds[index]
             if speed ~= nil then
-               -- speed/2 = 1 studs per second (120 = frequence)
+               -- speed/2 = 1 studs per second (120 = frequency)
                positions[index] = position + speed/moveForwardSpeedFactor  * rotation[3]
                return true
             end
