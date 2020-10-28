@@ -2,6 +2,9 @@
 
 **Roblox-ECS** is a tiny and easy to use [ECS _(Entity Component System)_](https://en.wikipedia.org/wiki/Entity_component_system) engine for game development on the Roblox platform
 
+
+**TLDR;** There is a very cool tutorial below in the content that shows you in practice how to create a small shooting system
+
 Entity-Component-System (ECS) is a distributed and compositional architectural design pattern that is mostly used in game development. It enables flexible decoupling of domain-specific behaviour, which overcomes many of the drawbacks of traditional object-oriented inheritance
 
 For further details:
