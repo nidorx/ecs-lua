@@ -1,5 +1,7 @@
 repeat wait() until game:GetService('Players').LocalPlayer.Character
 
+local DISABLED = true
+
 --[[
    Benchmark, data oriented design
 ]]
@@ -11,6 +13,10 @@ repeat wait() until game:GetService('Players').LocalPlayer.Character
 local case = require(script:WaitForChild('soa'))
 
 spawn(function()
+
+   if DISABLED then
+      return
+   end
 
    wait(5)
 

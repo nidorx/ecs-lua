@@ -1,17 +1,12 @@
 repeat wait() until game.Players.LocalPlayer.Character
 
--- Player, Workspace & Environment
 local Players 	   = game:GetService("Players")
 local Player 	   = Players.LocalPlayer
 local Character	= Player.Character
-local Humanoid    = Character:WaitForChild("Humanoid")
-local Camera 	   = workspace.CurrentCamera
 
---[[
    
 -- services
-local TweenService   = game:GetService("TweenService")
-local ECS            = require(game.ReplicatedStorage:WaitForChild("ECS"))
+local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
 -- Components
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
@@ -23,8 +18,13 @@ local FiringSystem         = require(Systems:WaitForChild("FiringSystem"))
 local PlayerShootingSystem = require(Systems:WaitForChild("PlayerShootingSystem"))
 local CleanupFiringSystem  = require(Systems:WaitForChild("CleanupFiringSystem"))
 
+--[[
 -- Our world
 local world = ECS.newWorld(nil, { disableDefaultSystems = false, frequence = 20 })
+]]
+
+-- Our world
+local world = ECS.newWorld(nil, { frequence = 10 })
 world.addSystem(FiringSystem)
 world.addSystem(PlayerShootingSystem)
 world.addSystem(CleanupFiringSystem)
@@ -42,13 +42,14 @@ local weldWeapon = Instance.new("WeldConstraint", weapon)
 weldWeapon.Part0 = weapon
 weldWeapon.Part1 = rightHand
 
+-- weapone bullet spawn
 local BulletSpawnPart   = Instance.new("Part", weapon)
 BulletSpawnPart.CanCollide = false
 BulletSpawnPart.CastShadow = false
 BulletSpawnPart.Color      = Color3.fromRGB(255, 255, 0)
 BulletSpawnPart.Size       = Vector3.new(0.6, 0.6, 0.6)
 BulletSpawnPart.Shape      = Enum.PartType.Ball
-BulletSpawnPart.CFrame     = (weapon.CFrame + Vector3.new(0, 0, -1)) * CFrame.Angles(math.rad(180), 0, 0)
+BulletSpawnPart.CFrame     = weapon.CFrame + Vector3.new(0, 0, -1)
 
 local weldBulletSpawn = Instance.new("WeldConstraint", BulletSpawnPart)
 weldBulletSpawn.Part0 = BulletSpawnPart
@@ -59,5 +60,3 @@ local bulletSpawnEntity = ECS.Util.NewBasePartEntity(world, BulletSpawnPart, tru
 
 -- Mark as weapon
 world.set(bulletSpawnEntity, WeaponComponent)
-
-]]

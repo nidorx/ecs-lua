@@ -1,13 +1,9 @@
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.Component.register('Firing', function(data)
-   if data == nil then
-      error("Data is required")
+return ECS.Component.register('Firing', function(firedAt)
+   if firedAt == nil then
+      error("firedAt is required")
    end
 
-   if data.FiredAt == nil then
-      error("FiredAt is required")
-   end
-
-   return data
+   return firedAt
 end)
