@@ -1,3 +1,11 @@
+--[[
+   Roblox-ECS v1.0
+
+   Roblox-ECS is a tiny and easy to use ECS (Entity Component System)
+   engine for game development on the Roblox platform
+
+   https://github.com/nidorx/roblox-ecs
+]]
 
 -- Services
 local RunService = game:GetService('RunService')
@@ -332,7 +340,7 @@ local Component  = {
 
       Returns component ID
    ]]
-   register = function(name, constructor, isTag) : number
+   register = function(name, constructor, isTag)
 
       if name == nil then
          error('Component name is required for registration')
@@ -1098,49 +1106,44 @@ local function NewExecutionPlan(world, systems)
 
          -- get the chunk and index of this entity
          local chunk, index = entityManager:getEntityChunk(entityID)
-         if chunk == nil then
-            continue
-         end
-
-         local buffers = chunk.buffers
+         if chunk ~= nil then
+            local buffers = chunk.buffers
             
-         for j, system in pairs(onEnterSystems) do
+            for j, system in pairs(onEnterSystems) do
 
-            -- system does not apply to the archetype of that entity
-            if not system.filter(chunk.archetype.components) then
-               continue
-            end
+               -- system does not apply to the archetype of that entity
+               if system.filter(chunk.archetype.components) then
+                  
+                  -- what components the system expects
+                  local whatComponents = system.requireAllOriginal
+                  if whatComponents == nil then
+                     whatComponents = system.requireAnyOriginal
+                  end
 
-            -- what components the system expects
-            local whatComponents = system.requireAllOriginal
-            if whatComponents == nil then
-               whatComponents = system.requireAnyOriginal
-            end
+                  if systemsFilters[system.id] == nil then
+                     systemsFilters[system.id] = componentFilter(nil, newComponents, nil, nil)
+                  end
 
-            if systemsFilters[system.id] == nil then
-               systemsFilters[system.id] = componentFilter(nil, newComponents, nil, nil)
-            end
+                  -- components received are not in the list of components expected by the system
+                  if systemsFilters[system.id](whatComponents) then
+                     local componentsData = table.create(table.getn(whatComponents))
 
-            -- components received are not in the list of components expected by the system
-            if not systemsFilters[system.id](whatComponents) then
-               continue
-            end
-            
-            local componentsData = table.create(table.getn(whatComponents))
+                     for l, compID in ipairs(whatComponents) do
+                        if buffers[compID] ~= nil then
+                           componentsData[l] = buffers[compID]
+                        else
+                           componentsData[l] = {}
+                        end
+                     end
 
-            for l, compID in ipairs(whatComponents) do
-               if buffers[compID] ~= nil then
-                  componentsData[l] = buffers[compID]
-               else
-                  componentsData[l] = {}
+                     -- onEnter: function(world, entity, index, [component_N_items...]) -> boolean
+                     if system.onEnter(time, world, entityID, index, table.unpack(componentsData)) then
+                        -- If any system execution informs you that it has changed data in
+                        -- this chunk, it then performs the versioning of the chunk
+                        chunk.version = world.version
+                     end
+                  end
                end
-            end
-
-            -- onEnter: function(world, entity, index, [component_N_items...]) -> boolean
-            if system.onEnter(time, world, entityID, index, table.unpack(componentsData)) then
-               -- If any system execution informs you that it has changed data in
-               -- this chunk, it then performs the versioning of the chunk
-               chunk.version = world.version
             end
          end
       end
@@ -1628,7 +1631,7 @@ function ECS.newWorld(systems, config)
             -- Fixed time is updated in regular intervals (equal to fixedDeltaTime) until time property is reached.
             while timeProcess < timeCurrentFrame and nLoops < maxSkipFrames do
 
-               debugF('Update')
+               -- debugF('Update')
 
                updated = true
                -- need to update execution plan?
@@ -1647,8 +1650,8 @@ function ECS.newWorld(systems, config)
                   cleanupEnvironmentFn()
                end
 
-               nLoops   += 1
-               timeProcess += proccessDeltaTime
+               nLoops      = nLoops + 1
+               timeProcess = timeProcess + proccessDeltaTime
             end
 
             if updated then
