@@ -18,11 +18,6 @@ local FiringSystem         = require(Systems:WaitForChild("FiringSystem"))
 local PlayerShootingSystem = require(Systems:WaitForChild("PlayerShootingSystem"))
 local CleanupFiringSystem  = require(Systems:WaitForChild("CleanupFiringSystem"))
 
---[[
--- Our world
-local world = ECS.newWorld(nil, { disableDefaultSystems = false, frequence = 20 })
-]]
-
 -- Our world
 local world = ECS.newWorld(nil, { frequence = 10 })
 world.addSystem(FiringSystem)
@@ -42,7 +37,7 @@ local weldWeapon = Instance.new("WeldConstraint", weapon)
 weldWeapon.Part0 = weapon
 weldWeapon.Part1 = rightHand
 
--- weapone bullet spawn
+-- weapon bullet spawn
 local BulletSpawnPart   = Instance.new("Part", weapon)
 BulletSpawnPart.CanCollide = false
 BulletSpawnPart.CastShadow = false
