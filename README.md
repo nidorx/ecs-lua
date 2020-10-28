@@ -142,8 +142,8 @@ At this stage, the following procedures are performed, in that order
    - Entities are grouped in chunk based on their archetype (types of existing components). When you add or remove components from an entity you are modifying its archetype, which should modify the chunk of that entity. When this happens, Roblox-ECS starts to work internally with a copy of that entity, without removing it from the original chunk. This chunk change only occurs during this cleaning phase
 3. **Creation of new entities**
    - When a new entity is added to the world by its systems, Roblox-ECS houses that entity in specific chunks of new entities, and only at that moment these entities are copied to their definitive chunk
-4. **Invocation of the systems "enter" method**
-   - After cleaning the environment, Roblox-ECS invokes the enter method for each entity that has been added (or that has undergone component changes and now matches the signature expected by some system)
+4. **Invocation of the systems "onEnter" method**
+   - After cleaning the environment, Roblox-ECS invokes the `onEnter` method for each entity that has been added (or that has undergone component changes and now matches the signature expected by some system)
 
 
 ## Roblox-ECS
@@ -269,7 +269,7 @@ Represents the logic that transforms component data of an entity from its curren
 
 In **Roblox-ECS**, a system has a strong connection with component types. You must define which components this system works on in the `System` registry.
 
-If the `update` method is implemented, it will be invoked respecting the order parameter within the configured step. Whenever an entity with the characteristics expected by this system is added on world, the system is informed via the `enter` method.
+If the `update` method is implemented, it will be invoked respecting the order parameter within the configured step. Whenever an entity with the characteristics expected by this system is added on world, the system is informed via the `onEnter` method.
 
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
@@ -298,7 +298,7 @@ return ECS.System.register({
    },
 
    --  [Optional] Invoked when an entity with these characteristics appears
-   enter = function(time, world, entity, index, weapons)
+   onEnter = function(time, world, entity, index, weapons)
       -- on new entity
       print('New entity added ', entity)
       return false
@@ -490,10 +490,9 @@ Roblox-ECS provides (and already starts the world) with some basic systems and c
 
 In this topic, we will see how to implement a simple shooting game, inspired by the [Unity ECS Tutorial - Player Shooting](https://www.youtube.com/watch?v=OQgmIHKXAdg&ab_channel=InfallibleCode)
 
+The first step in using Roblox-ECS is to install the script. In roblox studio, in the Toolbox search field, type "Roblox-ECS". Install the script in `ReplicatedStorage> ECS`.
 
-O primeiro passo para utilizar o Roblox-ECS é fazer a instalação do script. No roblox studio, no campo de busca do Toolbox digite "Roblox-ECS". Faça a instalação do script em `ReplicatedStorage > ECS`.
-
-Agora, vamos dar uma arma para o nosso personagem, vamos fazer isso via código. Crie um `LocalScript` com nome `tutorial` em `StarterPlayer > StarterCharacterScripts` e adicione o código abaixo. 
+Now, let's give our character a gun, let's do it via code. Create a `LocalScript` named `tutorial` in `StarterPlayer > StarterCharacterScripts` and add the code below.
 
  ```lua
 repeat wait() until game.Players.LocalPlayer.Character
@@ -502,8 +501,6 @@ local Players 	   = game:GetService("Players")
 local Player 	   = Players.LocalPlayer
 local Character	= Player.Character
 
-   
--- services
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
 -- Our weapon
@@ -519,7 +516,7 @@ local weldWeapon = Instance.new("WeldConstraint", weapon)
 weldWeapon.Part0 = weapon
 weldWeapon.Part1 = rightHand
 
--- weapone bullet spawn
+-- weapon bullet spawn
 local BulletSpawnPart   = Instance.new("Part", weapon)
 BulletSpawnPart.CanCollide = false
 BulletSpawnPart.CastShadow = false
@@ -533,44 +530,34 @@ weldBulletSpawn.Part0 = BulletSpawnPart
 weldBulletSpawn.Part1 = weapon
 ```
 
-No código acima estamos apenas adicionando uma arma (um cubo) nas mãos do personagem. Fazemos a ligação usando um `WeldConstraint`, adicionamos também um ponto de referencia para usarmos como posição inicial dos projéteis (`BulletSpawnPart`) e ajustamos o CFrame do mesmo para ficar no lado correto da arma (frente). 
+In the code above we are just adding a weapon _(a cube)_ in the character's hands. We make the connection using a `WeldConstraint`, we also add a reference point to use as the initial position of the projectiles (`BulletSpawnPart`) and adjust the CFrame of the same to be on the correct side of the weapon (front).
 
-Se executar o código agora você verá algo parecido com a imagem abaixo.
+If you run the code now you will see something like the image below.
 
 ![](docs/tut_01.gif)
 
-Tudo ok, agora, para termos acesso à posição do `BulletSpawnPart` dentro de um mundo ECS, precisamos obter a Posição e Rotação do objeto a partir do Workspace e salvar como componente de uma entidade no mundo ECS. 
+All ok, now, to have access to the position of `BulletSpawnPart` within an ECS world, we need to obtain the Position and Rotation of the object from the Workspace and save it as a component of an entity in the ECS world
 
-o Roblox-ECS já disponibiliza um método genérico e alguns sistemas e componentes que já faz essa sincronização para nós, vamos então usar para criar o nosso `bulletEntity`. 
+Roblox-ECS already offers a generic method, some components and systems that already do this synchronization, so let's use it to create our `bulletEntity`
 
-No script acima, antes da criação da nossa arma, vamos definir o nosso mundo ECS, e abaixo, no final do script, vamos utilizar os componentes utilitários do Roblox-ECS para sincronizar a posição e rotação do `BulletSpawnPart`
+In the script above, before the creation of our weapon, we will define our ECS world, and below, at the end of the script, we will use the Roblox-ECS utility components to synchronize the `BulletSpawnPart` position and rotation
 
  ```lua
- --- requires ...
-
--- Our world
 local world = ECS.newWorld()
 
 
--- Our weapon
----local rightHand = Ch...
-
-
--- Create our entity
 local bulletSpawnEntity = ECS.Util.NewBasePartEntity(world, BulletSpawnPart, true, false)
 ```
 
-O método `ECS.Util.NewBasePartEntity` é um facilitador que adiciona os componentes BasePart, Position, Rotation e também pode adicionar as tag de interpolação e sincronia, ele tem a seguinte assinatura: `function ECS.Util.NewBasePartEntity(world, part, syncBasePartToEntity, syncEntityToBasePart, interpolate)`. 
+The `ECS.Util.NewBasePartEntity` method is a facilitator that adds the `ECS.Util.BasePartComponent`, `ECS.Util.PositionComponent`, `ECS.Util.RotationComponent` components and can also add interpolation and sync tags, it has the following signature: `function ECS.Util.NewBasePartEntity(world, part, syncBasePartToEntity, syncEntityToBasePart, interpolate)`.
 
-No nosso caso, nós só desejamos que ele realize a sincronia dos dados do BasePart (workspace) para a nossa Entidade (ECS).
+In our case, we only want it to sync the data from `BasePart` _(workspace)_ to our `Entity` _(ECS)_.
 
-Se executar o projeto agora, você não verá nenhuma mudança visual, pois os sistemas que estão executando nessa instancia do mundo não tem nenhuma logica que modifica o comportamento do nosso jogo ainda.
+If you run the project now, you won't see any visual changes, because the systems that are running in this instance of the world don't have any logic that changes the behavior of our game yet.
 
-**WeaponComponent**
+Now let's create our first component. Thinking about a solution that can be used both on the client and on the server, we will create our components and systems in the `ReplicatedStorage > tutorial` directory. Within this directory we can create two folders, `component` and` system`.
 
-Agora vamos criar o nosso primeiro componente. Pensando em uma solução que pode ser usada tanto no cliente como no servidor, vamos criar nosssos componentes e sistemas no diretório `ReplicatedStorage > tutorial`. Dentro deste diretório, podemos criar duas pastas `component` e `system`.
-
-Em `ReplicatedStorage > tutorial > component`, cria um `ModuleScript` com nome `WeaponComponent` e o conteúdo abaixo.
+In `ReplicatedStorage > tutorial > component`, create a `ModuleScript` with the name `WeaponComponent` and the contents below
 
  ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
@@ -578,27 +565,27 @@ local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 return ECS.Component.register('Weapon')
 ```
  
-Só isso, não existe lógica, nem tipagem de dados, o Roblox-ECS não faz validação dos dados manipulados pelos sistemas, é de responsabilidade do desenvolvedor se atentar para as validações de tipo.
+That’s it, there’s no logic, no data typing
 
-Agora, no nossso script `tutorial`, vamos adicionar essa caracteristíca na nossa entidade. Altere o script adicionando os trechos abaixo.
+> **Note** Roblox-ECS does not validate the data handled by the systems, it is the responsibility of the developer to pay attention to the validations
+
+Now, in our `tutorial` script, we will add this feature to our entity. Change the script by adding the code snippets below.
 
 ```lua
--- Components
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
 local WeaponComponent = require(Components:WaitForChild("WeaponComponent"))
 
 
--- Mark as weapon
 world.set(bulletSpawnEntity, WeaponComponent)
 ```
 
-Ok. Nós criamos o mundo, criamos uma entidade, adicionamos características mas nada aconteceu na tela ainda. Isso porque nós só adicionamos características (componentes) em nossa entidade, nós ainda não definimos nenhum comportamento que deve ser executado para essas características.
+Ok. We created the world, we created an entity, we added features but nothing happened on the screen yet. This is because we only add features (components) to our entity, we have not yet defined any behavior that must be performed for those features
 
-Com nossos componentes e entidade definida, é hora de criar o nosso primeiro sistema, vamos chama-lo `PlayerShootingSystem`.
+With our components and entity defined, it's time to create our first system, let's call it `PlayerShootingSystem`
 
-Para melhor separação das responsabilidades, vamos dividir o nosso sistema de arma em dois sistemas distintos, o primeiro, `FiringSystem` será responsável apenas por criar novos projéteis no workpace sempre que necessário, já o `PlayerShootingSystem`, que estamos criando agora,  será o responsável por notificar o `FiringSystem` quando for o tempo de criar novos projéteis. Ele faz isso monitorando as entradas do usuário e sempre que o botão do mouse for acionado, adiciona um Tag Component na nossa entidade, indicando que um projétil deve ser criado.
+For a better separation of responsibilities, we will divide our weapon system into two distinct systems, the first, `FiringSystem` will be responsible only for creating new projectiles in the workpace whenever necessary. The `PlayerShootingSystem`, which we are creating now, will be the responsible for notifying the `FiringSystem` when it is time to create new projectiles. It does this by monitoring user input and whenever the mouse button is clicked, it adds a tag component to our entity, indicating that a projectile must be created
 
-Antes de seguir em frente, vamos criar este componente agora. Crie um `ModuleScript` em `ReplicatedStorage > tutorial > component` com nome `FiringComponent` e adicione o conteúdo abaixo
+Before moving on, let's create this component now. Create a `ModuleScript` in` ReplicatedStorage > tutorial > component` with the name `FiringComponent` and add the content below
 
  ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
@@ -606,13 +593,12 @@ local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 return ECS.Component.register('Firing', nil, true)
 ```
 
-Agora, voltando para o nosso sistema, crie um `ModuleScript` em `ReplicatedStorage > tutorial > system` com nome `PlayerShootingSystem` e o conteúdo abaixo. Este sistema é responsável por adicionar a tag `FiringComponent` na entidade que possui o componente `WeaponComponent` sempre que o botão do mouse é pressionado. Perceba que quando nós realizamos alteração nos dados sendo processados no momento (entidade ou array de dados), é necessário que nosso método `update` retorne `true`, para que o Roblox-ECS possa informar aos outros sistemas que este chunk sofreu alteração por meio do parametro `dirty`.
+Now, going back to our system, create a `ModuleScript` in `ReplicatedStorage > tutorial > system` with the name `PlayerShootingSystem` and the content below. This system is responsible for adding the `FiringComponent` tag to the entity that has the `WeaponComponent` component whenever the mouse button is pressed. Realize that when we make changes to the data currently being processed (entity or data array), it is necessary that our `update` method returns `true`, so that Roblox-ECS can inform other systems that this chunk has been changed, using dirty parameter
 
  ```lua
 local UserInputService = game:GetService("UserInputService")
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
--- Components
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 local WeaponComponent = require(Components:WaitForChild("WeaponComponent"))
@@ -638,19 +624,18 @@ return ECS.System.register({
 })
 ```
 
-Dando continuidade, vamos agora criar o sistema responsável por criar os projéteis sempre que a nossa entidade receber a tag `FiringComponent`, este será o `FiringSystem`
+Continuing, we will now create the system responsible for creating the projectiles whenever our entity receives the tag `FiringComponent`, this will be the `FiringSystem`
 
-Crie um `ModuleScript` em `ReplicatedStorage > tutorial > system` com nome `FiringSystem` e o conteúdo abaixo. Este sistema é responsáel apenas por criar objetos 3D na cena que representam os nosso projéteis. Perceba que esse sistema não possui o método `update`, pois ele só está interessando em saber quando uma entidade com as características esperadas surgir no mundo.
+Create a `ModuleScript` in `ReplicatedStorage > tutorial > system` with the name `FiringSystem` and the contents below. This system is responsible only for creating 3D objects in the scene that represent our projectiles. Realize that this system does not have the `update` method, as it is only interested in knowing when an entity with the expected characteristics appears in the world.
 
-Para posicionar corretamente os nosso projéteis, este sistema utiliza os dados provenientes dos componente `ECS.Util.PositionComponent` e `ECS.Util.RotationComponent`, que foram adicionados lá encima pelo método utilitário `ECS.Util.NewBasePartEntity` durante a criação da nossa entidade. Para que o nosso projétil possa movimentar-se, nós adicionamos nele os componentes `ECS.Util.MoveForwardComponent` e `ECS.Util.MoveSpeedComponent` que são usados pelo sistema `ECS.Util.MoveForwardSystem` (adicionado automaticamente na construção do mundo). 
+To correctly position our projectiles, this system uses data from the `ECS.Util.PositionComponent` and `ECS.Util.RotationComponent` components, which were added up there by the `ECS.Util.NewBasePartEntity` method during the creation of our entity. In order for our projectile to move, we added the `ECS.Util.MoveForwardComponent` and `ECS.Util.MoveSpeedComponent` components that are used by the `ECS.Util.MoveForwardSystem` system (Automatically added when creating the world)
 
-Perceba também que o nosso sistema não fez nenhuma modificação no `chunk` atual nem mesmo na entidade, portanto sempre retorna `false`
+Also note that our system has not made any changes to the current `chunk` or even the entity, so it always returns `false`
 
 ```lua
 
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
--- Components
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 
@@ -668,7 +653,6 @@ return ECS.System.register({
       local rotation = rotations[index]
       
       if position ~= nil and rotation ~= nil then
-
          -- can be made in a utility script, or clone a preexistece model
          local bulletPart = Instance.new("Part")
          bulletPart.Anchored     = true
@@ -680,7 +664,7 @@ return ECS.System.register({
          bulletPart.CFrame       = CFrame.fromMatrix(position, rotation[1], rotation[2], rotation[3] * -1)
          bulletPart.Parent       = game.Workspace
 
-         local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true, true)
+         local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true)
          world.set(bulletEntity, ECS.Util.MoveForwardComponent)
          world.set(bulletEntity, ECS.Util.MoveSpeedComponent, 0.1)
       end
@@ -690,30 +674,28 @@ return ECS.System.register({
 })
 ```
 
-Agora, vamos adicionar nossos sistemas no mundo. Altere o script `tutorial` adicionando os trechos abaixo.
+Now, let's add our systems to the world. Change the `tutorial` script by adding the codes below.
 
 ```lua
--- Systems
 local Systems = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("system")
 local FiringSystem         = require(Systems:WaitForChild("FiringSystem"))
 local PlayerShootingSystem = require(Systems:WaitForChild("PlayerShootingSystem"))
-
--- ...
 
 world.addSystem(FiringSystem)
 world.addSystem(PlayerShootingSystem)
 ```
 
-Ok, vamos testar o nosso jogo.
+Okay, let's test our game.
 
+![](docs/tut_01a.gif)
 
-Perfeito, tudo correu completamente bem, exceto por uma coisa. Nós só consguimos atirar uma única vez. Vamos entender o que há de errado:
+Perfect, everything went completely well, except for one thing. We can only shoot once. Let's understand what's wrong:
 
-O nosso `FiringSystem` está realizando o comportamento esperado, criando projéteis sempre que uma entidade com aquelas características aparece no mundo, o `PlayerShootingSystem` também está realizando o que esperamos, sempre que usamos o clique do mouse ele define que a nossa entidade possui o `FiringComponent`, porém, essa caracteristica `FiringComponent`, nunca deixa de existir, está sendo adicionada somente uma única vez, portanto o método `enter` do `FiringSystem`  só é invocado uma única vez. Portanto, precisamos remover o `FiringComponent` da entidade após algum período de tempo para que o método `enter` possa ser acionado mais vezes.
+Our `FiringSystem` is carrying out the expected behavior, creating projectiles whenever an entity with those characteristics appears in the world, `PlayerShootingSystem` is also carrying out what we expect, whenever we use the mouse click it defines that our entity has the `FiringComponent`, however, this `FiringComponent` feature never ceases to exist, it is being added only once, so the `onEnter` method of `FiringSystem` is only invoked once. Therefore, we need to remove the entity's `FiringComponent` after some time so that the `onEnter` method can be triggered more often.
 
-Vamos fazer isso, vamos criar um novo sistema, o nome dele será `CleanupFiringSystem`, ele será responsáel por remover o componente `FiringComponent` da nossa entidade após um período de tempo. Para que o novo `CleanupFiringSystem` possa realizar seu trabalho, nós precisamos alterar o `FiringComponent`, ele deixará de ser um Tag Componente e passará a salvar o instante de sua criação, para que o `CleanupFiringSystem` possa validar essa data e decidir se vai remove-lo da entidade ou não. 
+To do this we will create a new system, its name will be `CleanupFiringSystem`, it will be responsible for removing the `FiringComponent` component from our entity after a period of time. In order for `CleanupFiringSystem` to do its job we need to change `FiringComponent`. It will stop being a component tag and start saving the moment of its creation, so that `CleanupFiringSystem` can validate this time and decide if it will remove it from the entity or not
 
-Vamos alterar o script  `ReplicatedStorage > tutorial > component > FiringComponent.lua` para o conteúdo abaixo. O nosso componente agora tem um construtor, usado para validar os dados de entrada e deixou de ser um Tag Component.
+Let's change the `ReplicatedStorage > tutorial > component > FiringComponent.lua` script to the content below. Our component now has a constructor, used to validate the input data and is no longer a tag component
 
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
@@ -727,7 +709,7 @@ return ECS.Component.register('Firing', function(firedAt)
 end)
 ```
 
-Se você executar o código agora e tentar atirar, verá o seguinte erro na saída do Roblox Studio:
+If you run the code now and try to shoot, you will see the following error in Roblox Studio's output:
 
 ```log
 21:21:39.043 - ReplicatedStorage.tutorial.component.FiringComponent:5: firedAt is required
@@ -741,9 +723,9 @@ Se você executar o código agora e tentar atirar, verá o seguinte erro na saí
 21:21:39.047 - Stack End
 ```
 
-Veja que o `PlayerShootingSystem` está tentando adicionar um `FiringComponent` na nossa entidade mas o construtor realizou a validação e impediu a criação da entidade. 
+Note that `PlayerShootingSystem` is trying to add a `FiringComponent` to our entity, but the constructor method performed the validation and prevented the creation of the entity
 
-Vamos atualizar o script `ReplicatedStorage > tutorial > system > PlayerShootingSystem.lua` com a alteração abaixo, ao adicionar o componente, vamos passar para o construtor o instant do frame atual (`time.frame`)
+We will update the `ReplicatedStorage > tutorial > system > PlayerShootingSystem.lua` script with the change below, when adding the component, we will pass to the constructor the current frame instant (`time.frame`)
 
 ```lua
 if isFiring  then
@@ -752,10 +734,9 @@ if isFiring  then
 end
 ```
 
-Ok, agora que estamos iniciando corretamente nosso componente com um instante para validação, vamos criar o nosso `CleanupFiringSystem`
+Ok, now that we are correctly starting `FiringComponent` with a moment for validation, we will create `CleanupFiringSystem`
 
-Crie um `ModuleScript` em `ReplicatedStorage > tutorial > system` com nome `CleanupFiringSystem` e o conteúdo abaixo. Este sistema é responsáel por remover o componente `FiringComponent` após algum intervalo de tempo. Isso permitirá que o método `enter` do `FiringSystem` seja invocado mais vezes. Na nossa implementação, definimos que após `0.5` segundos a informação de que o disparo foi realizado é removido da nossa entidade, permitindo que seja disparado novamente na sequencia.
-
+Create a `ModuleScript` in `ReplicatedStorage > tutorial > system` with the name `CleanupFiringSystem` and the contents below. This system is responsible for removing the `FiringComponent` component after some time. This will allow the `FiringSystem` `onEnter` method to be invoked more often. In our implementation, we define that after `0.5` seconds the information that the shot was taken is removed from our entity, allowing it to be fired again in the sequence
 
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
@@ -787,27 +768,24 @@ return ECS.System.register({
 })
 ```
 
-Vamos alterar também script `tutorial` para adicionar o novo sistema no mundo.
+We will also change the `tutorial` script to add the new system to the world
 
 ```lua
--- Systems
 local CleanupFiringSystem  = require(Systems:WaitForChild("CleanupFiringSystem"))
 
--- ...
 
 world.addSystem(CleanupFiringSystem)
 ```
 
-Ok, agora nós conseguimos atirar mais de uma vez, porém, temos ainda outro problema. Perceba que ao pressionar e ficar segurado o botão do mouse a nossa arma não realiza mais disparos, ela só está disparando se eu clicar, esperar `0.5` segundos e clicar novamente. 
+OK, now we can shoot more than once, however, we still have another problem. Realize that by pressing and holding the mouse button, our weapon does not fire anymore, it is only firing if I click, wait `0.5` seconds and click again
 
-Isso está acontecendo pois o método `update` do `PlayerShootingSystem` está sendo invocado a cada novo frame, atualizando a data do `FiringComponent` da nossa entidade a todo instante (`world.set(entity, FiringComponent, time.frame)`), isso faz com que a lógica do `CleanupFiringSystem` não seja validada, visto que o tempo transcorrido (`firedAt`) nunca seja superior a 0.5 segundos. Nós precisamos filtrar esse comportamento.
+This is happening because the `update` method of `PlayerShootingSystem` is being invoked with each new frame, updating the time of the `FiringComponent` of our entity in each update (`world.set(entity, FiringComponent, time.frame)`) , this means that the logic of `CleanupFiringSystem` is not validated, since the elapsed time (`firedAt`) never exceeds 0.5 seconds. We need to filter this behavior.
 
-Vamos alterar o `PlayerShootingSystem` para obtermos o comportamento desejado. Queremos que ele adicione o `FiringComponent` em qualquer entidade que ainda não possua esse componente, desse modo, ele nunca fará a alteraçao nos dados desse componente. 
+Let's change the `PlayerShootingSystem` to obtain the desired behavior. We want him to add the `FiringComponent` to any entity that does not yet have this component, so he will never make changes to the data for that component.
 
-Vamos alterar o script  `ReplicatedStorage > tutorial > system > PlayerShootingSystem.lua` com o trecho de código abaixo, aplicando um filtro de componentes, que no momento só possui `requireAll`, vamos adicionar tambem o campo `rejectAny`, para que o método `update` ignore entidades que já possuam este componente.
+Let's change the script `ReplicatedStorage > tutorial > system > PlayerShootingSystem.lua` with the code snippet below, applying a component filter, which at the moment only has `requireAll`, we will also add the `rejectAny` field, so that the method `Update` ignore entities that already have this component.
 
 ```lua
--- ... register
 requireAll = {
    WeaponComponent
 },
@@ -815,32 +793,33 @@ rejectAny = {
    FiringComponent
 }
 ```
-Pronto, agora temos o comportamento esperado, ao pressionar e segurar o botão esquerdo do mouse a nossa arma dispara diversos projéteis respeitando o intervalo definido no `CleanupFiringSystem`. 
+
+Okay, now we have the expected behavior, when pressing and holding the left mouse button, our weapon fires several projectiles respecting the interval defined in `CleanupFiringSystem`
 
 ![](docs/tut_02.gif)
 
-Porém, você percebeu uma coisa: A animação do nosso projétil está péssima, os projéteis estão teleportando de um ponto para outro, a animação do movimento não está suave como esperado.
+However, you noticed one thing: The animation of our projectile is terrible, the projectiles are teleporting from one point to another, the animation of the movement is not smooth as expected
 
-Isso acontece devido ao **Fixed Timestep Jitter**, vamos entender no proximo tópico
+This happens due to **Fixed Timestep Jitter**, we will understand in the next topic
 
 
 ### Fixed Timestep Jitter
 
-No nosso projeto, o sistema resposável pelo movimento dos nossos projéteis é o `ECS.Util.MoveForwardSystem`. O método `update` desse sistema é invocado 30 vezes por segundo, que é a frequencia padrão de atualização para o passo `process` do Roblox-ECS. Portanto, apesar de o nosso jogo estar sendo renderizado a mais de 60 FPS, a simulação realizada por esse sistema está limitado, causando esse efeito indesejado na animação.
+In our project, the system responsible for the movement of our projectiles is `ECS.Util.MoveForwardSystem`. The `update` method of this system is invoked 30 times per second, which is the standard update frequency for the `process` step of Roblox-ECS. Therefore, even though our game is being rendered at more than 60FPS, the simulation performed by this system is limited, causing this unwanted effect in the animation
 
-Para contornar o problema nós temos duas soluções:
+To work around the problem we have two solutions:
 
-**1 - Aumentar a frequencia da nossa simulação**
+**1 - Increase the frequency of our simulation**
 
-À primeira vista, esse parece ser a solução mais adequada, basta aumentar a frequencia da nossa simulação para 60, 90 ou 120Hz e nossa animação ficará suave. 
+At first glance, this seems to be the most suitable solution, just increase the frequency of our simulation to 60, 90 or 120Hz and our animation will be smooth
 
-Do ponto de vista técnico isso é verdade, a nossa animação correrá suave, mas em contrapartida nós estaremos gastando muito mais recurso computacional para executar todos os sistemas que são programados para atualizar no passo `process`, e isso não é bom. 
+From a technical point of view this is true, our animation will run smoothly, but in return we will be spending a lot more computational resources to run all the systems that are programmed to update in the `process` step, and that is not a good thing
 
-Além de gastar recurso de processamento desnecessário, isso aumentará o consumo de bateria de dispositivos móveis e, se o dispositivo (seja computador ou celular) do jogador não tiver poder de processamento suficiente a simulação pesada irá causar a queda de FPS na renderização.
+In addition to spending unnecessary processing resources, this will increase the battery consumption of mobile devices and, if the player's device (whether computer or cell phone) does not have enough processing power the heavy simulation will cause the FPS to drop in rendering
 
-Outro ponto de problema é se você aumentar muito a frequencia da simulação no seu servidor, que além de tem poder de processamento limitado precisa processar dados de todos os jogadores simultaneamente, diminuindo a qualidade geral do seu jogo.
+Another problem is if you increase the frequency of the simulation on your server, which in addition to having limited processing power needs to process data from all players simultaneously, decreasing the overall quality of your game
 
-Apenas para fins de experimentação, vamos aumentar a frequencia de execução do nosso mundo. Altere o scrip `tutorial` para a seguinte configuração de inicialização do mundo:
+Just for the sake of experimentation, we will increase the frequency of execution of our world. Change the `tutorial` script to the following world boot configuration:
 
 ```lua
 local world = ECS.newWorld(nil, { frequence = 60 })
@@ -848,27 +827,27 @@ local world = ECS.newWorld(nil, { frequence = 60 })
 
 ![](docs/tut_03.gif)
 
-Pronto, você já percebeu que a animação dos nossos projéteis ficaram suaves, mas isso à um custo computacional caro (e desnecessário no nosso caso). Essa alteração faz com que o passo `process` do mundo seja executado a frequencia de 60Hz (60 vezes por segundo)
+Okay, you already noticed that the animation of our projectiles were smooth, but this at an expensive computational cost (and unnecessary in our case). This change causes the `process` step of the world to be performed at a frequency of 60Hz (60 times per second)
 
-Essa não é a melhor solução, vamos usar algo mais eficiente
+This is not the best solution, let's use something more efficient
 
-**2 - Realizar Interpolação**
+**2 - Do Interpolation**
 
-Interpolação é uma técnica que permite, a partir de dois valores (A e B), calcular um terceiro valor (C) que represente uma razão entre A e B.
+Interpolation is a technique that allows, from two values ​​(A and B), to calculate a third value (C) that represents a ratio between A and B.
 
-Exemplo: 
-   - Se A = 0 e B = 10, para a razão de 0.5 o valor de C = 5 (C está entre A e B exatamente 0.5) 
-   - Se a nossa razão fosse 0.95, o valor de C seria 9.5
+Example:
+   - If `A = 0` and `B = 10`, for the ratio of `0.5` the value of `C = 5` _(C is between A and B exactly 0.5)_
+   - If our ratio were `0.95`, the `C` value would be `9.5`
 
-No desenvolvimento de jogos, usamos a interpolação para calcular uma posição espacial (Vector3), ou uma rotação que esteja entre dois valores calculados anteriormente (posição do frame anterior e posição da última simulação) usando o tempo transcorrido como fator (se a simulação demora 0.24 segundos e já transcorreu 0.12 segundos desde a ultima simulação, o fator é ~0.5).
+In game development, we use interpolation to calculate a spatial position _(`Vector3`)_, or a rotation that is between two previously calculated values ​​_(position of the previous frame and position of the last simulation)_ using the elapsed time as a factor _(if the simulation takes 0.24 seconds and 0.12 seconds has passed since the last simulation, the factor is ~ 0.5)_
 
-Com isso, nós podemos reduzir a frequencia da simulação (cálculo pesado), salvar as duas últimas posições/rotações e aplicar a interpolação a medida que vamos renderizar a tela (que está rodando em uma frequencia maior, 60FPS por exemplo) 
+With that, we can reduce the frequency of the simulation _(heavy calculation)_, save the last two positions/rotations and apply the interpolation as we render the screen, in our case, doing this in the `transform` step _(which is running at a higher frequency, 60FPS for example)_
 
-O Roblox-ECS já disponibiliza o fator para interpolação (interpolationAlpha) para ser usado nos sistemas que desejam aplicar a interpolação. Ele também já disponibiliza um sistema de sincronização de dados entre a posição e rotação da entidade para atualizar o `BasePart` por meio dessa interpolação.
+Roblox-ECS already offers the interpolation factor _(interpolationAlpha)_ to be used in systems that wish to apply the interpolation. It also already provides a data synchronization system between the position and rotation of the entity to update the `BasePart` through this interpolation.
 
-Vamos então fazer as alterações para verificar o uso da interpolação e diminuir o custo de processamento do nosso jogo.
+We will then make the changes to verify the use of interpolation and decrease the cost of processing our game.
 
-No script `tutorial`, vamos dimiuir a frequencia de execução do mundo, digamos que para 10Hz
+In the `tutorial` script, we will decrease the execution frequency of the world, say for 10Hz
 
 ```lua
 local world = ECS.newWorld(nil, { frequence = 10 })
@@ -876,34 +855,30 @@ local world = ECS.newWorld(nil, { frequence = 10 })
 
 ![](docs/tut_04.gif)
 
-Se você executar o jogo agora verá que a animação está horrível, vamos agora informar que desejamos utilizar a interpolação nas entidades dos nossos projéteis.
+If you run the game now you will see that the animation is horrible, we will now inform you that we want to use interpolation in the entities of our projectiles.
 
-Altere o script  `ReplicatedStorage > tutorial > system > FiringSystem.lua`, na linha onde está inicializando o nosso bulletEntity, com uso do método utilitário, modifique de 
+Change the `ReplicatedStorage > tutorial > system > FiringSystem.lua` script, in the line where our bulletEntity is initializing, using the utility method, modify it
 
 ```lua
 local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true)
 ```
 
-para
+to
 
 ```lua
 local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true, true)
 ```
 
-Informando que desejamos uma entidade que recebe as tags e componentes usadas pelos sistema se sincronização interpolada.
+Informing that we want an entity that receives the tags and components used by the system if interpolated synchronization.
 
-O resultado, como esperado, é uma animação totalmente lisa e utilizando o mínimo de recursos da CPU no passo `transform` (apenas 10 vezes por segundo)
+The result, as expected, is a totally smooth animation and using minimal CPU resources in the `process` step (only 10 times per second)
 
 ![](docs/tut_05.gif)
 
-
-Para mais informações sobre estes conceitos, consulte
+And we come to the end of the tutorial, for more information on these concepts, see
 - [Game Loop by Robert Nystrom](http://gameprogrammingpatterns.com/game-loop.html)
 - [Fix Your Timestep! by Glenn Fiedler](https://gafferongames.com/post/fix_your_timestep/)
 - [The Game Loop By Gilles Bellot](https://bell0bytes.eu/the-game-loop/)
-
-
-@TODO
 
 ## Feedback, Requests and Roadmap
 

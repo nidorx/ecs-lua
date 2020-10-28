@@ -1,24 +1,16 @@
 
-
 -- Services
 local RunService = game:GetService('RunService')
 
 --[[
-
-   
-
-   Remover closures, transformar funções em locais
-
-   @TODO
+  @TODO
       - Table pool (avoid GC)
       - System readonly? Paralel execution
       - Debugging?
-      - Fazer benchmark usando cubos do Unity (Local Script vs ECS implementation)
+      - Benchmark (Local Script vs ECS implementation)
       - Basic physics (managed)
-      - TagComponents
       - SharedComponent?
 ]]
-
 
 local function NOW()
 	return DateTime.now().UnixTimestampMillis
@@ -43,13 +35,13 @@ local function debugF(message)
 end
 
 -- precision
-local EPSILON = 0.0000000001
+local EPSILON = 0.000000001
 
 local function floatEQ(n0, n1)
    if n0 == n1 then
       return true
    end
-   
+
    return math.abs(n1 - n0) < EPSILON
 end
 
@@ -144,7 +136,7 @@ local function componentFilter(requireAll, requireAny, rejectAll, rejectAny)
             FILTER_CACHE_RESULT[components] = cacheResultG
          end
 
-         -- verifica se essas combinações existem nesse array de componentes
+         -- check if these combinations exist in this component array
          if rejectAnyKey ~= '_' then
             if cacheResultG.rejectAny[rejectAnyKey] or cacheResultG.rejectAll[rejectAnyKey] then
                cache[components] = false
@@ -233,14 +225,9 @@ end
 
 --[[
     Archetype:
-      Uma entidade possui um Archetype (definido pelos componentes que possui). Um arquetipo é um 
-      identificador para cada combinção única de componentes. Um arquétipo é singleton
-
-      O ECS usa os arqétipos para agrupar entidades que possuem a mesma estrutura juntas. 
-      O ECS guarda estes componentes em blocos de memória chamados "chunks". Um  chunk só guarda 
-      entidades que possue a mesma estrutura
-
-      chunkCount: Numero de chunks usados para guardar entitades deste tipo 
+      An entity has an Archetype (defined by the components it has).
+      An archetype is an identifier for each unique combination of components. 
+      An archetype is singleton
 ]]
 local ARCHETYPES = {}
 
@@ -251,10 +238,10 @@ local Archetype  = {}
 Archetype.__index = Archetype
 
 --[[
-   Obtém a referencia para um arquétipo a partir dos componentes informados
+   Gets the reference to an archetype from the informed components
 
    Params
-      components Array<number> IDs dos componentes que definem esse arquétipo
+      components Array<number> Component IDs that define this archetype
 ]]
 function Archetype.get(components)
 
@@ -275,15 +262,14 @@ function Archetype.get(components)
 end
 
 --[[
-   Obtém a referência para um arquétipo que possua os componentes atuais + o component informado
+   Gets the reference to an archetype that has the current components + the informed component
 ]]
 function Archetype:with(component)
    if table.find(self.components, component) ~= nil then
-      -- componente existe nessa lista, retorna o próprio arquétipo
+      -- component exists in that list, returns the archetype itself
       return self
    end
 
-   -- obtém a referencia para 
    local len = table.getn(self.components)
    local newCoomponents = table.create(len + 1)
    newCoomponents[0] = component
@@ -292,15 +278,14 @@ function Archetype:with(component)
 end
 
 --[[
-   Obtém a referência para um arquétipo que possua os componentes atuais - o component informado
+   Gets the reference to an archetype that has the current components - the informed component
 ]]
 function Archetype:without(component)
    if table.find(self.components, component) == nil then
-      -- componente não existe nessa lista, retorna o próprio arquétipo
+      -- component does not exist in this list, returns the archetype itself
       return self
    end
 
-   -- obtém a referencia para
    local len = table.getn(self.components)
    local newCoomponents = table.create(len - 1)
    local a = 1
@@ -314,7 +299,7 @@ function Archetype:without(component)
    return Archetype.get(newCoomponents)
 end
 
--- Arquétipo generico, para entidades que não possuem componentes
+-- Generic archetype, for entities that do not have components
 local ARCHETYPE_EMPTY = Archetype.get({})
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -334,11 +319,16 @@ local Component  = {
       Register a new component
 
       Params:
-         name {String} Unique identifier for this component
+         name {String} 
+            Unique identifier for this component
 
-         constructor {Function} Allow you to validate or parse data
+         constructor {Function}
+            Allow you to validate or parse data
 
-         @TODO: shared  {Boolean} (see https://docs.unity3d.com/Packages/com.unity.entities@0.7/manual/shared_component_data.html)
+         isTag {Boolean}
+
+         @TODO: shared  {Boolean}
+            see https://docs.unity3d.com/Packages/com.unity.entities@0.7/manual/shared_component_data.html
 
       Returns component ID
    ]]
@@ -377,7 +367,7 @@ local Component  = {
    end
 }
 
--- identificador especial usado para identificar a entidade dona de um dado
+-- Special component used to identify the entity that owns a data
 local ENTITY_ID_KEY = Component.register('_ECS_ENTITY_ID_')
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -391,7 +381,7 @@ local CHUNK_SIZE = 500
 --[[
    A block of memory containing the components for entities sharing the same Archetype
 
-   Um chunk é uma base de dados burra, apenas organiza em memória os componentes
+   A chunk is a dumb database, it only organizes the components in memory
 ]]
 function  Chunk.new(world, archetype)
 
@@ -418,7 +408,7 @@ function  Chunk.new(world, archetype)
 end
 
 --[[
-   Realiza a limpeza de um índice específico dentro deste chunk
+   Performs cleaning of a specific index within this chunk
 ]]
 function  Chunk:clear(index)
    local buffers = self.buffers
@@ -428,14 +418,14 @@ function  Chunk:clear(index)
 end
 
 --[[
-   Obtém o valor de um componente para um indice específico
+   Gets the value of a component for a specific index
 
    Params
       index {number}
-         posição no chunk
+         chunk position
 
       component {number}
-         Id do component
+         Component Id
 ]]
 function Chunk:getValue(index, component)
    local buffers = self.buffers
@@ -446,17 +436,17 @@ function Chunk:getValue(index, component)
 end
 
 --[[
-   Obtém o valor de um componente para um indice específico
+   Sets the value of a component to a specific index
 
    Params
       index {number}
-         posição no chunk
+         chunk position
 
       component {number}
-         Id do component
+         Component Id
 
       value {any}
-         Valor a ser persistido em memória
+         Value to be persisted in memory
 ]]
 function Chunk:setValue(index, component, value)
    local buffers = self.buffers
@@ -467,7 +457,7 @@ function Chunk:setValue(index, component, value)
 end
 
 --[[
-   Obtém todos os dados do buffer em um índice especifico
+   Get all buffer data at a specific index
 ]]
 function Chunk:get(index)
    local data = {}
@@ -479,9 +469,9 @@ function Chunk:get(index)
 end
 
 --[[
-   Seta todos os dados do buffer para o índice específico. 
+   Sets all buffer data to the specific index.
 
-   Copia apenas os dados dos componentes existentes neste chunk (portanto, ignora outros registros)
+   Copies only the data of the components existing in this chunk (therefore, ignores other records)
 ]]
 function Chunk:set(index, data)
    local buffers = self.buffers
@@ -493,7 +483,7 @@ function Chunk:set(index, data)
 end
 
 --[[
-   Define o entity a qual esse dado pertence
+   Defines the entity to which this data belongs
 ]]
 function Chunk:setEntityId(index, entity)
    self.buffers[ENTITY_ID_KEY][index] = entity
@@ -505,7 +495,7 @@ end
 ----------------------------------------------------------------------------------------------------------------------
 
 --[[
-   Responsável por gerenciar as entidades e chunks de um world.
+   Responsible for managing the entities and chunks of a world
 ]]
 local EntityManager  = {}
 EntityManager.__index = EntityManager
@@ -517,7 +507,7 @@ function  EntityManager.new(world)
       COUNT = 0,
 
       --[[
-         Qual é o índice local dessa entidade (para acesso aos outros valores)
+         What is the local index of that entity (for access to other values)
 
          @Type { [entityID] : { archetype: string, chunk: number, chunkIndex: number } }
       ]]
@@ -526,11 +516,12 @@ function  EntityManager.new(world)
       --[[
          { 
             [archetypeID] : {
-               -- Qual é o índice do útimo chunk livre para uso?
+               -- The number of entities currently stored
+               count: number
+               -- What is the index of the last free chunk to use?
                lastChunk:number,
-               -- Dentro do chunk disponível, qual é o próximo indice disponível para alocação?
-               -- The number of entities currently stored in the chunk.
-               nextChunkIndex:number,
+               -- Within the available chunk, what is the next available index for allocation?          
+               nextChunkIndex:number,               
                chunks: Array<Chunk>}
             }
       ]]
@@ -539,19 +530,19 @@ function  EntityManager.new(world)
 end
 
 --[[
-   Reserva o espaço pra uma entidade em um chunk desse arquétipo
+   Reserve space for an entity in a chunk of this archetype
 
-   É importante que alterações no EntityManager principal só ocorra após 
-      a execução do frame corrente (update de scripts), pois alguns scripts executam em paralelo,
-      deste modo pode apontar para índice errado durante a execução
-   
-   A estratégia para evitar estes problemas é que o mundo possua 2 EntityManagers distintos,
-      1 - EntityManager Principal
-         Onde estão registrados as entidaes que serão atualizados no update dos scripts
-      2 - EntityManager Novo
-         Onde o sistema registra as novas entidades criadas durante a execução dos scripts. 
-         Após a finalização da execução atual, copia-se todas essas novas entidades para o 
-         EntityManager principal
+   It is important that changes in the main EntityManager only occur after the
+   execution of the current frame (script update), as some scripts run in parallel,
+   so it can point to the wrong index during execution
+
+   The strategy to avoid these problems is that the world has 2 different EntityManagers,
+      1 - Primary EntityManager
+         Where are registered the entities that will be updated in the update of the scripts
+      2 - Secondary EntityManager
+         Where the system registers the new entities created during the execution of the
+         scripts. After completing the current run, all these new entities are copied to
+         the primary EntityManager
 ]]
 function  EntityManager:set(entityID, archetype)
 
@@ -560,24 +551,24 @@ function  EntityManager:set(entityID, archetype)
 
    local oldEntityData = nil
 
-   -- entidade já está registrada neste entity manager?
+   -- entity is already registered with this entity manager?
    if entity ~= nil then
       if entity.archetype == archetypeID then
-         -- entidade já está registrada no arquétipo informado, nada a fazer
+         -- entity is already registered in the informed archetype, nothing to do
          return
       end
 
-      -- Arquétipo diferente
-      -- faz backup dos dados antigos
+      --Different archetype
+      -- back up old data
       oldEntityData = self.ARCHETYPES[entity.archetype].chunks[entity.chunk]:get(entity.chunkIndex)
 
-      -- remove entidade do arquétipo (e consequentemente chunk) atual
+      -- removes entity from the current (and hence chunk) archetype
       self:remove(entityID)
    end
 
-   -- Verifica se tem chunk disponível (pode ser a primeira entidade para o arquétipo informado)
+   -- Check if chunk is available (may be the first entity for the informed archetype)
    if self.ARCHETYPES[archetypeID] == nil then
-      -- não existe nenhum chunk para esse arquétipo, inicia a lista
+      -- there is no chunk for this archetype, start the list
       self.ARCHETYPES[archetypeID] = {
          count          = 0,
          lastChunk      = 1,
@@ -586,10 +577,10 @@ function  EntityManager:set(entityID, archetype)
       }
    end
 
-   -- aldiciona entidade no fim do chunk correto
+   -- add entity at the end of the correct chunk
    local db = self.ARCHETYPES[archetypeID]
 
-   -- novo registro da entidade
+   -- new entity record
    self.ENTITIES[entityID] = {
       archetype   = archetypeID,
       chunk       = db.lastChunk,
@@ -599,12 +590,12 @@ function  EntityManager:set(entityID, archetype)
 
    local chunk = db.chunks[db.lastChunk]
 
-   -- Limpa qualquer lixo de memória
+   -- Clears any memory junk
    chunk:clear(db.nextChunkIndex)
 
-    -- atualiza índices da entidade
+    -- update entity indexes
     if oldEntityData ~= nil then
-      -- se é mudança de arquétipo, restaura o backup dos dados antigos
+      -- if it's archetype change, restore backup of old data
       chunk:set(db.nextChunkIndex, oldEntityData)
     end
     chunk:setEntityId(db.nextChunkIndex, entityID)
@@ -612,13 +603,13 @@ function  EntityManager:set(entityID, archetype)
    db.count = db.count + 1
    chunk.count = db.nextChunkIndex
 
-   -- atualiza indice do chunk
+   -- update chunk index
    db.nextChunkIndex = db.nextChunkIndex + 1
 
-   -- marca a nova versão do CHUNK (momento que houve alteração)
+   -- marks the new version of chunk (moment that changed)
    chunk.version = self.world.version
 
-   -- se o chunk estiver cheio, já cria um novo chunk para recepcionar novas entidades futuras
+   -- if the chunk is full, it already creates a new chunk to welcome new future entities
    if db.nextChunkIndex > CHUNK_SIZE  then
       db.lastChunk            = db.lastChunk + 1
       db.nextChunkIndex       = 1
@@ -627,17 +618,19 @@ function  EntityManager:set(entityID, archetype)
 end
 
 --[[
-   Remove uma entidade deste entity manager
+   Removes an entity from this entity manager
 
-   Faz a limpeza dos índices e reorganização dos dados no Chunk
+   Clean indexes and reorganize data in Chunk
 
-   É importante que alterações no EntityManager principal só ocorra após 
-      a execução do frame corrente (update de scripts), pois alguns scripts executam em paralelo,
-      deste modo pode apontar para índice errado durante a execução.
+   It is important that changes in the main EntityManager only
+   occur after the execution of the current frame (script update),
+   as some scripts run in parallel, so it can point to the wrong
+   index during execution.
 
-   A estratégia para evitar tais problemas é que o sistema registre em uma tabela separado os 
-      IDs das entidades removidas durante a execução dos scripts. Após a finalização da execução 
-      atual, solicita a remoção de fato dessas entidades do EntityManager principal
+   The strategy to avoid such problems is for the system to register
+   in a separate table the IDs of the entities removed during the
+   execution of the scripts. Upon completion of the current run,
+   requests to actually remove these entities from the main EntityManager
 ]]
 function  EntityManager:remove(entityID)
    local entity = self.ENTITIES[entityID]
@@ -649,36 +642,37 @@ function  EntityManager:remove(entityID)
    local db = self.ARCHETYPES[entity.archetype]
    local chunk = db.chunks[entity.chunk]
 
-   -- limpa dados no chunk
+   -- clear data in chunk
    chunk:clear(entity.chunkIndex)
    chunk.count = chunk.count - 1
 
-   -- limpa referencias da entidade
+   -- clears entity references
    self.ENTITIES[entityID] = nil
    self.COUNT = self.COUNT - 1
    db.count = db.count - 1
 
-   -- Ajusta os chunks, evita buracos
+   -- Adjust chunks, avoid holes
    if db.nextChunkIndex == 1 then
-      -- o último chunk está vazio e foi removido um item de algum chunk anterior
-      -- sistema deve remover este chunk (pois existe um buraco nos chunks anteriores que deve ser preenchido antes)
+      -- the last chunk is empty and an item from a previous chunk has been removed
+      -- system should remove this chunk (as there is a hole in the previous chunks that must be filled before)
       db.chunks[db.lastChunk] = nil
       db.lastChunk      = db.lastChunk - 1
-      db.nextChunkIndex = CHUNK_SIZE + 1 -- (+1, proximos passos pego o valor -1)
+      db.nextChunkIndex = CHUNK_SIZE + 1 -- (+1, next steps get -1)
    end
 
    if db.count > 0 then
       if db.nextChunkIndex > 1 then
-         -- Move ultimo item do ultimo chunk para a posição que ficou aberta, para isso, necessário desobrir a
-         -- qual entidade pertence, afim de manter as referencias consistentes
+         -- Moves the last item of the last chunk to the position that was left open, for
+         -- this, it is necessary to find out which entity belongs, in order to keep
+         -- the references consistent
          local otherEntityData = db.chunks[db.lastChunk]:get(db.nextChunkIndex-1)
          db.chunks[entity.chunk]:set(entity.chunkIndex, otherEntityData)
    
-         -- recua o apontamento e faz a limpeza do registro não usado
+         -- backs down the note and clears the unused record
          db.nextChunkIndex = db.nextChunkIndex - 1
          db.chunks[db.lastChunk]:clear(db.nextChunkIndex)
    
-         -- atualiza índices da entidade
+         -- update entity indexes
          local otherEntityID     = otherEntityData[ENTITY_ID_KEY]
          local otherEntity       = self.ENTITIES[otherEntityID]
          otherEntity.chunk       = entity.chunk
@@ -690,19 +684,20 @@ function  EntityManager:remove(entityID)
 end
 
 --[[
-   Quantas entidades este EntityManager possui
+   How many entities does this EntityManager have
 ]]
 function EntityManager:count()
    return self.COUNT
 end
 
 --[[
-   Realiza a limpeza dos dados de uma entidae SEM REMOVE-LA.
+   Performs the cleaning of an entity's data WITHOUT REMOVING IT.
 
-   Usada durante a execução dos scripts quando um script solicita a remoção 
-      de uma entidade. Como o sistema posterga a remoção real até o fim da execução dos scripts, 
-      neste momento ele apenas realiza a limpeza dos dados (Permitindo aos scripts posteriores 
-      realizarem a verificação)
+   Used when running scripts when a script requests the removal of an
+   entity. As the system postpones the actual removal until the end
+   of the execution of the scripts, at this moment it only performs
+   the cleaning of the data (Allowing the subsequent scripts to
+   perform the verification)
 ]]
 function EntityManager:clear(entityID)
    local entity = self.ENTITIES[entityID]
@@ -715,7 +710,7 @@ function EntityManager:clear(entityID)
 end
 
 --[[
-   Obtém o valor atual de um componente de uma entidade
+   Gets the current value of an entity component
 
    Params
       entity {number} 
@@ -731,37 +726,35 @@ function EntityManager:getValue(entityID, component)
 end
 
 --[[
-   Salva o valor de um componente de uma entidade
+   Saves the value of an entity component
 
    Params
-      entity {number} 
-         Id da entidade a ser alterada
+      entity {number}
+         Entity Id to be changed
 
       component {number}
-         ID do componente
+         Component ID
 
       value {any}
-         Novo valor
+         New value
 ]]
 function EntityManager:setValue(entityID, component, value)
    local entity = self.ENTITIES[entityID]
    if entity == nil then
-      return 
+      return
    end
 
    local chunk = self.ARCHETYPES[entity.archetype].chunks[entity.chunk]
-
-  
 
    chunk:setValue(entity.chunkIndex, component, value)
 end
 
 --[[
-   Obtém todos os valores dos componentes de uma entidade
+   Gets all values of the components of an entity
 
    Params
       entity {number}
-         ID da entidade
+         Entity ID
 ]]
 function EntityManager:getData(entityID)
    local entity = self.ENTITIES[entityID]
@@ -774,17 +767,17 @@ function EntityManager:getData(entityID)
 end
 
 --[[
-   Salva o valor de um componente de uma entidade
+   Saves the value of an entity component
 
    Params
-      entity {number} 
-         Id da entidade a ser alterada
+      entity {number}
+         Entity Id to be changed
 
       component {number}
-         ID do componente
+         Component ID
 
       data {table}
-         Tabela com os novos valores que serão persistidos em memória neste chunk
+         Table with the new values that will be persisted in memory in this chunk
 ]]
 function EntityManager:setData(entityID, component, data)
    local entity = self.ENTITIES[entityID]
@@ -798,7 +791,7 @@ end
 
 
 --[[
-   Obtém o chunk e o índice de uma entidade
+   Gets an entity's chunk and index
 ]]
 function EntityManager:getEntityChunk(entityID)
    local entity = self.ENTITIES[entityID]
@@ -833,9 +826,6 @@ end
 local SYSTEM                 = {}
 local SYSTEM_INDEX_BY_NAME   = {}
 
--- Filter: require all, require any, reject all, reject any
-
-
 --[[
    Represents the logic that transforms component data of an entity from its current 
    state to its next state. A system runs on entities that have a specific set of 
@@ -859,8 +849,6 @@ local System  = {}
          rejectAll|rejectAny: Array<number|string>,
             Optional It allows informing that this system will not be invoked if the entity has any of these components
 
-         
-
          step: render|process|transform Defaults to process
             Em qual momento, durante a execução de um Frame do Roblox, este sistema deverá ser executado (https://developer.roblox.com/en-us/articles/task-scheduler)
             render      : RunService.RenderStepped
@@ -874,21 +862,20 @@ local System  = {}
             Indicates that this system does not change entities and components, so it can be executed
             in parallel with other systems in same step and order
 
-         -- Versionamento, ver https://gametorrahod.com/designing-an-efficient-system-with-version-numbers/
          update: function(time, world, dirty, entity, index, [component_N_items...]) -> boolean
-            Invoked in updates, limited to the value set in the "frequency" attribute			
+            Invoked in updates, limited to the value set in the "frequency" attribute
          			 	
 			beforeUpdate(time: number): void
-			 	Invoked before updating entities available for this system. 
-			 	It is only invoked when there are entities with the characteristics 
-			 	expected by this system.			 	  	 
+			 	Invoked before updating entities available for this system.
+			 	It is only invoked when there are entities with the characteristics
+			 	expected by this system	  	 
 			 
-			afterUpdate(time: number, entities: Entity[]): void
-			 	Invoked after performing update of entities available for this system. 
-			 	It is only invoked when there are entities with the characteristics 
+			@TODO afterUpdate(time: number, entities: Entity[]): void
+			 	Invoked after performing update of entities available for this system.
+			 	It is only invoked when there are entities with the characteristics
 			 	expected by this system
 			 	
-			change(entity: Entity, added?: Component<any>, removed?: Component<any>): void
+			@TODO change(entity: Entity, added?: Component<any>, removed?: Component<any>): void
 			 	 Invoked when an expected feature of this system is added or removed from the entity
 			 	 			 	 
 			   enter(entity: Entity): void;
@@ -900,7 +887,7 @@ local System  = {}
 			     	c) An existing entity in the same world receives a new component at runtime 
 			     		and all of its new components match the standard expected by this system.
 			     		
-			exit(entity: Entity): void;
+			@TODO exit(entity: Entity): void;
 				Invoked when:
      				a) An entity with the characteristics (components) expected by this system is 
      					removed from the world;
@@ -1011,19 +998,11 @@ local function NewExecutionPlan(world, systems)
       processOut   = {},
    }
 
-   --[[      
-      local updateStepsOrder = {
-         render      = {},
-         simulation  = {},
-         heartbeat   = {},
-      }
-   ]]
-
-   -- sistemas que esperam o evento onEnter
+   -- systems that process the onEnter event
    local onEnterSystems = {}
 
    for k, system in pairs(systems) do
-      -- filtro de componentes, usados para obter os chunks corretos no entity manager
+      -- component filter, used to obtain the correct chunks in the entity manager
       system.filter = componentFilter(system.requireAll, system.requireAny, system.rejectAll, system.rejectAny)
 
       if system.update ~= nil then
@@ -1039,10 +1018,6 @@ local function NewExecutionPlan(world, systems)
          table.insert(onEnterSystems, system)
       end
    end
-
-   --updateStepsOrder.render = safeNumberTable(updateStepsOrder.render)
-   --updateStepsOrder.simulation = safeNumberTable(updateStepsOrder.render)
-   --updateStepsOrder.heartbeat = safeNumberTable(updateStepsOrder.render)
 
    -- Update systems
    local onUpdate = function(step, entityManager, time, interpolation)
@@ -1075,8 +1050,9 @@ local function NewExecutionPlan(world, systems)
             end
 
             for k, chunk in pairs(chunks) do
-               -- se a versão do chunk é maior do que o do sistema, significa que este chunk já sofreu
-               -- alteração que não foi realizada após a última execução deste sistema
+               -- if the version of the chunk is larger than the system, it means 
+               -- that this chunk has already undergone a change that was not performed 
+               -- after the last execution of this system
                local dirty = chunk.version == 0 or chunk.version > systemVersion
                local buffers = chunk.buffers
                local entityIDBuffer = buffers[ENTITY_ID_KEY]
@@ -1099,7 +1075,7 @@ local function NewExecutionPlan(world, systems)
                end
 
                if hasChangeThisChunk then
-                  -- If any system execution informs you that it has changed data in 
+                  -- If any system execution informs you that it has changed data in
                   -- this chunk, it then performs the versioning of the chunk
                   chunk.version = world.version
                end
@@ -1120,7 +1096,7 @@ local function NewExecutionPlan(world, systems)
 
       for entityID, newComponents in pairs(onEnterEntities) do
 
-         -- obtém o chunk e indice dessa entidade
+         -- get the chunk and index of this entity
          local chunk, index = entityManager:getEntityChunk(entityID)
          if chunk == nil then
             continue
@@ -1130,7 +1106,7 @@ local function NewExecutionPlan(world, systems)
             
          for j, system in pairs(onEnterSystems) do
 
-            -- system não aplica para o arquétipo dessa entidade
+            -- system does not apply to the archetype of that entity
             if not system.filter(chunk.archetype.components) then
                continue
             end
@@ -1145,7 +1121,7 @@ local function NewExecutionPlan(world, systems)
                systemsFilters[system.id] = componentFilter(nil, newComponents, nil, nil)
             end
 
-            -- componentes recebidos não estão na lista dos componentes esperados pelo system
+            -- components received are not in the list of components expected by the system
             if not systemsFilters[system.id](whatComponents) then
                continue
             end
@@ -1177,14 +1153,12 @@ end
 -- ECS
 ----------------------------------------------------------------------------------------------------------------------
 
--- The very definition of the ECS. Also called Admin or Manager in other implementations.
 local ECS = {
-	-- references for simplicity, allow to use ECS.Entity
 	Component 	= Component,
 	System 		= System
 }
 
--- constructor
+-- World constructor
 function ECS.newWorld(systems, config)
 
    if config == nil then
@@ -1215,15 +1189,14 @@ function ECS.newWorld(systems, config)
    -- System execution plan
    local updateExecPlan, enterExecPlan
 
-   -- Deve ser o mesmo valor do sistema com a maior frequencia (msPerUpdate = 1000/frequencia.)
    local proccessDeltaTime = 1000/config.frequence/1000
 
    -- INTERPOLATION: The proportion of time since the previous transform relative to proccessDeltaTime
-   local interpolation           = 1
+   local interpolation = 1
 
    local FIRST_UPDATE_TIME = nil
 
-   local timeLastFrame     = 0
+   local timeLastFrame = 0
 
    -- The time at the beginning of this frame. The world receives the current time at the beginning 
    -- of each frame, with the value increasing per frame.
@@ -1237,60 +1210,57 @@ function ECS.newWorld(systems, config)
    -- The completion time in seconds since the last frame. This property provides the time between the current and previous frame.
    local timeDelta = 0
 
-   -- se a execução ficar lenta, realiza até 10 updates simultaneos
-   -- afim de manter o fixrate
+   -- if execution is slow, perform a maximum of 10 simultaneous 
+   -- updates in order to keep the fixrate
    local maxSkipFrames = 10
 
    local lastKnownArchetypeInstant = 0
 
    --[[
-      O EntityManager principal
+      The main EntityManager
 
-      É importante que alterações no EntityManager principal só ocorra após 
-      a execução do frame corrente (update de scripts), pois alguns scripts executam em paralelo,
-      deste modo pode apontar para índice errado durante a execução
+      It is important that changes in the main EntityManager only occur after the execution 
+      of the current frame (script update), as some scripts run in parallel, so 
+      it can point to the wrong index during execution
    
-      A estratégia para evitar estes problemas é que o mundo possua 2 EntityManagers distintos,
-         1 - EntityManager Principal
-            Onde estão registrados as entidaes que serão atualizados no update dos scripts
-         2 - EntityManager Novo
-            Onde o sistema registra as novas entidades criadas durante a execução dos scripts. 
-            Após a finalização da execução atual, copia-se todas essas novas entidades para o 
-            EntityManager principal
+      The strategy to avoid these problems is that the world has 2 different EntityManagers,
+         1 - Primary EntityManager
+            Where are registered the entities that will be updated in the update of the scripts
+         2 - Secondary EntityManager
+            Where the system registers the new entities created during the execution of the scripts.
+            After completing the current run, all these new entities are copied to the primary EntityManager
    ]]
    local entityManager
 
-   -- O EntityManager usado para abrigar as novas entidades
+   -- The EntityManager used to house the new entities
    local entityManagerNew
 
-   -- O EntityManager usado para abrigar a cópia dos dados da entidade que sofreu alteração
-   -- No final da execução dos scripts, a entidade será atualizada no entity manger principal
+   -- The EntityManager used to house the copy of the data of the entity that changed
+   -- At the end of the execution of the scripts of the current step, the entity will be updated in the main entity manger
    local entityManagerUpdated
 
-   -- Entidades que foram removidas durante a execução (só remove após o último passo de execução)
+   -- Entities that were removed during execution (only removed after the last execution step)
    local entitiesRemoved = {}
 
-   -- Entidades que sofreram alteraçao durante a execução
-   -- (recebeu ou perdeu componentes, portanto, alterou o arquétipo)
+   -- Entities that changed during execution (received or lost components, therefore, changed the archetype)
    local entitiesUpdated = {}
 
-   -- Entidades que foram criadas durante a execução do update, 
-   -- serão transportadas do "entityManagerNew" para o "entityManager"
+   -- Entities that were created during the execution of the update, will be transported from "entityManagerNew" to "entityManager"
    local entitiesNew = {}
 
-   -- referencia do arquétipo mais atualizado de uma entidade (sujo)
-   -- A alteração do arquétipo nao reflete na execução atual dos scripts, é usado apenas para a atualização dos 
-   -- dados no entity manager principal
+   -- reference to the most updated archetype of an entity (dirty)
+   -- Changing the archetype does not reflect the current execution of the scripts, it is only used 
+   -- for updating the data in the main entity manager
    local entitiesArchetypes  = {}
 
    local world
 
-   -- 
-   local cleanupEnvironment
+   -- Environment cleaning method
+   local cleanupEnvironmentFn
 
    -- True when environment has been modified while a system is running
    local dirtyEnvironment = false
-   
+
 	world = {
 
       version = 0,
@@ -1305,7 +1275,7 @@ function ECS.newWorld(systems, config)
 
          entityManagerNew:set(ID, ARCHETYPE_EMPTY)
 
-         -- informa que possui nova entidade
+         -- informs that it has a new entity
          entitiesNew[ID] = true
 
          entitiesArchetypes[ID] = ARCHETYPE_EMPTY
@@ -1327,9 +1297,7 @@ function ECS.newWorld(systems, config)
       end,
 
       --[[
-         Define o valor de um componente para uma entidade.
-
-         Essa alteração
+         Defines the value of a component for an entity
       ]]
       set = function(entity, component, ...)
          local archetype = entitiesArchetypes[entity]
@@ -1356,25 +1324,25 @@ function ECS.newWorld(systems, config)
             entityManagerNew:setValue(entity, component, value)
          else
             if archetypeChanged then
-               -- entidade sofreu alteração de arquétipo. Registra uma cópia em outro entity manager, que será
-               -- processado após a execução dos scripts atuais
+               -- entity has undergone an archetype change. Registers a copy in another entity 
+               -- manager, which will be processed after the execution of the current scripts
                if entitiesUpdated[entity] == nil then
                   entitiesUpdated[entity] = {
                      received = {},
                      lost = {}
                   }
-                  -- primeira vez que está modificando os componentes dessa entidade
-                  -- nessa execução, necessário realizar copia dos dados da entidade
+                  -- the first time you are modifying the components of this entity in 
+                  -- this execution, you need to copy the data of the entity
                   entityManagerUpdated:set(entity, archetypeNew)
                   entityManagerUpdated:setData(entity, entityManager:getData(entity))
                else
-                  -- apenas realiza a atualização do arquétipo no entityManager
+                  -- just perform the archetype update on the entityManager
                   entityManagerUpdated:set(entity, archetypeNew)
                end
             end
 
             if entitiesUpdated[entity]  ~= nil then
-               -- registra uma cópia do valor
+               -- register a copy of the value
                entityManagerUpdated:setValue(entity, component, value)
 
                -- removed before, received again
@@ -1391,13 +1359,13 @@ function ECS.newWorld(systems, config)
                end
             end
 
-            -- registra o valor no entityManager atual, usado pelos scripts
+            -- records the value in the current entityManager, used by the scripts
             entityManager:setValue(entity, component, value)
          end
       end,
 
       --[[
-         Removing a entity or Removing a component from a entity at runtime
+         Removing a entity or Removing a component from an entity at runtime
       ]]
       remove = function(entity, component)
          local archetype = entitiesArchetypes[entity]
@@ -1436,25 +1404,25 @@ function ECS.newWorld(systems, config)
             else
                if archetypeChanged then
 
-                  -- entidade sofreu alteração de arquétipo. Registra uma cópia em outro entity manager, que será
-                  -- processado após a execução dos scripts atuais
+                  -- entity has undergone an archetype change. Registers a copy in
+                  -- another entity manager, which will be processed after the execution of the current scripts
                   if entitiesUpdated[entity] == nil then
                      entitiesUpdated[entity] = {
                         received = {},
                         lost = {}
                      }
-                     -- primeira vez que está modificando os componentes dessa entidade
-                     -- nessa execução, necessário realizar copia dos dados da entidade
+                     -- the first time you are modifying the components of this entity
+                     -- in this execution, you need to copy the data of the entity
                      entityManagerUpdated:set(entity, archetypeNew)
                      entityManagerUpdated:setData(entity, entityManager:getData(entity))
                   else
-                     -- apenas realiza a atualização do arquétipo no entityManager
+                     -- just perform the archetype update on the entityManager
                      entityManagerUpdated:set(entity, archetypeNew)
                   end
                end
 
                if entitiesUpdated[entity] ~= nil then
-                  -- registra uma cópia do valor
+                  -- register a copy of the value
                   entityManagerUpdated:setValue(entity, component, nil)
 
                   -- received before, removed again
@@ -1471,7 +1439,7 @@ function ECS.newWorld(systems, config)
                   end
                end
 
-               -- registra o valor no entityManager atual, usado pelos scripts
+               -- records the value in the current entityManager, used by the scripts
                entityManager:setValue(entity, component, nil)
             end
          end
@@ -1539,11 +1507,6 @@ function ECS.newWorld(systems, config)
 
          worldSystems[systemID] = system
 
-         if system.msPerUpdate ~= nil then
-             -- o sistema com maior frequencia tem o menor ms por update
-            proccessDeltaTime = math.min(proccessDeltaTime, system.msPerUpdate)
-         end
-
          -- forces re-creation of the execution plan
          lastKnownArchetypeInstant = 0
       end,
@@ -1571,7 +1534,8 @@ function ECS.newWorld(systems, config)
          Remove all entities and systems
       ]]
       destroy = function()
-
+         --[[
+         @TODO: Destroy
          for i = #self.entities, 1, -1 do
             self:removeEntity(self.entities[i])
          end
@@ -1580,9 +1544,9 @@ function ECS.newWorld(systems, config)
             self:removeSystem(self.systems[i])
          end
 
-         self._steppedConn:Disconnect()
+         self._steppedConn:Disconnect()      
+         ]]
       end,
-
       --[[
          Realizes world update
       ]]
@@ -1639,16 +1603,15 @@ function ECS.newWorld(systems, config)
             }, interpolation)
 
             while dirtyEnvironment do
-               cleanupEnvironment()
+               cleanupEnvironmentFn()
             end
          else
 
             local timeProcessOldTmp = timeProcess
 
             --[[
-               Adjusting the framerate, the world must run on the same frequency as the
-               system that has the highest frequency, this ensures determinism in the
-               execution of the scripts
+               Adjusting the framerate, the world must run on the same frequency, 
+               this ensures determinism in the execution of the scripts
 
                Each system in "transform" step is executed at a predetermined frequency (in Hz).
 
@@ -1681,7 +1644,7 @@ function ECS.newWorld(systems, config)
                }, 1)
                
                while dirtyEnvironment do
-                  cleanupEnvironment()
+                  cleanupEnvironmentFn()
                end
 
                nLoops   += 1
@@ -1695,8 +1658,8 @@ function ECS.newWorld(systems, config)
       end
    }
 
-   -- realiza a limpeza após a execução dos scripts
-   cleanupEnvironment = function()
+   -- cleans up after running scripts
+   cleanupEnvironmentFn = function()
 
       if not dirtyEnvironment then
          -- fast exit
@@ -1966,7 +1929,7 @@ end)
    Utility system that copies the direction and position of a Roblox BasePart to the ECS entity
 
    Executed in two moments: At the beginning of the "process" step and at the beginning of the "transform" step
-]] 
+]]
 ---------------------------------------->>
 local function BasePartToEntityUpdate(time, world, dirty, entity, index, parts, positions, rotations)
 
@@ -2037,7 +2000,7 @@ ECS.Util.BasePartToEntityTransformSystem = System.register({
    Utility system that copies the direction and position from ECS entity to a Roblox BasePart
 
    Executed in two moments: At the end of the "process" step and at the end of the "transform" step
-]] 
+]]
 ---------------------------------------->>
 
 local function EntityToBasePartUpdate(time, world, dirty, entity, index, parts, positions, rotations)
