@@ -1,36 +1,36 @@
 --[[
-	Roblox-ECS v1.1
+   Roblox-ECS v1.1
 
-	Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
+   Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
    game development on the Roblox platform
 
-	https://github.com/nidorx/roblox-ecs
+   https://github.com/nidorx/roblox-ecs
 
-	Discussions about this script are at https://devforum.roblox.com/t/841175
+   Discussions about this script are at https://devforum.roblox.com/t/841175
 
-	------------------------------------------------------------------------------
+   ------------------------------------------------------------------------------
 
-	MIT License
+   MIT License
 
-	Copyright (c) 2020 Alex Rodin
+   Copyright (c) 2020 Alex Rodin
 
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so, subject to the following conditions:
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
 
-	The above copyright notice and this permission notice shall be included in all
-	copies or substantial portions of the Software.
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
 
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-	SOFTWARE.
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
 ]]
 
 -- Services
@@ -47,7 +47,7 @@ local RunService = game:GetService('RunService')
 ]]
 
 local function NOW()
-	return DateTime.now().UnixTimestampMillis
+   return DateTime.now().UnixTimestampMillis
 end
 
 local PRINT_LIMIT_LAST_TIME = {}
@@ -98,7 +98,7 @@ local function safeNumberTable(values)
    end
 
    local hash = {}
-	local res  = {}
+   local res  = {}
    for _,v in pairs(values) do
       if v ~= nil and hash[v] == nil then
          table.insert(res, v)
@@ -106,7 +106,7 @@ local function safeNumberTable(values)
       end
    end
    table.sort(res)
-	return res
+   return res
 end
 
 -- generate an identifier for a table that has only numbers
@@ -138,120 +138,167 @@ local FILTER_CACHE_RESULT = {}
 
    Returns function(Array<number>) => boolean
 ]]
-local function componentFilter(requireAll, requireAny, rejectAll, rejectAny)
+local function Filter(config)
 
    -- local cache (L1)
    local cache = {}
 
-   local requireAllKey, requireAnyKey, rejectAllKey, rejectAnyKey
+   if config == nil then
+      config = {}
+   end
 
-   requireAllKey, requireAll  = hashNumberTable(requireAll)
-   requireAnyKey, requireAny  = hashNumberTable(requireAny)
-   rejectAllKey, rejectAll    = hashNumberTable(rejectAll)
-   rejectAnyKey, rejectAny    = hashNumberTable(rejectAny)
+   if config.requireAll == nil and config.requireAny == nil then
+      error('It is necessary to define the components using the "requireAll" or "requireAny" parameters')
+   end
+
+   if config.requireAll ~= nil and config.requireAny ~= nil then
+      error('It is not allowed to use the "requireAll" and "requireAny" settings simultaneously')
+   end
+
+   if config.requireAll ~= nil then
+      config.requireAllOriginal = config.requireAll
+      config.requireAll = safeNumberTable(config.requireAll)
+      if table.getn(config.requireAll) == 0 then
+         error('You must enter at least one component id in the "requireAll" field')
+      end
+   elseif config.requireAny ~= nil then
+      config.requireAnyOriginal = config.requireAny
+      config.requireAny = safeNumberTable(config.requireAny)
+      if table.getn(config.requireAny) == 0 then
+         error('You must enter at least one component id in the "requireAny" field')
+      end
+   end
+
+   if config.rejectAll ~= nil and config.rejectAny ~= nil then
+      error('It is not allowed to use the "rejectAll" and "rejectAny" settings simultaneously')
+   end
+
+   if config.rejectAll ~= nil then
+      config.rejectAll = safeNumberTable(config.rejectAll)
+      if table.getn(config.rejectAll) == 0 then
+         error('You must enter at least one component id in the "rejectAll" field')
+      end
+   elseif config.rejectAny ~= nil then
+      config.rejectAny = safeNumberTable(config.rejectAny)
+      if table.getn(config.rejectAny) == 0 then
+         error('You must enter at least one component id in the "rejectAny" field')
+      end
+   end
+
+   local requireAllKey, requireAll  = hashNumberTable(config.requireAll)
+   local requireAnyKey, requireAny  = hashNumberTable(config.requireAny)
+   local rejectAllKey, rejectAll    = hashNumberTable(config.rejectAll)
+   local rejectAnyKey, rejectAny    = hashNumberTable(config.rejectAny)
+
+   -- Maintains the original component list, used to correctly display the attributes
+   local components = config.requireAllOriginal
+   if components == nil then
+      components = config.requireAnyOriginal
+   end
 
    -- match function
-   return function(components)
+   return {
+      components  = components,
+      match = function(components)
 
-      -- check local cache
-      local cacheResult = cache[components]
-      if cacheResult == false then
-         return false
+         -- check local cache
+         local cacheResult = cache[components]
+         if cacheResult == false then
+            return false
 
-      elseif cacheResult == true then
-         return true
+         elseif cacheResult == true then
+            return true
+         else
 
-      else
-
-         -- check global cache (executed by other filter instance)
-         local cacheResultG = FILTER_CACHE_RESULT[components]
-         if cacheResultG == nil then
-            cacheResultG = { matchAny = {}, matchAll = {}, rejectAny = {}, rejectAll = {} }
-            FILTER_CACHE_RESULT[components] = cacheResultG
-         end
-
-         -- check if these combinations exist in this component array
-         if rejectAnyKey ~= '_' then
-            if cacheResultG.rejectAny[rejectAnyKey] or cacheResultG.rejectAll[rejectAnyKey] then
-               cache[components] = false
-               return false
+            -- check global cache (executed by other filter instance)
+            local cacheResultG = FILTER_CACHE_RESULT[components]
+            if cacheResultG == nil then
+               cacheResultG = { matchAny = {}, matchAll = {}, rejectAny = {}, rejectAll = {} }
+               FILTER_CACHE_RESULT[components] = cacheResultG
             end
 
-            for _, v in pairs(rejectAny) do
-               if table.find(components, v) then
+            -- check if these combinations exist in this component array
+            if rejectAnyKey ~= '_' then
+               if cacheResultG.rejectAny[rejectAnyKey] or cacheResultG.rejectAll[rejectAnyKey] then
                   cache[components] = false
-                  cacheResultG.matchAny[rejectAnyKey] = true
-                  cacheResultG.rejectAny[rejectAnyKey] = true
+                  return false
+               end
+
+               for _, v in pairs(rejectAny) do
+                  if table.find(components, v) then
+                     cache[components] = false
+                     cacheResultG.matchAny[rejectAnyKey] = true
+                     cacheResultG.rejectAny[rejectAnyKey] = true
+                     return false
+                  end
+               end
+            end
+
+            if rejectAllKey ~= '_' then
+               if cacheResultG.rejectAll[rejectAllKey] then
+                  cache[components] = false
+                  return false
+               end
+
+               local haveAll = true
+               for _, v in pairs(rejectAll) do
+                  if not table.find(components, v) then
+                     haveAll = false
+                     break
+                  end
+               end
+
+               if haveAll then
+                  cache[components] = false
+                  cacheResultG.matchAll[rejectAllKey] = true
+                  cacheResultG.rejectAll[rejectAllKey] = true
                   return false
                end
             end
-         end
 
-         if rejectAllKey ~= '_' then
-            if cacheResultG.rejectAll[rejectAllKey] then
-               cache[components] = false
-               return false
-            end
-
-            local haveAll = true
-            for _, v in pairs(rejectAll) do
-               if not table.find(components, v) then
-                  haveAll = false
-                  break
-               end
-            end
-
-            if haveAll then
-               cache[components] = false
-               cacheResultG.matchAll[rejectAllKey] = true
-               cacheResultG.rejectAll[rejectAllKey] = true
-               return false
-            end
-         end
-
-         if requireAnyKey ~= '_' then
-            if cacheResultG.matchAny[requireAnyKey] or cacheResultG.matchAll[requireAnyKey] then
-               cache[components] = true
-               return true
-            end
-
-            for _, v in pairs(requireAny) do
-               if table.find(components, v) then
-                  cacheResultG.matchAny[requireAnyKey] = true
+            if requireAnyKey ~= '_' then
+               if cacheResultG.matchAny[requireAnyKey] or cacheResultG.matchAll[requireAnyKey] then
                   cache[components] = true
                   return true
                end
-            end
-         end
 
-         if requireAllKey ~= '_' then
-            if cacheResultG.matchAll[requireAllKey] then
-               cache[components] = true
-               return true
-            end
-
-            local haveAll = true
-            for _, v in pairs(requireAll) do
-               if not table.find(components, v) then
-                  haveAll = false
-                  break
+               for _, v in pairs(requireAny) do
+                  if table.find(components, v) then
+                     cacheResultG.matchAny[requireAnyKey] = true
+                     cache[components] = true
+                     return true
+                  end
                end
             end
 
-            if haveAll then
-               cache[components] = true
-               cacheResultG.matchAll[requireAllKey] = true
-               cacheResultG.rejectAll[requireAllKey] = true
-               return true
+            if requireAllKey ~= '_' then
+               if cacheResultG.matchAll[requireAllKey] then
+                  cache[components] = true
+                  return true
+               end
+
+               local haveAll = true
+               for _, v in pairs(requireAll) do
+                  if not table.find(components, v) then
+                     haveAll = false
+                     break
+                  end
+               end
+
+               if haveAll then
+                  cache[components] = true
+                  cacheResultG.matchAll[requireAllKey] = true
+                  cacheResultG.rejectAll[requireAllKey] = true
+                  return true
+               end
             end
+
+            cache[components] = false
+            return false
          end
-
-         cache[components] = false
-         return false
       end
-   end
+   }
 end
-
 
 ----------------------------------------------------------------------------------------------------------------------
 -- ARCHETYPE
@@ -260,7 +307,7 @@ end
 --[[
     Archetype:
       An entity has an Archetype (defined by the components it has).
-      An archetype is an identifier for each unique combination of components. 
+      An archetype is an identifier for each unique combination of components.
       An archetype is singleton
 ]]
 local ARCHETYPES = {}
@@ -353,7 +400,7 @@ local Component  = {
       Register a new component
 
       Params:
-         name {String} 
+         name {String}
             Unique identifier for this component
 
          constructor {Function}
@@ -407,10 +454,10 @@ local ENTITY_ID_KEY = Component.register('_ECS_ENTITY_ID_')
 ----------------------------------------------------------------------------------------------------------------------
 -- CHUNK
 ----------------------------------------------------------------------------------------------------------------------
-local Chunk  = {}
-Chunk.__index = Chunk
+local Chunk    = {}
+Chunk.__index  = Chunk
 
-local CHUNK_SIZE = 500
+local CHUNK_SIZE = 300
 
 --[[
    A block of memory containing the components for entities sharing the same Archetype
@@ -420,7 +467,7 @@ local CHUNK_SIZE = 500
 function  Chunk.new(world, archetype)
 
    local buffers = {}
-    -- um buffer especial que identifica o id da entidade
+   -- um buffer especial que identifica o id da entidade
    buffers[ENTITY_ID_KEY] = table.create(CHUNK_SIZE)
 
    for _, componentID in pairs(archetype.components) do
@@ -447,7 +494,7 @@ end
 function  Chunk:clear(index)
    local buffers = self.buffers
    for k in pairs(buffers) do
-     buffers[k][index] = nil
+      buffers[k][index] = nil
    end
 end
 
@@ -523,7 +570,6 @@ function Chunk:setEntityId(index, entity)
    self.buffers[ENTITY_ID_KEY][index] = entity
 end
 
-
 ----------------------------------------------------------------------------------------------------------------------
 -- ENTITY MANAGER
 ----------------------------------------------------------------------------------------------------------------------
@@ -548,14 +594,14 @@ function  EntityManager.new(world)
       ENTITIES = {},
 
       --[[
-         { 
+         {
             [archetypeID] : {
                -- The number of entities currently stored
                count: number
                -- What is the index of the last free chunk to use?
                lastChunk:number,
-               -- Within the available chunk, what is the next available index for allocation?          
-               nextChunkIndex:number,               
+               -- Within the available chunk, what is the next available index for allocation?
+               nextChunkIndex:number,
                chunks: Array<Chunk>}
             }
       ]]
@@ -627,12 +673,12 @@ function  EntityManager:set(entityID, archetype)
    -- Clears any memory junk
    chunk:clear(db.nextChunkIndex)
 
-    -- update entity indexes
-    if oldEntityData ~= nil then
+   -- update entity indexes
+   if oldEntityData ~= nil then
       -- if it's archetype change, restore backup of old data
       chunk:set(db.nextChunkIndex, oldEntityData)
-    end
-    chunk:setEntityId(db.nextChunkIndex, entityID)
+   end
+   chunk:setEntityId(db.nextChunkIndex, entityID)
 
    db.count = db.count + 1
    chunk.count = db.nextChunkIndex
@@ -696,21 +742,24 @@ function  EntityManager:remove(entityID)
 
    if db.count > 0 then
       if db.nextChunkIndex > 1 then
-         -- Moves the last item of the last chunk to the position that was left open, for
-         -- this, it is necessary to find out which entity belongs, in order to keep
-         -- the references consistent
-         local otherEntityData = db.chunks[db.lastChunk]:get(db.nextChunkIndex-1)
-         db.chunks[entity.chunk]:set(entity.chunkIndex, otherEntityData)
-   
+         -- ignore when entity is the laste item
+         if not (db.lastChunk == entity.chunk and (db.nextChunkIndex - 1) == entity.chunkIndex) then
+            -- Moves the last item of the last chunk to the position that was left open, for
+            -- this, it is necessary to find out which entity belongs, in order to keep
+            -- the references consistent
+            local lastEntityData = db.chunks[db.lastChunk]:get(db.nextChunkIndex-1)
+            db.chunks[entity.chunk]:set(entity.chunkIndex, lastEntityData)
+
+            -- update entity indexes
+            local otherEntityID     = lastEntityData[ENTITY_ID_KEY]
+            local otherEntity       = self.ENTITIES[otherEntityID]
+            otherEntity.chunk       = entity.chunk
+            otherEntity.chunkIndex  = entity.chunkIndex
+         end
+
          -- backs down the note and clears the unused record
          db.nextChunkIndex = db.nextChunkIndex - 1
          db.chunks[db.lastChunk]:clear(db.nextChunkIndex)
-   
-         -- update entity indexes
-         local otherEntityID     = otherEntityData[ENTITY_ID_KEY]
-         local otherEntity       = self.ENTITIES[otherEntityID]
-         otherEntity.chunk       = entity.chunk
-         otherEntity.chunkIndex  = entity.chunkIndex
       end
    else
       db.nextChunkIndex = db.nextChunkIndex - 1
@@ -747,7 +796,7 @@ end
    Gets the current value of an entity component
 
    Params
-      entity {number} 
+      entity {number}
       component {number}
 ]]
 function EntityManager:getValue(entityID, component)
@@ -823,7 +872,6 @@ function EntityManager:setData(entityID, component, data)
    chunk:set(entity.chunkIndex, component, data)
 end
 
-
 --[[
    Gets an entity's chunk and index
 ]]
@@ -861,8 +909,8 @@ local SYSTEM                 = {}
 local SYSTEM_INDEX_BY_NAME   = {}
 
 --[[
-   Represents the logic that transforms component data of an entity from its current 
-   state to its next state. A system runs on entities that have a specific set of 
+   Represents the logic that transforms component data of an entity from its current
+   state to its next state. A system runs on entities that have a specific set of
    component types.
 ]]
 local System  = {}
@@ -877,7 +925,7 @@ local System  = {}
             Unique name for this System
 
          requireAll|requireAny: Array<number|string>,
-            components this system expects the entity to have before it can act on. If you want 
+            components this system expects the entity to have before it can act on. If you want
             to create a system that acts on all entities, enter nil
 
          rejectAll|rejectAny: Array<number|string>,
@@ -898,37 +946,37 @@ local System  = {}
 
          update: function(time, world, dirty, entity, index, [component_N_items...]) -> boolean
             Invoked in updates, limited to the value set in the "frequency" attribute
-         			 	
-			beforeUpdate(time: number): void
-			 	Invoked before updating entities available for this system.
-			 	It is only invoked when there are entities with the characteristics
-			 	expected by this system	  	 
-			 
-			@TODO afterUpdate(time: number, entities: Entity[]): void
-			 	Invoked after performing update of entities available for this system.
-			 	It is only invoked when there are entities with the characteristics
-			 	expected by this system
-			 	
-			@TODO change(entity: Entity, added?: Component<any>, removed?: Component<any>): void
-			 	 Invoked when an expected feature of this system is added or removed from the entity
-			 	 			 	 
-			   enter(entity: Entity): void;
-			 	Invoked when:
-			    	a) An entity with the characteristics (components) expected by this system is 
-			    		added in the world;
-			     	b) This system is added in the world and this world has one or more entities with 
-			     		the characteristics expected by this system;
-			     	c) An existing entity in the same world receives a new component at runtime 
-			     		and all of its new components match the standard expected by this system.
-			     		
-			@TODO exit(entity: Entity): void;
-				Invoked when:
-     				a) An entity with the characteristics (components) expected by this system is 
-     					removed from the world;
-    				b) This system is removed from the world and this world has one or more entities 
-    					with the characteristics expected by this system;
-     				c) An existing entity in the same world loses a component at runtime and its new 
-     					component set no longer matches the standard expected by this system
+
+         beforeUpdate(time: number): void
+            Invoked before updating entities available for this system.
+            It is only invoked when there are entities with the characteristics
+            expected by this system
+
+         @TODO afterUpdate(time: number, entities: Entity[]): void
+            Invoked after performing update of entities available for this system.
+            It is only invoked when there are entities with the characteristics
+            expected by this system
+
+         @TODO change(entity: Entity, added?: Component<any>, removed?: Component<any>): void
+             Invoked when an expected feature of this system is added or removed from the entity
+
+            enter(entity: Entity): void;
+            Invoked when:
+               a) An entity with the characteristics (components) expected by this system is
+                  added in the world;
+               b) This system is added in the world and this world has one or more entities with
+                  the characteristics expected by this system;
+               c) An existing entity in the same world receives a new component at runtime
+                  and all of its new components match the standard expected by this system.
+
+         @TODO exit(entity: Entity): void;
+            Invoked when:
+               a) An entity with the characteristics (components) expected by this system is
+                  removed from the world;
+               b) This system is removed from the world and this world has one or more entities
+                  with the characteristics expected by this system;
+               c) An existing entity in the same world loses a component at runtime and its new
+                  component set no longer matches the standard expected by this system
    }
 ]]
 function System.register(config)
@@ -945,43 +993,7 @@ function System.register(config)
       error('Another System already registered with that name')
    end
 
-   if config.requireAll == nil and config.requireAny == nil then
-      error('It is necessary to define the components using the "requireAll" or "requireAny" parameters')
-   end
-
-   if config.requireAll ~= nil and config.requireAny ~= nil then
-      error('It is not allowed to use the "requireAll" and "requireAny" settings simultaneously')
-   end
-
-   if config.requireAll ~= nil then
-      config.requireAllOriginal = config.requireAll
-      config.requireAll = safeNumberTable(config.requireAll)
-      if table.getn(config.requireAll) == 0 then
-         error('You must enter at least one component id in the "requireAll" field')
-      end
-   elseif config.requireAny ~= nil then
-      config.requireAnyOriginal = config.requireAny
-      config.requireAny = safeNumberTable(config.requireAny)
-      if table.getn(config.requireAny) == 0 then
-         error('You must enter at least one component id in the "requireAny" field')
-      end
-   end
-
-   if config.rejectAll ~= nil and config.rejectAny ~= nil then
-      error('It is not allowed to use the "rejectAll" and "rejectAny" settings simultaneously')
-   end
-
-   if config.rejectAll ~= nil then
-      config.rejectAll = safeNumberTable(config.rejectAll)
-      if table.getn(config.rejectAll) == 0 then
-         error('You must enter at least one component id in the "rejectAll" field')
-      end
-   elseif config.rejectAny ~= nil then
-      config.rejectAny = safeNumberTable(config.rejectAny)
-      if table.getn(config.rejectAny) == 0 then
-         error('You must enter at least one component id in the "rejectAny" field')
-      end
-   end
+   local filter = Filter(config)
 
    if config.step == nil then
       config.step = 'transform'
@@ -992,12 +1004,13 @@ function System.register(config)
    end
 
    if config.order == nil or config.order < 0 then
-		config.order = 50
+      config.order = 50
    end
 
    -- imutable
    table.insert(SYSTEM, {
       name                 = config.name,
+      filter               = filter,
       requireAll           = config.requireAll,
       requireAny           = config.requireAny,
       requireAllOriginal   = config.requireAllOriginal,
@@ -1015,7 +1028,7 @@ function System.register(config)
 
    SYSTEM_INDEX_BY_NAME[config.name] = ID
 
-	return ID
+   return ID
 end
 
 --[[
@@ -1025,20 +1038,17 @@ end
 local function NewExecutionPlan(world, systems)
 
    local updateSteps = {
-      render         = {},
+      processIn      = {},
       process        = {},
+      processOut     = {},
       transform      = {},
-      processIn    = {},
-      processOut   = {},
+      render         = {}
    }
 
    -- systems that process the onEnter event
    local onEnterSystems = {}
 
    for k, system in pairs(systems) do
-      -- component filter, used to obtain the correct chunks in the entity manager
-      system.filter = componentFilter(system.requireAll, system.requireAny, system.rejectAll, system.rejectAny)
-
       if system.update ~= nil then
          if updateSteps[system.step][system.order] == nil then
             updateSteps[system.step][system.order] = {}
@@ -1071,7 +1081,7 @@ local function NewExecutionPlan(world, systems)
             local systemVersion        = system.version
 
             -- Gets all the chunks that apply to this system
-            local chunks = entityManager:filterChunks(system.filter)
+            local chunks = entityManager:filterChunks(system.filter.match)
 
             -- update: function(time, world, dirty, entity, index, [component_N_items...]) -> boolean
             local updateFn = system.update
@@ -1084,8 +1094,8 @@ local function NewExecutionPlan(world, systems)
             end
 
             for k, chunk in pairs(chunks) do
-               -- if the version of the chunk is larger than the system, it means 
-               -- that this chunk has already undergone a change that was not performed 
+               -- if the version of the chunk is larger than the system, it means
+               -- that this chunk has already undergone a change that was not performed
                -- after the last execution of this system
                local dirty = chunk.version == 0 or chunk.version > systemVersion
                local buffers = chunk.buffers
@@ -1125,33 +1135,29 @@ local function NewExecutionPlan(world, systems)
       -- increment Global System Version (GSV), before system update
       world.version = world.version + 1
 
-      -- temporary filters
-      local systemsFilters = {}
-
       for entityID, newComponents in pairs(onEnterEntities) do
+
+         -- temporary filter
+         local filterHasAny = Filter({ requireAny = newComponents })
 
          -- get the chunk and index of this entity
          local chunk, index = entityManager:getEntityChunk(entityID)
          if chunk ~= nil then
             local buffers = chunk.buffers
-            
+
             for j, system in pairs(onEnterSystems) do
 
                -- system does not apply to the archetype of that entity
-               if system.filter(chunk.archetype.components) then
-                  
+               if system.filter.match(chunk.archetype.components) then
+
                   -- what components the system expects
                   local whatComponents = system.requireAllOriginal
                   if whatComponents == nil then
                      whatComponents = system.requireAnyOriginal
                   end
 
-                  if systemsFilters[system.id] == nil then
-                     systemsFilters[system.id] = componentFilter(nil, newComponents, nil, nil)
-                  end
-
                   -- components received are not in the list of components expected by the system
-                  if systemsFilters[system.id](whatComponents) then
+                  if filterHasAny.match(whatComponents) then
                      local componentsData = table.create(table.getn(whatComponents))
 
                      for l, compID in ipairs(whatComponents) do
@@ -1181,10 +1187,10 @@ end
 ----------------------------------------------------------------------------------------------------------------------
 -- ECS
 ----------------------------------------------------------------------------------------------------------------------
-
 local ECS = {
-	Component 	= Component,
-	System 		= System
+   Component   = Component,
+   System      = System,
+   Filter      = Filter
 }
 
 -- World constructor
@@ -1200,17 +1206,17 @@ function ECS.newWorld(systems, config)
       config.frequency = 30
    end
 
-   local safeFrequency  = math.round(math.abs(config.frequency)/5)*5
-   if safeFrequency < 5 then
-      safeFrequency = 5
+   local safeFrequency  = math.round(math.abs(config.frequency)/2)*2
+   if safeFrequency < 2 then
+      safeFrequency = 2
    end
 
    if config.frequency ~= safeFrequency then
       config.frequency = safeFrequency
       print(string.format(">>> ATTENTION! The execution frequency of world has been changed to %d <<<", safeFrequency))
    end
-   
-   local SEQ_ENTITY 	= 1
+
+   local SEQ_ENTITY  = 1
 
    -- systems in this world
    local worldSystems = {}
@@ -1227,7 +1233,7 @@ function ECS.newWorld(systems, config)
 
    local timeLastFrame = 0
 
-   -- The time at the beginning of this frame. The world receives the current time at the beginning 
+   -- The time at the beginning of this frame. The world receives the current time at the beginning
    -- of each frame, with the value increasing per frame.
    local timeCurrentFrame  = 0
 
@@ -1239,7 +1245,7 @@ function ECS.newWorld(systems, config)
    -- The completion time in seconds since the last frame. This property provides the time between the current and previous frame.
    local timeDelta = 0
 
-   -- if execution is slow, perform a maximum of 10 simultaneous 
+   -- if execution is slow, perform a maximum of 10 simultaneous
    -- updates in order to keep the fixrate
    local maxSkipFrames = 10
 
@@ -1248,10 +1254,10 @@ function ECS.newWorld(systems, config)
    --[[
       The main EntityManager
 
-      It is important that changes in the main EntityManager only occur after the execution 
-      of the current frame (script update), as some scripts run in parallel, so 
+      It is important that changes in the main EntityManager only occur after the execution
+      of the current frame (script update), as some scripts run in parallel, so
       it can point to the wrong index during execution
-   
+
       The strategy to avoid these problems is that the world has 2 different EntityManagers,
          1 - Primary EntityManager
             Where are registered the entities that will be updated in the update of the scripts
@@ -1268,17 +1274,17 @@ function ECS.newWorld(systems, config)
    -- At the end of the execution of the scripts of the current step, the entity will be updated in the main entity manger
    local entityManagerUpdated
 
+   -- Entities that were created during the execution of the update, will be transported from "entityManagerNew" to "entityManager"
+   local entitiesNew = {}
+
    -- Entities that were removed during execution (only removed after the last execution step)
    local entitiesRemoved = {}
 
    -- Entities that changed during execution (received or lost components, therefore, changed the archetype)
    local entitiesUpdated = {}
 
-   -- Entities that were created during the execution of the update, will be transported from "entityManagerNew" to "entityManager"
-   local entitiesNew = {}
-
    -- reference to the most updated archetype of an entity (dirty)
-   -- Changing the archetype does not reflect the current execution of the scripts, it is only used 
+   -- Changing the archetype does not reflect the current execution of the scripts, it is only used
    -- for updating the data in the main entity manager
    local entitiesArchetypes  = {}
 
@@ -1290,9 +1296,10 @@ function ECS.newWorld(systems, config)
    -- True when environment has been modified while a system is running
    local dirtyEnvironment = false
 
-	world = {
+   world = {
 
       version = 0,
+
       frequency = config.frequency,
 
       --[[
@@ -1353,14 +1360,14 @@ function ECS.newWorld(systems, config)
             entityManagerNew:setValue(entity, component, value)
          else
             if archetypeChanged then
-               -- entity has undergone an archetype change. Registers a copy in another entity 
+               -- entity has undergone an archetype change. Registers a copy in another entity
                -- manager, which will be processed after the execution of the current scripts
                if entitiesUpdated[entity] == nil then
                   entitiesUpdated[entity] = {
                      received = {},
                      lost = {}
                   }
-                  -- the first time you are modifying the components of this entity in 
+                  -- the first time you are modifying the components of this entity in
                   -- this execution, you need to copy the data of the entity
                   entityManagerUpdated:set(entity, archetypeNew)
                   entityManagerUpdated:setData(entity, entityManager:getData(entity))
@@ -1486,6 +1493,66 @@ function ECS.newWorld(systems, config)
       end,
 
       --[[
+         Allows you to perform the interaction between all active entities that is compatible with the informed filter
+
+         Params
+            filter {ECS.Filter instance}
+               The filter that will be applied to obtain the entities
+
+            callback {function(stop, entity, index, [Component_N_Data...]) => bool}
+               Function that will be invoked for each filtered entity. To stop execution, use the 'stop'
+                  method received in the parameters.
+               This function should return true if you have made changes to the component or data of
+                  the chunk being worked on
+      ]]
+      forEach = function(filter, callback)
+
+         local stopped = false
+
+         -- Allows the developer to stop execution
+         local stop = function()
+            stopped = true
+         end
+
+         -- Gets all the chunks that apply to this filter
+         local chunks = entityManager:filterChunks(filter.match)
+
+         for k, chunk in pairs(chunks) do
+            local buffers = chunk.buffers
+
+            local componentsData = table.create(table.getn(filter.components))
+            for l, compID in ipairs(filter.components) do
+               if buffers[compID] ~= nil then
+                  componentsData[l] = buffers[compID]
+               else
+                  componentsData[l] = {}
+               end
+            end
+
+            local entityIDBuffer = buffers[ENTITY_ID_KEY]
+            local hasChangeThisChunk = false
+            for index = 1, chunk.count do
+               if callback(stop, entityIDBuffer[index], index, table.unpack(componentsData)) then
+                  hasChangeThisChunk = true
+               end
+               if stopped then
+                  break
+               end
+            end
+
+            if hasChangeThisChunk then
+               -- If any system execution informs you that it has changed data in
+               -- this chunk, it then performs the versioning of the chunk
+               chunk.version = world.version
+            end
+
+            if stopped then
+               break
+            end
+         end
+      end,
+
+      --[[
          Remove an entity from this world
       ]]
       addSystem = function (systemID, order, config)
@@ -1519,6 +1586,7 @@ function ECS.newWorld(systems, config)
             requireAnyOriginal   = SYSTEM[systemID].requireAnyOriginal,
             rejectAll            = SYSTEM[systemID].rejectAll,
             rejectAny            = SYSTEM[systemID].rejectAny,
+            filter               = SYSTEM[systemID].filter,
             beforeUpdate         = SYSTEM[systemID].beforeUpdate,
             update               = SYSTEM[systemID].update,
             onEnter              = SYSTEM[systemID].onEnter,
@@ -1563,19 +1631,47 @@ function ECS.newWorld(systems, config)
          Remove all entities and systems
       ]]
       destroy = function()
-         --[[
-         @TODO: Destroy
-         for i = #self.entities, 1, -1 do
-            self:removeEntity(self.entities[i])
+         if world._steppedConn ~= nil then
+            world._steppedConn:Disconnect()
+            world._steppedConn = nil
          end
 
-         for i = #self.systems, 1, -1 do
-            self:removeSystem(self.systems[i])
+         if world._heartbeatConn ~= nil then
+            world._heartbeatConn:Disconnect()
+            world._heartbeatConn = nil
          end
 
-         self._steppedConn:Disconnect()      
-         ]]
+         if world._renderSteppedConn ~= nil then
+            world._renderSteppedConn:Disconnect()
+            world._renderSteppedConn = nil
+         end
+
+         -- Clears all references. An ECS world never creates external references (cache, etc.), all variables are enclosed in this block
+         entityManager        = nil
+         entityManagerNew     = nil
+         entityManagerUpdated = nil
+         entitiesUpdated      = nil
+         entitiesRemoved      = nil
+         worldSystems         = nil
+         updateExecPlan       = nil
+         enterExecPlan        = nil
+         cleanupEnvironmentFn = nil
+         entitiesArchetypes   = nil
+
+         -- It also removes all methods in the world, avoids external calls
+         world.create      = nil
+         world.set         = nil
+         world.get         = nil
+         world.remove      = nil
+         world.has         = nil
+         world.forEach     = nil
+         world.addSystem   = nil
+         world.alive       = nil
+         world.update      = nil
+         world.destroy     = nil
+         world             = nil
       end,
+
       --[[
          Realizes world update
       ]]
@@ -1590,7 +1686,7 @@ function ECS.newWorld(systems, config)
 
          -- corrects for internal time
          now = now - FIRST_UPDATE_TIME
-         
+
          -- need to update execution plan?
          if lastKnownArchetypeInstant < LAST_ARCHETYPE_INSTANT then
             updateExecPlan, enterExecPlan = NewExecutionPlan(world, worldSystems)
@@ -1639,7 +1735,7 @@ function ECS.newWorld(systems, config)
             local timeProcessOldTmp = timeProcess
 
             --[[
-               Adjusting the framerate, the world must run on the same frequency, 
+               Adjusting the framerate, the world must run on the same frequency,
                this ensures determinism in the execution of the scripts
 
                Each system in "transform" step is executed at a predetermined frequency (in Hz).
@@ -1671,7 +1767,7 @@ function ECS.newWorld(systems, config)
                   frame          = timeCurrentFrame,
                   delta          = timeDelta
                }, 1)
-               
+
                while dirtyEnvironment do
                   cleanupEnvironmentFn()
                end
@@ -1727,9 +1823,9 @@ function ECS.newWorld(systems, config)
       end
       entitiesUpdated = {}
 
-      -- 3: Add new entities     
+      -- 3: Add new entities
       for entityID, V in pairs(entitiesNew) do
-         entityManager:set(entityID, entitiesArchetypes[entityID])        
+         entityManager:set(entityID, entitiesArchetypes[entityID])
          entityManager:setData(entityID,  entityManagerNew:getData(entityID))
          entityManagerNew:remove(entityID)
          onEnterEntities[entityID] = entitiesArchetypes[entityID].components
@@ -1750,14 +1846,14 @@ function ECS.newWorld(systems, config)
 
    -- add user systems
    if systems ~= nil then
-		for i, system in pairs(systems) do
-			world.addSystem(system)
-		end
+      for i, system in pairs(systems) do
+         world.addSystem(system)
+      end
    end
 
    -- add default systems
    if not config.disableDefaultSystems then
-      
+
       -- processIn
       world.addSystem(ECS.Util.BasePartToEntityProcessInSystem)
 
@@ -1790,7 +1886,7 @@ function ECS.newWorld(systems, config)
       end)
    end
 
-	return world
+   return world
 end
 
 
@@ -1808,11 +1904,11 @@ function ECS.Util.NewBasePartEntity(world, part, syncBasePartToEntity, syncEntit
    world.set(entityID, ECS.Util.PositionComponent, part.CFrame.Position)
    world.set(entityID, ECS.Util.RotationComponent, part.CFrame.RightVector, part.CFrame.UpVector, part.CFrame.LookVector)
 
-   if syncBasePartToEntity then 
+   if syncBasePartToEntity then
       world.set(entityID, ECS.Util.BasePartToEntitySyncComponent)
    end
 
-   if syncEntityToBasePart then 
+   if syncEntityToBasePart then
       world.set(entityID, ECS.Util.EntityToBasePartSyncComponent)
    end
 
@@ -1845,7 +1941,7 @@ ECS.Util.PositionComponent = Component.register('Position', function(position)
       error("This component only works with Vector3 objects")
    end
 
-   if position == nil then 
+   if position == nil then
       position = Vector3.new(0, 0, 0)
    end
 
@@ -1858,7 +1954,7 @@ ECS.Util.PositionInterpolationComponent = Component.register('PositionInterpolat
       error("This component only works with Vector3 objects")
    end
 
-   if position == nil then 
+   if position == nil then
       position = Vector3.new(0, 0, 0)
    end
 
@@ -1870,7 +1966,7 @@ local VEC3_U = Vector3.new(0, 1, 0)
 local VEC3_F = Vector3.new(0, 0, 1)
 
 --[[
-   Rotational vectors that represents the object in the 3d world. 
+   Rotational vectors that represents the object in the 3d world.
    To transform into a CFrame use CFrame.fromMatrix(pos, rot[1], rot[2], rot[3] * -1)
 
    Params
@@ -1878,7 +1974,7 @@ local VEC3_F = Vector3.new(0, 0, 1)
       rightVector {Vector3}   @See CFrame.RightVector
       upVector    {Vector3}   @See CFrame.UpVector
 
-   @See 
+   @See
       https://devforum.roblox.com/t/understanding-cframe-frommatrix-the-replacement-for-cframe-new/593742
       https://devforum.roblox.com/t/handling-the-edge-cases-of-cframe-frommatrix/632465
 ]]
@@ -1946,7 +2042,7 @@ ECS.Util.MoveForwardComponent = Component.register('MoveForward', nil, true)
 
 -- Allows you to define a movement speed for specialized handling systems
 ECS.Util.MoveSpeedComponent = Component.register('MoveSpeed', function(speed)
-   if speed == nil or typeof(speed) ~= 'number' then 
+   if speed == nil or typeof(speed) ~= 'number' then
       error("This component only works with number value")
    end
 
@@ -2128,8 +2224,8 @@ ECS.Util.EntityToBasePartInterpolationTransformSystem = System.register({
       local rotation = rotations[index]
 
       if part ~= nil then
-          -- goal cframe, allow interpolation
-          local cframe = part.CFrame
+         -- goal cframe, allow interpolation
+         local cframe = part.CFrame
 
          -- swap old and new position, if changed
          if position ~= nil then
