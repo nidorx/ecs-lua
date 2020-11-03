@@ -133,7 +133,7 @@ On the other hand, roblox-ecs-lib does not bring to its implementation all that 
 
 The first reason that makes implementation simpler is that roblox-ecs-lib hides the complexities related to Archetypes, Chunks management and EntityManager from the developer.
 
-The second reason for simplification is the fact that Roblox's script execution is Single Thread (there are promises for parallel execution for 2021, let's wait). Although the Lua language allows the use of coroutines, these are only performaticas for processes with high Input / Output consumption, (such as http calls, disk access, etc.), for heavy processing there is no advantage in using coroutines.
+The second reason for simplification is the fact that Roblox's script execution is Single Thread (there are promises for parallel execution for 2021, let's wait). Although the Lua language allows the use of coroutines, these are only performaticas for processes with high Input/Output consumption, (such as http calls, disk access, etc.), for heavy processing there is no advantage in using coroutines (see https://realpython.com/python-concurrency/).
 
 A third reason is the difference in the execution flow, which in Roblox is already predefined and roblox-ecs-lib makes use of these events, in its own way, as steps for running systems.
 
