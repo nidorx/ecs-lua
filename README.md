@@ -3,7 +3,24 @@
 **Roblox-ECS** is a tiny and easy to use [ECS _(Entity Component System)_](https://en.wikipedia.org/wiki/Entity_component_system) engine for game development on the Roblox platform
 
 
-**TLDR;** There is a very cool tutorial below in the content that shows you in practice how to create a small shooting system
+**TLDR;** There is a very cool tutorial below in the content that shows you in practice how to create a small shooting system (The result of this tutorial can be seen at https://github.com/nidorx/roblox-ecs/blob/master/docs/tutorial.rbxl). 
+
+> **IMPORTANT!** This engine is still in development, therefore subject to bugs
+
+## Links
+
+- **Latest stable version**
+    - https://www.roblox.com/library/5887881675/Roblox-ECS
+- **Forum**
+    - https://devforum.roblox.com/t/841175
+    
+## Installation
+
+You can do the installation directly from Roblox Studio, through the Toolbox search for `Roblox-ECS`, this is the minified version of the engine (https://www.roblox.com/library/5887881675/Roblox-ECS).
+
+If you want to work with the original source code (for debugging or working on improvements), access the repository at https://github.com/nidorx/roblox-ecs
+
+## Entity-Component-System
 
 Entity-Component-System (ECS) is a distributed and compositional architectural design pattern that is mostly used in game development. It enables flexible decoupling of domain-specific behaviour, which overcomes many of the drawbacks of traditional object-oriented inheritance
 
@@ -882,6 +899,21 @@ And we come to the end of the tutorial, for more information on these concepts, 
 - [Game Loop by Robert Nystrom](http://gameprogrammingpatterns.com/game-loop.html)
 - [Fix Your Timestep! by Glenn Fiedler](https://gafferongames.com/post/fix_your_timestep/)
 - [The Game Loop By Gilles Bellot](https://bell0bytes.eu/the-game-loop/)
+
+## @Todo
+
+- Remove systems
+- Destroy world
+- Improve technical documentation
+- Perform benchmark with a focus on Data-oriented design
+- From the benchmarks, make improvements to the engine
+- Prepare for multi-thread?
+- Debugging system (External tool? Plugin?)
+- Statistics (Per system, per component)
+- Template export?
+- Facilitate the creation of unit tests
+- Facilitate systems benchmark
+- Create unit tests for the engine (quality assurance)
 
 ## Feedback, Requests and Roadmap
 
