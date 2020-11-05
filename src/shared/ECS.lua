@@ -38,6 +38,9 @@ local RunService = game:GetService('RunService')
 
 --[[
   @TODO
+      - Serialize componentes
+      - Server entities
+      - Client - Server sincronization (snapshot, delta, spatial index, grid manhatham distance)
       - Table pool (avoid GC)
       - System readonly? Paralel execution
       - Debugging?
@@ -1368,15 +1371,7 @@ local System  = {}
             It is only invoked when there are entities with the characteristics
             expected by this system
 
-         @TODO afterUpdate(time: number, entities: Entity[]): void
-            Invoked after performing update of entities available for this system.
-            It is only invoked when there are entities with the characteristics
-            expected by this system
-
-         @TODO change(entity: Entity, added?: Component<any>, removed?: Component<any>): void
-             Invoked when an expected feature of this system is added or removed from the entity
-
-            enter(entity: Entity): void;
+         onEnter(entity: Entity): void;
             Invoked when:
                a) An entity with the characteristics (components) expected by this system is
                   added in the world;
@@ -1385,7 +1380,18 @@ local System  = {}
                c) An existing entity in the same world receives a new component at runtime
                   and all of its new components match the standard expected by this system.
 
-         @TODO exit(entity: Entity): void;
+         onRemove(time, world, enity, index, [component_N_items...])
+
+
+         @TODO afterUpdate(time: number, entities: Entity[]): void
+            Invoked after performing update of entities available for this system.
+            It is only invoked when there are entities with the characteristics
+            expected by this system
+
+         @TODO change(entity: Entity, added?: Component<any>, removed?: Component<any>): void
+             Invoked when an expected feature of this system is added or removed from the entity
+
+         @onExit(entity: Entity): void;
             Invoked when:
                a) An entity with the characteristics (components) expected by this system is
                   removed from the world;
@@ -1458,6 +1464,7 @@ function System.register(config)
       beforeUpdate         = config.beforeUpdate,
       update               = config.update,
       onEnter              = config.onEnter,
+      onRemove             = config.onRemove,
       beforeExecute        = config.beforeExecute,
       execute              = config.execute,
       step                 = config.step,
@@ -1789,6 +1796,9 @@ local function NewExecutionPlan(world, systems)
    -- systems that process the onEnter event
    local onEnterSystems = {}
 
+   -- systems that process the onRemove event
+   local onRemoveSystems = {}
+
    for k, system in pairs(systems) do
       if system.update ~= nil then
          if updateSteps[system.step][system.order] == nil then
@@ -1801,6 +1811,10 @@ local function NewExecutionPlan(world, systems)
 
       if system.onEnter ~= nil then
          table.insert(onEnterSystems, system)
+      end
+
+      if system.onRemove ~= nil then
+         table.insert(onRemoveSystems, system)
       end
    end
 
@@ -1922,7 +1936,51 @@ local function NewExecutionPlan(world, systems)
       end
    end
 
-   return onUpdate, onEnter
+   local onRemove = function(removedEntities, entityManager, time)
+      -- increment Global System Version (GSV), before system update
+      world.version = world.version + 1
+
+      for entityID, _  in pairs(removedEntities) do
+
+         -- get the chunk and index of this entity
+         local chunk, index = entityManager:getEntityChunk(entityID)
+         if chunk ~= nil then
+            local buffers = chunk.buffers
+
+            for _, system in pairs(onRemoveSystems) do
+
+               -- system does not apply to the archetype of that entity
+               if system.filter.match(chunk.archetype.components) then
+
+                  -- what components the system expects
+                  local whatComponents = system.requireAllOriginal
+                  if whatComponents == nil then
+                     whatComponents = system.requireAnyOriginal
+                  end
+
+                  local componentsData = table.create(table.getn(whatComponents))
+
+                  for l, compID in ipairs(whatComponents) do
+                     if buffers[compID] ~= nil then
+                        componentsData[l] = buffers[compID]
+                     else
+                        componentsData[l] = {}
+                     end
+                  end
+
+                  -- onRemove: function(world, entity, index, [component_N_items...]) -> boolean
+                  if system.onRemove(time, world, entityID, index, table.unpack(componentsData)) then
+                     -- If any system execution informs you that it has changed data in
+                     -- this chunk, it then performs the versioning of the chunk
+                     chunk.version = world.version
+                  end
+               end
+            end
+         end
+      end
+   end
+
+   return onUpdate, onEnter, onRemove
 end
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -1966,11 +2024,11 @@ function ECS.newWorld(systems, config)
    local scheduler
 
    -- System execution plan
-   local updateExecPlan, enterExecPlan
+   local updateExecPlan, enterExecPlan, removeExecPlan
 
-   local proccessDeltaTime = 1000/config.frequency/1000
+   local processDeltaTime = 1000/config.frequency/1000
 
-   -- INTERPOLATION: The proportion of time since the previous transform relative to proccessDeltaTime
+   -- INTERPOLATION: The proportion of time since the previous transform relative to processDeltaTime
    local interpolation = 1
 
    local FIRST_UPDATE_TIME = nil
@@ -1984,7 +2042,7 @@ function ECS.newWorld(systems, config)
    -- The REAL time at the beginning of this frame.
    local timeCurrentFrameReal  = 0
 
-   -- The time the latest proccess step has started.
+   -- The time the latest process step has started.
    local timeProcess  = 0
 
    local timeProcessOld = 0
@@ -2343,6 +2401,7 @@ function ECS.newWorld(systems, config)
                beforeUpdate         = SYSTEM[systemID].beforeUpdate,
                update               = SYSTEM[systemID].update,
                onEnter              = SYSTEM[systemID].onEnter,
+               onRemove             = SYSTEM[systemID].onRemove,
                step                 = SYSTEM[systemID].step,
                order                = SYSTEM[systemID].order,
                -- instance properties
@@ -2409,6 +2468,7 @@ function ECS.newWorld(systems, config)
          worldSystems         = nil
          updateExecPlan       = nil
          enterExecPlan        = nil
+         removeExecPlan       = nil
          cleanupEnvironmentFn = nil
          entitiesArchetypes   = nil
          scheduler            = nil
@@ -2445,7 +2505,7 @@ function ECS.newWorld(systems, config)
 
          -- need to update execution plan?
          if lastKnownArchetypeInstant < LAST_ARCHETYPE_INSTANT then
-            updateExecPlan, enterExecPlan = NewExecutionPlan(world, worldSystems)
+            updateExecPlan, enterExecPlan, removeExecPlan = NewExecutionPlan(world, worldSystems)
             lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
          end
 
@@ -2453,7 +2513,7 @@ function ECS.newWorld(systems, config)
             -- executed only once per frame
 
             if timeProcess ~= timeProcessOld then
-               interpolation = 1 + (now - timeProcess)/proccessDeltaTime
+               interpolation = 1 + (now - timeProcess)/processDeltaTime
             else
                interpolation = 1
             end
@@ -2490,7 +2550,7 @@ function ECS.newWorld(systems, config)
             updateExecPlan(step, entityManager, time, interpolation)
 
             while dirtyEnvironment do
-               cleanupEnvironmentFn()
+               cleanupEnvironmentFn(time)
             end
 
             if step == 'transform' then
@@ -2528,21 +2588,24 @@ function ECS.newWorld(systems, config)
                   lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
                end
 
-               updateExecPlan(step, entityManager, {
+               local time = {
                   process        = timeProcess,
+                  processDelta   = processDeltaTime,
                   frame          = timeCurrentFrame,
                   frameReal      = timeCurrentFrameReal,
                   now            = now,
                   nowReal        = nowReal,
                   delta          = timeDelta
-               }, 1)
+               }
+
+               updateExecPlan(step, entityManager, time, 1)
 
                while dirtyEnvironment do
-                  cleanupEnvironmentFn()
+                  cleanupEnvironmentFn(time)
                end
 
                nLoops      = nLoops + 1
-               timeProcess = timeProcess + proccessDeltaTime
+               timeProcess = timeProcess + processDeltaTime
             end
 
             if updated then
@@ -2553,7 +2616,7 @@ function ECS.newWorld(systems, config)
    }
 
    -- cleans up after running scripts
-   cleanupEnvironmentFn = function()
+   cleanupEnvironmentFn = function(time)
 
       if not dirtyEnvironment then
          -- fast exit
@@ -2562,8 +2625,12 @@ function ECS.newWorld(systems, config)
 
       dirtyEnvironment = false
 
+      local haveOnEnter = false
+      local onEnterEntities = {}
+
       -- 1: remove entities
-      -- @TODO: Event onRemove?
+      -- Event onRemove
+      removeExecPlan(entitiesRemoved, entityManager, time)
       for entityID, V in pairs(entitiesRemoved) do
          entityManager:remove(entityID)
          entitiesArchetypes[entityID] = nil
@@ -2574,9 +2641,7 @@ function ECS.newWorld(systems, config)
             entityManagerUpdated:remove(entityID)
          end
       end
-
-      local haveOnEnter = false
-      local onEnterEntities = {}
+      entitiesRemoved = {}
 
       -- 2: Update entities in memory
       -- @TODO: Event onChange?
@@ -2603,7 +2668,7 @@ function ECS.newWorld(systems, config)
       entitiesNew = {}
 
       if haveOnEnter then
-         enterExecPlan(onEnterEntities, entityManager)
+         enterExecPlan(onEnterEntities, entityManager, time)
          onEnterEntities = nil
       end
    end
