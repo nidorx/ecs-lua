@@ -1,5 +1,5 @@
 --[[
-   Roblox-ECS v1.2
+   Roblox-ECS v1.1
 
    Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
    game development on the Roblox platform
@@ -49,50 +49,8 @@ local RunService = game:GetService('RunService')
       - SharedComponent?
 ]]
 
-local function NOW()
-   return DateTime.now().UnixTimestampMillis
-end
-
-local PRINT_LIMIT_LAST_TIME = {}
-local PRINT_LIMIT_COUNT = {}
-local function debugF(message)
-   local t =  PRINT_LIMIT_LAST_TIME[message]
-   if t ~= nil then
-      if (t + 1000) < NOW() then
-         print(PRINT_LIMIT_COUNT[message],' times > ', message)
-         PRINT_LIMIT_LAST_TIME[message] = NOW()
-         PRINT_LIMIT_COUNT[message] = 0
-         return
-      end
-      PRINT_LIMIT_COUNT[message] =  PRINT_LIMIT_COUNT[message] + 1
-   else
-      PRINT_LIMIT_LAST_TIME[message] = NOW()
-      PRINT_LIMIT_COUNT[message] = 1
-   end
-end
-
 -- precision
 local EPSILON = 0.000000001
-
-local function floatEQ(n0, n1)
-   if n0 == n1 then
-      return true
-   end
-
-   return math.abs(n1 - n0) < EPSILON
-end
-
-local function vectorEQ(v0, v1)
-   if v0 == v1 then
-      return true
-   end
-
-   if not floatEQ(v0.X, v1.X) or not floatEQ(v0.Y, v1.Y) or not floatEQ(v0.Z, v1.Z) then
-      return false
-   else
-      return true
-   end
-end
 
 -- Ensures values are unique, removes nil values as well
 local function safeNumberTable(values)
@@ -715,7 +673,7 @@ end
 local ARCHETYPES = {}
 
 -- Moment when the last archetype was recorded. Used to cache the systems execution plan
-local LAST_ARCHETYPE_INSTANT = NOW()
+local LAST_ARCHETYPE_INSTANT = os.clock()
 
 local Archetype  = {}
 Archetype.__index = Archetype
@@ -738,7 +696,7 @@ function Archetype.get(components)
          components  = components
       }, Archetype)
 
-      LAST_ARCHETYPE_INSTANT = NOW()
+      LAST_ARCHETYPE_INSTANT = os.clock()
    end
 
    return ARCHETYPES[id]
@@ -867,7 +825,7 @@ local ENTITY_ID_KEY = Component.register('_ECS_ENTITY_ID_')
 local Chunk    = {}
 Chunk.__index  = Chunk
 
-local CHUNK_SIZE = 100
+local CHUNK_SIZE = 300
 
 --[[
    A block of memory containing the components for entities sharing the same Archetype
@@ -1438,6 +1396,11 @@ function System.register(config)
          error('Task-type systems do not accept the "beforeUpdate" parameter')
       end
 
+      if config.afterUpdate ~= nil then
+         error('Task-type systems do not accept the "afterUpdate" parameter')
+      end
+
+
       if config.onEnter ~= nil then
          error('Task-type systems do not accept the "onEnter" parameter')
       end
@@ -1462,6 +1425,7 @@ function System.register(config)
       rejectAll            = config.rejectAll,
       rejectAny            = config.rejectAny,
       beforeUpdate         = config.beforeUpdate,
+      afterUpdate          = config.afterUpdate,
       update               = config.update,
       onEnter              = config.onEnter,
       onRemove             = config.onRemove,
@@ -1793,6 +1757,14 @@ local function NewExecutionPlan(world, systems)
       render         = {}
    }
 
+   local updateStepsOrder = {
+      processIn      = {},
+      process        = {},
+      processOut     = {},
+      transform      = {},
+      render         = {}
+   }
+
    -- systems that process the onEnter event
    local onEnterSystems = {}
 
@@ -1803,7 +1775,7 @@ local function NewExecutionPlan(world, systems)
       if system.update ~= nil then
          if updateSteps[system.step][system.order] == nil then
             updateSteps[system.step][system.order] = {}
-            --table.insert(updateStepsOrder[system.step], system.order)
+            table.insert(updateStepsOrder[system.step], system.order)
          end
 
          table.insert(updateSteps[system.step][system.order], system)
@@ -1818,10 +1790,15 @@ local function NewExecutionPlan(world, systems)
       end
    end
 
+   for _, order in ipairs(updateStepsOrder) do
+      table.sort(order)
+   end
+
    -- Update systems
    local onUpdate = function(step, entityManager, time, interpolation)
-      for i, stepSystems  in pairs(updateSteps[step]) do
-         for j, system  in pairs(stepSystems) do
+      local stepSystems = updateSteps[step]
+      for i, order  in pairs(updateStepsOrder[step]) do
+         for j, system  in pairs(stepSystems[order]) do
             -- execute system update
 
             system.lastUpdate = time
@@ -1878,6 +1855,10 @@ local function NewExecutionPlan(world, systems)
                   -- this chunk, it then performs the versioning of the chunk
                   chunk.version = world.version
                end
+            end
+
+            if system.afterUpdate ~= nil then
+               system.afterUpdate(time, interpolation, world, system)
             end
 
             -- update last system version with GSV
@@ -2399,6 +2380,7 @@ function ECS.newWorld(systems, config)
                rejectAny            = SYSTEM[systemID].rejectAny,
                filter               = SYSTEM[systemID].filter,
                beforeUpdate         = SYSTEM[systemID].beforeUpdate,
+               afterUpdate          = SYSTEM[systemID].afterUpdate,
                update               = SYSTEM[systemID].update,
                onEnter              = SYSTEM[systemID].onEnter,
                onRemove             = SYSTEM[systemID].onRemove,
@@ -2555,6 +2537,7 @@ function ECS.newWorld(systems, config)
 
             if step == 'transform' then
                scheduler:run(time)
+               cleanupEnvironmentFn(time)
             end
          else
 
@@ -2687,25 +2670,6 @@ function ECS.newWorld(systems, config)
       end
    end
 
-   -- add default systems
-   if not config.disableDefaultSystems then
-
-      -- processIn
-      world.addSystem(ECS.Util.BasePartToEntityProcessInSystem)
-
-      -- process
-      world.addSystem(ECS.Util.MoveForwardSystem)
-
-      -- processOut
-      world.addSystem(ECS.Util.EntityToBasePartProcessOutSystem)
-
-      -- transform
-      world.addSystem(ECS.Util.BasePartToEntityTransformSystem)
-      world.addSystem(ECS.Util.EntityToBasePartTransformSystem)
-      world.addSystem(ECS.Util.EntityToBasePartInterpolationTransformSystem)
-      world.addSystem(ECS.Util.EntityToBasePartInterpolationCustomTransformSystem)
-   end
-
    if not config.disableAutoUpdate then
 
       world._steppedConn = RunService.Stepped:Connect(function()
@@ -2725,466 +2689,6 @@ function ECS.newWorld(systems, config)
 
    return world
 end
-
-
-----------------------------------------------------------------------------------------------------------------------
--- UTILITY COMPONENTS & SYSTEMS
-----------------------------------------------------------------------------------------------------------------------
-
-ECS.Util = {}
-
--- Creates an entity related to a BasePart
-function ECS.Util.NewBasePartEntity(world, part, syncBasePartToEntity, syncEntityToBasePart, interpolate)
-   local entityID = world.create()
-
-   world.set(entityID, ECS.Util.BasePartComponent, part)
-   world.set(entityID, ECS.Util.PositionComponent, part.CFrame.Position)
-   world.set(entityID, ECS.Util.RotationComponent, part.CFrame.RightVector, part.CFrame.UpVector, part.CFrame.LookVector)
-
-   if syncBasePartToEntity then
-      world.set(entityID, ECS.Util.BasePartToEntitySyncComponent)
-   end
-
-   if syncEntityToBasePart then
-      world.set(entityID, ECS.Util.EntityToBasePartSyncComponent)
-   end
-
-   if interpolate then
-      world.set(entityID, ECS.Util.PositionInterpolationComponent, part.CFrame.Position)
-      world.set(entityID, ECS.Util.RotationInterpolationComponent, part.CFrame.RightVector, part.CFrame.UpVector, part.CFrame.LookVector)
-   end
-
-   return entityID
-end
-
--- A component that facilitates access to BasePart
-ECS.Util.BasePartComponent = Component.register('BasePart', function(object)
-   if object == nil or object['IsA'] == nil or object:IsA('BasePart') == false then
-      error("This component only works with BasePart objects")
-   end
-
-   return object
-end)
-
--- Tag, indicates that the entity must be synchronized with the data from the BasePart (workspace)
-ECS.Util.BasePartToEntitySyncComponent = Component.register('BasePartToEntitySync', nil, true)
-
--- Tag, indicates that the BasePart (workspace) must be synchronized with the existing data in the Entity (ECS)
-ECS.Util.EntityToBasePartSyncComponent = Component.register('EntityToBasePartSync', nil, true)
-
--- Component that works with a position Vector3
-ECS.Util.PositionComponent = Component.register('Position', function(position)
-   if position ~= nil and typeof(position) ~= 'Vector3' then
-      error("This component only works with Vector3 objects")
-   end
-
-   if position == nil then
-      position = Vector3.new(0, 0, 0)
-   end
-
-   return position
-end)
-
--- Allows to register two last positions (Vector3) to allow interpolation
-ECS.Util.PositionInterpolationComponent = Component.register('PositionInterpolation', function(position)
-   if position ~= nil and typeof(position) ~= 'Vector3' then
-      error("This component only works with Vector3 objects")
-   end
-
-   if position == nil then
-      position = Vector3.new(0, 0, 0)
-   end
-
-   return {position, position}
-end)
-
--- {avgDelta, lastUpdate, position, rightVector, upVector, lookVector}
-ECS.Util.InterpolationCustomComponent = Component.register('InterpolationCustom', function(avgDelta, lastUpdate, lastPosition, lastRightVector, lastUpVector, lastLookVector)
-   if avgDelta == nil then
-      return nil
-   end
-   return {avgDelta, lastUpdate, lastPosition, lastRightVector, lastUpVector, lastLookVector}
-end)
-
-local VEC3_R = Vector3.new(1, 0, 0)
-local VEC3_U = Vector3.new(0, 1, 0)
-local VEC3_F = Vector3.new(0, 0, 1)
-
---[[
-   Rotational vectors that represents the object in the 3d world.
-   To transform into a CFrame use CFrame.fromMatrix(pos, rot[1], rot[2], rot[3] * -1)
-
-   Params
-      lookVector  {Vector3}   @See CFrame.LookVector
-      rightVector {Vector3}   @See CFrame.RightVector
-      upVector    {Vector3}   @See CFrame.UpVector
-
-   @See
-      https://devforum.roblox.com/t/understanding-cframe-frommatrix-the-replacement-for-cframe-new/593742
-      https://devforum.roblox.com/t/handling-the-edge-cases-of-cframe-frommatrix/632465
-]]
-ECS.Util.RotationComponent = Component.register('Rotation', function(rightVector, upVector, lookVector)
-
-   if rightVector ~= nil and typeof(rightVector) ~= 'Vector3' then
-      error("This component only works with Vector3 objects [param=rightVector]")
-   end
-
-   if upVector ~= nil and typeof(upVector) ~= 'Vector3' then
-      error("This component only works with Vector3 objects [param=upVector]")
-   end
-
-   if lookVector ~= nil and typeof(lookVector) ~= 'Vector3' then
-      error("This component only works with Vector3 objects [param=lookVector]")
-   end
-
-   if rightVector == nil then
-      rightVector = VEC3_R
-   end
-
-   if upVector == nil then
-      upVector = VEC3_U
-   end
-
-   if lookVector == nil then
-      lookVector = VEC3_F
-   end
-
-   return {rightVector, upVector, lookVector}
-end)
-
--- Allows to record two last rotations (rightVector, upVector, lookVector) to allow interpolation
-ECS.Util.RotationInterpolationComponent = Component.register('RotationInterpolation', function(rightVector, upVector, lookVector)
-
-   if rightVector ~= nil and typeof(rightVector) ~= 'Vector3' then
-      error("This component only works with Vector3 objects [param=rightVector]")
-   end
-
-   if upVector ~= nil and typeof(upVector) ~= 'Vector3' then
-      error("This component only works with Vector3 objects [param=upVector]")
-   end
-
-   if lookVector ~= nil and typeof(lookVector) ~= 'Vector3' then
-      error("This component only works with Vector3 objects [param=lookVector]")
-   end
-
-   if rightVector == nil then
-      rightVector = VEC3_R
-   end
-
-   if upVector == nil then
-      upVector = VEC3_U
-   end
-
-   if lookVector == nil then
-      lookVector = VEC3_F
-   end
-
-   return {{rightVector, upVector, lookVector}, {rightVector, upVector, lookVector}}
-end)
-
--- Tag, indicates that the forward movement system must act on this entity
-ECS.Util.MoveForwardComponent = Component.register('MoveForward', nil, true)
-
--- Allows you to define a movement speed for specialized handling systems
-ECS.Util.MoveSpeedComponent = Component.register('MoveSpeed', function(speed)
-   if speed == nil or typeof(speed) ~= 'number' then
-      error("This component only works with number value")
-   end
-
-   return speed
-end)
-
-------------------------------------------
---[[
-   Utility system that copies the direction and position of a Roblox BasePart to the ECS entity
-
-   Executed in two moments: At the beginning of the "process" step and at the beginning of the "transform" step
-]]
----------------------------------------->>
-local function BasePartToEntityUpdate(time, world, dirty, entity, index, parts, positions, rotations)
-
-   local changed = false
-   local part = parts[index]
-
-   if part ~= nil then
-
-      local position = positions[index]
-      local basePos = part.CFrame.Position
-      if position == nil or not vectorEQ(basePos, position) then
-         positions[index] = basePos
-         changed = true
-      end
-
-      local rotation    = rotations[index]
-      local rightVector =  part.CFrame.RightVector
-      local upVector    =  part.CFrame.UpVector
-      local lookVector  =  part.CFrame.LookVector
-      if rotation == nil or not vectorEQ(rightVector, rotation[1]) or not vectorEQ(upVector, rotation[2]) or not vectorEQ(lookVector, rotation[3]) then
-         rotations[index] = {rightVector, upVector, lookVector}
-         changed = true
-      end
-   end
-
-   return changed
-end
-
--- copia dados de basepart para entidade no inicio do processamento, ignora entidades marcadas com Interpolation
-ECS.Util.BasePartToEntityProcessInSystem = System.register({
-   name  = 'BasePartToEntityProcessIn',
-   step  = 'processIn',
-   order = 10,
-   requireAll = {
-      ECS.Util.BasePartComponent,
-      ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent,
-      ECS.Util.BasePartToEntitySyncComponent
-   },
-   rejectAny = {
-      ECS.Util.PositionInterpolationComponent,
-      ECS.Util.RotationInterpolationComponent
-   },
-   update = BasePartToEntityUpdate
-})
-
--- copia dados de um BasePart para entidade no inicio do passo transform
-ECS.Util.BasePartToEntityTransformSystem = System.register({
-   name  = 'BasePartToEntityTransform',
-   step  = 'transform',
-   order = 10,
-   requireAll = {
-      ECS.Util.BasePartComponent,
-      ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent,
-      ECS.Util.BasePartToEntitySyncComponent
-   },
-   rejectAny = {
-      ECS.Util.PositionInterpolationComponent,
-      ECS.Util.RotationInterpolationComponent
-   },
-   update = BasePartToEntityUpdate
-})
-----------------------------------------<<
-
-------------------------------------------
---[[
-   Utility system that copies the direction and position from ECS entity to a Roblox BasePart
-
-   Executed in two moments: At the end of the "process" step and at the end of the "transform" step
-]]
----------------------------------------->>
-
-local function EntityToBasePartUpdate(time, world, dirty, entity, index, parts, positions, rotations)
-
-   if not dirty then
-      return false
-   end
-
-   local changed  = false
-   local part     = parts[index]
-   local position = positions[index]
-   local rotation = rotations[index]
-   if part ~= nil then
-      local basePos     = part.CFrame.Position
-      local rightVector = part.CFrame.RightVector
-      local upVector    = part.CFrame.UpVector
-      local lookVector  = part.CFrame.LookVector
-
-      -- goal cframe, allow interpolation
-      local cframe = part.CFrame
-
-      if position ~= nil and not vectorEQ(basePos, position) then
-         cframe = CFrame.fromMatrix(position, rightVector, upVector, lookVector * -1)
-         changed = true
-      end
-
-      if rotation ~= nil then
-         if not vectorEQ(rightVector, rotation[1]) or not vectorEQ(upVector, rotation[2]) or not vectorEQ(lookVector, rotation[3]) then
-            cframe = CFrame.fromMatrix(cframe.Position, rotation[1], rotation[2], rotation[3] * -1)
-            changed = true
-         end
-      end
-
-      if changed then
-         part.CFrame = cframe
-      end
-   end
-
-   return changed
-end
-
--- copia dados da entidade para um BaseParte no fim do processamento
-ECS.Util.EntityToBasePartProcessOutSystem = System.register({
-   name  = 'EntityToBasePartProcess',
-   step  = 'processOut',
-   order = 100,
-   requireAll = {
-      ECS.Util.BasePartComponent,
-      ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent,
-      ECS.Util.EntityToBasePartSyncComponent
-   },
-   update = EntityToBasePartUpdate
-})
-
--- copia dados de uma entidade para um BsePart no passo de transformação, ignora entidades com interpolação
-ECS.Util.EntityToBasePartTransformSystem = System.register({
-   name  = 'EntityToBasePartTransform',
-   step  = 'transform',
-   order = 100,
-   requireAll = {
-      ECS.Util.BasePartComponent,
-      ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent,
-      ECS.Util.EntityToBasePartSyncComponent
-   },
-   rejectAny = {
-      ECS.Util.PositionInterpolationComponent,
-      ECS.Util.RotationInterpolationComponent
-   },
-   update = EntityToBasePartUpdate
-})
-
--- Interpolates the position and rotation of a BasePart in the transform step.
--- Allows the process step to be performed at low frequency and with smooth rendering
-local interpolationFactor = 1
-ECS.Util.EntityToBasePartInterpolationTransformSystem = System.register({
-   name  = 'EntityToBasePartInterpolationTransform',
-   step  = 'transform',
-   order = 100,
-   requireAll = {
-      ECS.Util.BasePartComponent,
-      ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent,
-      ECS.Util.PositionInterpolationComponent,
-      ECS.Util.RotationInterpolationComponent,
-      ECS.Util.EntityToBasePartSyncComponent
-   },
-   rejectAny ={
-      ECS.Util.InterpolationCustomComponent
-   },
-   beforeUpdate = function(time, interpolation, world, system)
-      interpolationFactor = interpolation
-   end,
-   update = function(time, world, dirty, entity, index, parts, positions, rotations, positionsInt, rotationsInt)
-
-      local part     = parts[index]
-      local position = positions[index]
-      local rotation = rotations[index]
-
-      if part ~= nil then
-         -- goal cframe, allow interpolation
-         local cframe = part.CFrame
-
-         -- swap old and new position, if changed
-         if position ~= nil then
-            local rightVector = part.CFrame.RightVector
-            local upVector    = part.CFrame.UpVector
-            local lookVector  = part.CFrame.LookVector
-
-            if not vectorEQ(positionsInt[index][1], position) then
-               positionsInt[index][2] = positionsInt[index][1]
-               positionsInt[index][1] = position
-            end
-
-            local oldPosition = positionsInt[index][2]
-            cframe = CFrame.fromMatrix(oldPosition:Lerp(position, interpolationFactor), rightVector, upVector, lookVector * -1)
-         end
-
-         -- swap old and new rotation, if changed
-         if rotation ~= nil then
-            if not vectorEQ(rotationsInt[index][1][1], rotation[1])
-               or not vectorEQ(rotationsInt[index][1][2], rotation[2])
-               or not vectorEQ(rotationsInt[index][1][3], rotation[3])
-            then
-               rotationsInt[index][2] = rotationsInt[index][1]
-               rotationsInt[index][1] = rotation
-            end
-
-            local oldRotation = rotationsInt[index][2]
-            cframe = CFrame.fromMatrix(
-               cframe.Position,
-               oldRotation[1]:Lerp(rotation[1], interpolationFactor),
-               oldRotation[2]:Lerp(rotation[2], interpolationFactor),
-               (oldRotation[3] * -1):Lerp((rotation[3] * -1), interpolationFactor)
-            )
-         end
-
-         part.CFrame = cframe
-      end
-
-      -- readonly
-      return false
-   end
-})
-
--- Customized interpolation, the developer is responsible for indicating the necessary parameters for calculating the interpolation 
-ECS.Util.EntityToBasePartInterpolationCustomTransformSystem = System.register({
-   name  = 'EntityToBasePartInterpolationCustomTransform',
-   step  = 'transform',
-   order = 100,
-   requireAll = {
-      ECS.Util.BasePartComponent,
-      ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent,
-      ECS.Util.InterpolationCustomComponent,
-      ECS.Util.EntityToBasePartSyncComponent
-   },
-   update = function(time, world, dirty, entity, index, parts, positions, rotations, interpolations)
-
-      local part     = parts[index]
-      local position = positions[index]
-      local rotation = rotations[index]
-      -- {avgDelta, lastUpdate, position, rightVector, upVector, lookVector}
-      local interp = interpolations[index]
-
-      if part ~= nil and position ~= nil and rotation ~= nil and interp ~= nil then
-         local avgDelta    = interp[1]
-         local lastUpdate  = interp[2]
-         local alpha = (time.frame-lastUpdate)/avgDelta
-         local cframe = CFrame.fromMatrix(interp[3], interp[4], interp[5], interp[6] * -1)
-         part.CFrame = cframe:Lerp ( CFrame.fromMatrix(position, rotation[1], rotation[2], rotation[3] * -1), alpha )
-      end
-
-      -- readonly
-      return false
-   end
-})
-----------------------------------------<<
-
--- Simple forward movement system (position = position + speed * lookVector)
-local moveForwardSpeedFactor = 1
-ECS.Util.MoveForwardSystem = System.register({
-   name = 'MoveForward',
-   step = 'process',
-   requireAll = {
-      ECS.Util.MoveSpeedComponent,
-      ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent,
-      ECS.Util.MoveForwardComponent,
-   },
-   beforeUpdate = function(time, interpolation, world, system)
-      moveForwardSpeedFactor = world.frequency/60
-   end,
-   update = function (time, world, dirty, entity, index, speeds, positions, rotations, forwards)
-
-      local position = positions[index]
-      if position ~= nil then
-
-         local rotation = rotations[index]
-         if rotation ~= nil then
-
-            local speed = speeds[index]
-            if speed ~= nil then
-               -- speed/2 = 1 studs per second (120 = frequency)
-               positions[index] = position + speed/moveForwardSpeedFactor  * rotation[3]
-               return true
-            end
-         end
-      end
-
-      return false
-   end
-})
 
 -- export ECS lib
 return ECS
