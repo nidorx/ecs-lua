@@ -756,12 +756,15 @@ local ARCHETYPE_EMPTY = Archetype.get({})
 ----------------------------------------------------------------------------------------------------------------------
 local COMPONENTS_NAME            = {}
 local COMPONENTS_CONSTRUCTOR     = {}
+local COMPONENTS_API             = {}
 local COMPONENTS_IS_TAG          = {}
 local COMPONENTS_INDEX_BY_NAME   = {}
 
 local function DEFAULT_CONSTRUCOTR(value)
    return value
 end
+
+local DEFAULT_API = {}
 
 local Component  = {
    --[[
@@ -776,12 +779,16 @@ local Component  = {
 
          isTag {Boolean}
 
+         api {{[key:string] -> Function(component, [PARAM_N...])}}
+            allows you to add "methods" to that component. The methods are invoked as follows:
+            "world.call(entity, Component, 'methodName', param1, paramN)"
+
          @TODO: shared  {Boolean}
             see https://docs.unity3d.com/Packages/com.unity.entities@0.7/manual/shared_component_data.html
 
       Returns component ID
    ]]
-   register = function(name, constructor, isTag)
+   register = function(name, constructor, isTag, api)
 
       if name == nil then
          error('Component name is required for registration')
@@ -799,6 +806,10 @@ local Component  = {
          isTag = false
       end
 
+      if api == nil then
+         api = DEFAULT_API
+      end
+
       if COMPONENTS_INDEX_BY_NAME[name] ~= nil then
          error('Another component already registered with that name')
       end
@@ -809,6 +820,7 @@ local Component  = {
       COMPONENTS_INDEX_BY_NAME[name] = ID
 
       table.insert(COMPONENTS_NAME, name)
+      table.insert(COMPONENTS_API, api)
       table.insert(COMPONENTS_IS_TAG, isTag)
       table.insert(COMPONENTS_CONSTRUCTOR, constructor)
 
@@ -2107,6 +2119,7 @@ function ECS.newWorld(systems, config)
          return ID
       end,
 
+
       --[[
          Get entity compoment data
       ]]
@@ -2138,7 +2151,14 @@ function ECS.newWorld(systems, config)
             entitiesArchetypes[entity] = archetypeNew
          end
 
-         local value = COMPONENTS_CONSTRUCTOR[component](table.unpack({...}))
+         local value
+         local arg = {...}
+         if arg and arg[1] and typeof(arg[1]) == 'table' and arg[1].__v then
+            -- invocado pelo método call
+            value = arg[1].__v[0]
+         else
+            value = COMPONENTS_CONSTRUCTOR[component](table.unpack(arg))
+         end
 
          if entitiesNew[entity] == true then
             if archetypeChanged then
@@ -2186,6 +2206,25 @@ function ECS.newWorld(systems, config)
             -- records the value in the current entityManager, used by the scripts
             entityManager:setValue(entity, component, value)
          end
+      end,
+
+      --[[
+         Invokes a utility method from a component's api
+      ]]
+      call = function(entity, component, method, ...)
+
+         local fn = COMPONENTS_API[component][method]
+         if not fn then
+            return nil
+         end
+
+         local changed, value = fn(world.get(entity, component), table.unpack({...}))
+
+         if changed then
+            world.set(entity, component, {__v = {value}})
+         end
+
+         return value
       end,
 
       --[[
