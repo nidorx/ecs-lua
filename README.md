@@ -3,7 +3,7 @@
 **Roblox-ECS** is a tiny and easy to use [ECS _(Entity Component System)_](https://en.wikipedia.org/wiki/Entity_component_system) engine for game development on the Roblox platform
 
 
-**TLDR;** There is a very cool tutorial below in the content that shows you in practice how to create a small shooting system (The result of this tutorial can be seen at https://github.com/nidorx/roblox-ecs/blob/master/docs/tutorial.rbxl). 
+**TLDR;** There is a [very cool tutorial that shows you in practice how to create a small shooting system](TUTORIAL.md) (The result of this tutorial can be seen at https://github.com/nidorx/roblox-ecs/blob/master/docs/tutorial.rbxl). 
 
 > **IMPORTANT!** This engine is still in development, therefore subject to bugs
 
@@ -13,6 +13,9 @@
     - https://www.roblox.com/library/5887881675/Roblox-ECS
 - **Forum**
     - https://devforum.roblox.com/t/841175
+
+- [**ECSUtil** - Utility Systems and Components](ECSUtil.md)
+   - https://github.com/nidorx/roblox-ecs/blob/master/src/shared/ECSUtil.lua
     
 ## Installation
 
@@ -394,118 +397,7 @@ local PlayerShootingSystem = require(path.to.PlayerShootingSystem)
 
 world.addSystem(PlayerShootingSystem, newOrder, { customConfig = 'Hello' })
 ```
-## Utility Systems and Components
 
-Roblox-ECS provides (and already starts the world) with some basic systems and components, described below
-
-### Components
-- _ECS.Util._**BasePartComponent**
-   - A component that facilitates access to BasePart
-- _ECS.Util._**PositionComponent**
-   - Component that works with a position `Vector3`
-- _ECS.Util._**RotationComponent**
-   - Rotational vectors _(right, up, look)_ that represents the object in the 3d world. To transform into a CFrame use `CFrame.fromMatrix(pos, rot[1], rot[2], rot[3] * -1)`
-- _ECS.Util._**PositionInterpolationComponent**
-   - Allows to register two last positions (`Vector3`) to allow interpolation
-- _ECS.Util._**RotationInterpolationComponent**
-   - Allows to record two last rotations (`rightVector`, `upVector`, `lookVector`) to allow interpolation
-- _ECS.Util._**BasePartToEntitySyncComponent**
-   - Tag, indicates that the `Entity` _(ECS)_ must be synchronized with the data from the `BasePart` _(workspace)_
-- _ECS.Util._**EntityToBasePartSyncComponent**
-   - Tag, indicates that the `BasePart` _(workspace)_ must be synchronized with the existing data in the `Entity` _(ECS)_
-- _ECS.Util._**MoveForwardComponent**
-   - Tag, indicates that the forward movement system must act on this entity
-- _ECS.Util._**MoveSpeedComponent**
-   - Allows you to define a movement speed for specialized handling systems
-
-
-### Systems
-- _ECS.Util._**BasePartToEntityProcessInSystem**
-   - Synchronizes the `Entity` _(ECS)_ with the data of a `BasePart` _(workspace)_ at the beginning of the `processIn` step
-   -  ```lua
-      step  = 'processIn',
-      order = 10,
-      requireAll = {
-         ECS.Util.BasePartComponent,
-         ECS.Util.PositionComponent,
-         ECS.Util.RotationComponent,
-         ECS.Util.BasePartToEntitySyncComponent
-      },
-      rejectAny = {
-         ECS.Util.PositionInterpolationComponent,
-         ECS.Util.RotationInterpolationComponent
-      }
-      ```
-- _ECS.Util._**BasePartToEntityTransformSystem**
-   - Synchronizes the `Entity` _(ECS)_ with the data of a `BasePart` _(workspace)_ at the beginning of the `transform` step _(After running the Roblox physics engine)_
-   -  ```lua
-      step  = 'transform',
-      order = 10,
-      requireAll = {
-         ECS.Util.BasePartComponent,
-         ECS.Util.PositionComponent,
-         ECS.Util.RotationComponent,
-         ECS.Util.BasePartToEntitySyncComponent
-      },
-      rejectAny = {
-         ECS.Util.PositionInterpolationComponent,
-         ECS.Util.RotationInterpolationComponent
-      }
-      ```
-- _ECS.Util._**EntityToBasePartProcessOutSystem**
-   - Synchronizes the `BasePart` _(workspace)_ with the `Entity` _(ECS)_ data at the end of the `processOut` step _(before Roblox's physics engine runs)_
-   -  ```lua
-      step  = 'processOut',
-      order = 100,
-      requireAll = {
-         ECS.Util.BasePartComponent,
-         ECS.Util.PositionComponent,
-         ECS.Util.RotationComponent,
-         ECS.Util.EntityToBasePartSyncComponent
-      }
-      ```
-- _ECS.Util._**EntityToBasePartTransformSystem**
-   - Synchronizes the `BasePart` _(workspace)_ with the `Entity` _(ECS)_ data at the end of the `transform` step _(last step of the current frame in multi-thread execution)_
-   -  ```lua
-      step  = 'transform',
-      order = 100,
-      requireAll = {
-         ECS.Util.BasePartComponent,
-         ECS.Util.PositionComponent,
-         ECS.Util.RotationComponent,
-         ECS.Util.EntityToBasePartSyncComponent
-      },
-      rejectAny = {
-         ECS.Util.PositionInterpolationComponent,
-         ECS.Util.RotationInterpolationComponent
-      }
-      ```
-- _ECS.Util._**EntityToBasePartInterpolationTransformSystem**
-   - Interpolates the position and rotation of a BasePart in the `transform` step. Allows the `process` step to be performed at low frequency with smooth rendering
-   -  ```lua
-      step  = 'transform',
-      order = 100,
-      requireAll = {
-         ECS.Util.BasePartComponent,
-         ECS.Util.PositionComponent,
-         ECS.Util.RotationComponent,
-         ECS.Util.PositionInterpolationComponent,
-         ECS.Util.RotationInterpolationComponent,
-         ECS.Util.EntityToBasePartSyncComponent
-      }
-      ```
-- _ECS.Util._**MoveForwardSystem**
-   - Simple forward movement system (position = position + speed * lookVector)
-   -  ```lua
-      step = 'process',
-      requireAll = {
-         ECS.Util.MoveSpeedComponent,
-         ECS.Util.PositionComponent,
-         ECS.Util.RotationComponent,
-         ECS.Util.MoveForwardComponent,
-      }
-      ```
-      
 ## @Todo
 
 - Remove systems
