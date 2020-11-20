@@ -58,10 +58,10 @@ In the script above, before the creation of our weapon, we will define our ECS w
 local world = ECS.newWorld()
 
 
-local bulletSpawnEntity = ECS.Util.NewBasePartEntity(world, BulletSpawnPart, true, false)
+local bulletSpawnEntity = ECSUtil.NewBasePartEntity(world, BulletSpawnPart, true, false)
 ```
 
-The `ECS.Util.NewBasePartEntity` method is a facilitator that adds the `ECS.Util.BasePartComponent`, `ECS.Util.PositionComponent`, `ECS.Util.RotationComponent` components and can also add interpolation and sync tags, it has the following signature: `function ECS.Util.NewBasePartEntity(world, part, syncBasePartToEntity, syncEntityToBasePart, interpolate)`.
+The `ECSUtil.NewBasePartEntity` method is a facilitator that adds the `ECSUtil.BasePartComponent`, `ECSUtil.PositionComponent`, `ECSUtil.RotationComponent` components and can also add interpolation and sync tags, it has the following signature: `function ECSUtil.NewBasePartEntity(world, part, syncBasePartToEntity, syncEntityToBasePart, interpolate)`.
 
 In our case, we only want it to sync the data from `BasePart` _(workspace)_ to our `Entity` _(ECS)_.
 
@@ -140,7 +140,7 @@ Continuing, we will now create the system responsible for creating the projectil
 
 Create a `ModuleScript` in `ReplicatedStorage > tutorial > system` with the name `FiringSystem` and the contents below. This system is responsible only for creating 3D objects in the scene that represent our projectiles. Realize that this system does not have the `update` method, as it is only interested in knowing when an entity with the expected characteristics appears in the world.
 
-To correctly position our projectiles, this system uses data from the `ECS.Util.PositionComponent` and `ECS.Util.RotationComponent` components, which were added up there by the `ECS.Util.NewBasePartEntity` method during the creation of our entity. In order for our projectile to move, we added the `ECS.Util.MoveForwardComponent` and `ECS.Util.MoveSpeedComponent` components that are used by the `ECS.Util.MoveForwardSystem` system (Automatically added when creating the world)
+To correctly position our projectiles, this system uses data from the `ECSUtil.PositionComponent` and `ECSUtil.RotationComponent` components, which were added up there by the `ECSUtil.NewBasePartEntity` method during the creation of our entity. In order for our projectile to move, we added the `ECSUtil.MoveForwardComponent` and `ECSUtil.MoveSpeedComponent` components that are used by the `ECSUtil.MoveForwardSystem` system (Automatically added when creating the world)
 
 Also note that our system has not made any changes to the current `chunk` or even the entity, so it always returns `false`
 
@@ -155,8 +155,8 @@ return ECS.System.register({
    name = 'Firing',
    step = 'processIn', 
    requireAll = {      
-      ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent,
+      ECSUtil.PositionComponent,
+      ECSUtil.RotationComponent,
       FiringComponent
    },
    onEnter = function(time, world, entity, index,  positions, rotations, firings)
@@ -176,9 +176,9 @@ return ECS.System.register({
          bulletPart.CFrame       = CFrame.fromMatrix(position, rotation[1], rotation[2], rotation[3] * -1)
          bulletPart.Parent       = game.Workspace
 
-         local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true)
-         world.set(bulletEntity, ECS.Util.MoveForwardComponent)
-         world.set(bulletEntity, ECS.Util.MoveSpeedComponent, 0.1)
+         local bulletEntity = ECSUtil.NewBasePartEntity(world, bulletPart, false, true)
+         world.set(bulletEntity, ECSUtil.MoveForwardComponent)
+         world.set(bulletEntity, ECSUtil.MoveSpeedComponent, 0.1)
       end
 
       return false
@@ -317,7 +317,7 @@ This happens due to **Fixed Timestep Jitter**, we will understand in the next to
 
 ### Fixed Timestep Jitter
 
-In our project, the system responsible for the movement of our projectiles is `ECS.Util.MoveForwardSystem`. The `update` method of this system is invoked 30 times per second, which is the standard update frequency for the `process` step of Roblox-ECS. Therefore, even though our game is being rendered at more than 60FPS, the simulation performed by this system is limited, causing this unwanted effect in the animation
+In our project, the system responsible for the movement of our projectiles is `ECSUtil.MoveForwardSystem`. The `update` method of this system is invoked 30 times per second, which is the standard update frequency for the `process` step of Roblox-ECS. Therefore, even though our game is being rendered at more than 60FPS, the simulation performed by this system is limited, causing this unwanted effect in the animation
 
 To work around the problem we have two solutions:
 
@@ -372,13 +372,13 @@ If you run the game now you will see that the animation is horrible, we will now
 Change the `ReplicatedStorage > tutorial > system > FiringSystem.lua` script, in the line where our bulletEntity is initializing, using the utility method, modify it
 
 ```lua
-local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true)
+local bulletEntity = ECSUtil.NewBasePartEntity(world, bulletPart, false, true)
 ```
 
 to
 
 ```lua
-local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true, true)
+local bulletEntity = ECSUtil.NewBasePartEntity(world, bulletPart, false, true, true)
 ```
 
 Informing that we want an entity that receives the tags and components used by the system if interpolated synchronization.
@@ -391,56 +391,3 @@ And we come to the end of the tutorial, for more information on these concepts, 
 - [Game Loop by Robert Nystrom](http://gameprogrammingpatterns.com/game-loop.html)
 - [Fix Your Timestep! by Glenn Fiedler](https://gafferongames.com/post/fix_your_timestep/)
 - [The Game Loop By Gilles Bellot](https://bell0bytes.eu/the-game-loop/)
-
-## @Todo
-
-- Remove systems
-- Destroy world
-- Improve technical documentation
-- Perform benchmark with a focus on Data-oriented design
-- From the benchmarks, make improvements to the engine
-- Prepare for multi-thread?
-- Debugging system (External tool? Plugin?)
-- Statistics (Per system, per component)
-- Template export?
-- Facilitate the creation of unit tests
-- Facilitate systems benchmark
-- Create unit tests for the engine (quality assurance)
-
-## Feedback, Requests and Roadmap
-
-Please use [GitHub issues] for feedback, questions or comments.
-
-If you have specific feature requests or would like to vote on what others are recommending, please go to the [GitHub issues] section as well. I would love to see what you are thinking.
-
-## Contributing
-
-You can contribute in many ways to this project.
-
-### Translating and documenting
-
-I'm not a native speaker of the English language, so you may have noticed a lot of grammar errors in this documentation.
-
-You can FORK this project and suggest improvements to this document (https://github.com/nidorx/roblox-ecs/edit/master/README.md).
-
-If you find it more convenient, report a issue with the details on [GitHub issues].
-
-### Reporting Issues
-
-If you have encountered a problem with this component please file a defect on [GitHub issues].
-
-Describe as much detail as possible to get the problem reproduced and eventually corrected.
-
-### Fixing defects and adding improvements
-
-1. Fork it (<https://github.com/nidorx/roblox-ecs/fork>)
-2. Commit your changes (`git commit -am 'Add some fooBar'`)
-3. Push to your master branch (`git push`)
-4. Create a new Pull Request
-
-## License
-
-This code is distributed under the terms and conditions of the [MIT license](LICENSE).
-
-
-[GitHub issues]: https://github.com/nidorx/roblox-ecs/issues
