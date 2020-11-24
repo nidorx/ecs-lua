@@ -1412,7 +1412,6 @@ function System.register(config)
          error('Task-type systems do not accept the "afterUpdate" parameter')
       end
 
-
       if config.onEnter ~= nil then
          error('Task-type systems do not accept the "onEnter" parameter')
       end
@@ -1439,6 +1438,7 @@ function System.register(config)
       beforeUpdate         = config.beforeUpdate,
       afterUpdate          = config.afterUpdate,
       update               = config.update,
+      onCreate             = config.onCreate,
       onEnter              = config.onEnter,
       onRemove             = config.onRemove,
       beforeExecute        = config.beforeExecute,
@@ -2421,6 +2421,7 @@ function ECS.newWorld(systems, config)
                beforeUpdate         = SYSTEM[systemID].beforeUpdate,
                afterUpdate          = SYSTEM[systemID].afterUpdate,
                update               = SYSTEM[systemID].update,
+               onCreate             = SYSTEM[systemID].onCreate,
                onEnter              = SYSTEM[systemID].onEnter,
                onRemove             = SYSTEM[systemID].onRemove,
                step                 = SYSTEM[systemID].step,
@@ -2439,6 +2440,10 @@ function ECS.newWorld(systems, config)
    
             -- forces re-creation of the execution plan
             lastKnownArchetypeInstant = 0
+
+            if system.onCreate ~= nil then
+               system.onCreate(world, system)
+            end
          end
       end,
 
