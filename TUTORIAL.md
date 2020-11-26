@@ -14,6 +14,7 @@ local Player 	   = Players.LocalPlayer
 local Character	= Player.Character
 
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
+local ECSUtil = require(game.ReplicatedStorage:WaitForChild("ECSUtil"))
 
 -- Our weapon
 local rightHand = Character:WaitForChild("RightHand")
@@ -56,6 +57,7 @@ In the script above, before the creation of our weapon, we will define our ECS w
 
  ```lua
 local world = ECS.newWorld()
+ECSUtil.AddDefaultSystems(world)
 
 
 local bulletSpawnEntity = ECSUtil.NewBasePartEntity(world, BulletSpawnPart, true, false)
