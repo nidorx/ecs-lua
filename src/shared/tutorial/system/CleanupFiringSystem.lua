@@ -5,7 +5,7 @@ local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 
-return ECS.System.register({
+return ECS.RegisterSystem({
    name = 'CleanupFiring',
    step = 'transform',
    requireAll = {
@@ -19,7 +19,7 @@ return ECS.System.register({
             return false
          end
 
-         world.remove(entity, FiringComponent)
+         world.Remove(entity, FiringComponent)
 
          return true
       end

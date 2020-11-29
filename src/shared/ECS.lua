@@ -1,5 +1,5 @@
 --[[
-   Roblox-ECS v1.1
+   Roblox-ECS v1.2
 
    Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
    game development on the Roblox platform
@@ -766,70 +766,68 @@ end
 
 local DEFAULT_API = {}
 
-local Component  = {
-   --[[
-      Register a new component
+--[[
+   Register a new component
 
-      Params:
-         name {String}
-            Unique identifier for this component
+   Params:
+      name {String}
+         Unique identifier for this component
 
-         constructor {Function}
-            Allow you to validate or parse data
+      constructor {Function}
+         Allow you to validate or parse data
 
-         isTag {Boolean}
+      isTag {Boolean}
 
-         api {{[key:string] -> Function(component, [PARAM_N...])}}
-            allows you to add "methods" to that component. The methods are invoked as follows:
-            "world.call(entity, Component, 'methodName', param1, paramN)"
+      api {{[key:string] -> Function(component, [PARAM_N...])}}
+         allows you to add "methods" to that component. The methods are invoked as follows:
+         "world.Call(entity, Component, 'methodName', param1, paramN)"
 
-         @TODO: shared  {Boolean}
-            see https://docs.unity3d.com/Packages/com.unity.entities@0.7/manual/shared_component_data.html
+      @TODO: shared  {Boolean}
+         see https://docs.unity3d.com/Packages/com.unity.entities@0.7/manual/shared_component_data.html
 
-      Returns component ID
-   ]]
-   register = function(name, constructor, isTag, api)
+   Returns component ID
+]]
+local function RegisterComponent(name, constructor, isTag, api)
 
-      if name == nil then
-         error('Component name is required for registration')
-      end
-
-      if constructor ~= nil and type(constructor) ~= 'function' then
-         error('The component constructor must be a function, or nil')
-      end
-
-      if constructor == nil then
-         constructor = DEFAULT_CONSTRUCOTR
-      end
-
-      if isTag == nil then
-         isTag = false
-      end
-
-      if api == nil then
-         api = DEFAULT_API
-      end
-
-      if COMPONENTS_INDEX_BY_NAME[name] ~= nil then
-         error('Another component already registered with that name')
-      end
-
-      -- component type ID = index
-      local ID = table.getn(COMPONENTS_NAME) + 1
-
-      COMPONENTS_INDEX_BY_NAME[name] = ID
-
-      table.insert(COMPONENTS_NAME, name)
-      table.insert(COMPONENTS_API, api)
-      table.insert(COMPONENTS_IS_TAG, isTag)
-      table.insert(COMPONENTS_CONSTRUCTOR, constructor)
-
-      return ID
+   if name == nil then
+      error('Component name is required for registration')
    end
-}
+
+   if constructor ~= nil and type(constructor) ~= 'function' then
+      error('The component constructor must be a function, or nil')
+   end
+
+   if constructor == nil then
+      constructor = DEFAULT_CONSTRUCOTR
+   end
+
+   if isTag == nil then
+      isTag = false
+   end
+
+   if api == nil then
+      api = DEFAULT_API
+   end
+
+   if COMPONENTS_INDEX_BY_NAME[name] ~= nil then
+      error('Another component already registered with that name')
+   end
+
+   -- component type ID = index
+   local ID = table.getn(COMPONENTS_NAME) + 1
+
+   COMPONENTS_INDEX_BY_NAME[name] = ID
+
+   table.insert(COMPONENTS_NAME, name)
+   table.insert(COMPONENTS_API, api)
+   table.insert(COMPONENTS_IS_TAG, isTag)
+   table.insert(COMPONENTS_CONSTRUCTOR, constructor)
+
+   return ID
+end
 
 -- Special component used to identify the entity that owns a data
-local ENTITY_ID_KEY = Component.register('_ECS_ENTITY_ID_')
+local ENTITY_ID_KEY = RegisterComponent('_ECS_ENTITY_ID_')
 
 ----------------------------------------------------------------------------------------------------------------------
 -- CHUNK
@@ -1072,7 +1070,7 @@ function  EntityManager:set(entityID, archetype)
    db.nextChunkIndex = db.nextChunkIndex + 1
 
    -- marks the new version of chunk (moment that changed)
-   chunk.version = self.world.version
+   chunk.version = self.world.Version
 
    -- if the chunk is full, it already creates a new chunk to welcome new future entities
    if db.nextChunkIndex > CHUNK_SIZE  then
@@ -1298,13 +1296,6 @@ local SYSTEM                 = {}
 local SYSTEM_INDEX_BY_NAME   = {}
 
 --[[
-   Represents the logic that transforms component data of an entity from its current
-   state to its next state. A system runs on entities that have a specific set of
-   component types.
-]]
-local System  = {}
-
---[[
    Allow to create new System Class Type
 
    Params:
@@ -1371,7 +1362,7 @@ local System  = {}
                   component set no longer matches the standard expected by this system
    }
 ]]
-function System.register(config)
+local function RegisterSystem(config)
 
    if config == nil then
       error('System configuration is required for its creation')
@@ -1610,7 +1601,7 @@ function Scheduler:run(time)
       local executeFn = system.execute
 
       -- increment Global System Version (GSV), before system execute
-      world.version = world.version + 1
+      world.Version = world.Version + 1
 
       if system.beforeExecute ~= nil then
          system.beforeExecute(time, world, system)
@@ -1651,11 +1642,11 @@ function Scheduler:run(time)
       if hasChangeThisChunk then
          -- If any system execution informs you that it has changed data in
          -- this chunk, it then performs the versioning of the chunk
-         chunk.version = world.version
+         chunk.version = world.Version
       end
 
       -- update last task version with GSV
-      task.data[3] = world.version
+      task.data[3] = world.Version
       task.data[4] = timeInitTask
 
       -- recalculate task vruntime
@@ -1695,7 +1686,7 @@ function Scheduler:update()
    local systems        = self.systems
    local entityManager  = self.entityManager
    local min_vruntime   = self.min_vruntime
-   local worldVersion   = self.world.version
+   local worldVersion   = self.world.Version
 
    local taskByChunkSystem  = {}
 
@@ -1831,7 +1822,7 @@ local function NewExecutionPlan(world, systems)
             local updateFn = system.update
 
             -- increment Global System Version (GSV), before system update
-            world.version = world.version + 1
+            world.Version = world.Version + 1
 
             if system.beforeUpdate ~= nil then
                system.beforeUpdate(time, interpolation, world, system)
@@ -1865,7 +1856,7 @@ local function NewExecutionPlan(world, systems)
                if hasChangeThisChunk then
                   -- If any system execution informs you that it has changed data in
                   -- this chunk, it then performs the versioning of the chunk
-                  chunk.version = world.version
+                  chunk.version = world.Version
                end
             end
 
@@ -1874,14 +1865,14 @@ local function NewExecutionPlan(world, systems)
             end
 
             -- update last system version with GSV
-            system.version = world.version
+            system.version = world.Version
          end
       end
    end
 
    local onEnter = function(onEnterEntities, entityManager, time)
       -- increment Global System Version (GSV), before system update
-      world.version = world.version + 1
+      world.Version = world.Version + 1
 
       for entityID, newComponents in pairs(onEnterEntities) do
 
@@ -1920,7 +1911,7 @@ local function NewExecutionPlan(world, systems)
                      if system.onEnter(time, world, entityID, index, table.unpack(componentsData)) then
                         -- If any system execution informs you that it has changed data in
                         -- this chunk, it then performs the versioning of the chunk
-                        chunk.version = world.version
+                        chunk.version = world.Version
                      end
                   end
                end
@@ -1931,7 +1922,7 @@ local function NewExecutionPlan(world, systems)
 
    local onRemove = function(removedEntities, entityManager, time)
       -- increment Global System Version (GSV), before system update
-      world.version = world.version + 1
+      world.Version = world.Version + 1
 
       for entityID, _  in pairs(removedEntities) do
 
@@ -1965,7 +1956,7 @@ local function NewExecutionPlan(world, systems)
                   if system.onRemove(time, world, entityID, index, table.unpack(componentsData)) then
                      -- If any system execution informs you that it has changed data in
                      -- this chunk, it then performs the versioning of the chunk
-                     chunk.version = world.version
+                     chunk.version = world.Version
                   end
                end
             end
@@ -1976,17 +1967,10 @@ local function NewExecutionPlan(world, systems)
    return onUpdate, onEnter, onRemove
 end
 
-----------------------------------------------------------------------------------------------------------------------
--- ECS
-----------------------------------------------------------------------------------------------------------------------
-local ECS = {
-   Component   = Component,
-   System      = System,
-   Filter      = Filter
-}
-
--- World constructor
-function ECS.newWorld(systems, config)
+--[[
+   World constructor
+]]
+local function CreateNewWorld(systems, config)
 
    if config == nil then
       config = {}
@@ -2088,95 +2072,185 @@ function ECS.newWorld(systems, config)
 
    local world
 
-   -- Environment cleaning method
-   local cleanupEnvironmentFn
-
    -- True when environment has been modified while a system is running
    local dirtyEnvironment = false
 
-   world = {
+   --[[
+      Create a new entity
+   ]]
+   local function CreateEntity()
+      local ID = SEQ_ENTITY
+      SEQ_ENTITY = SEQ_ENTITY + 1
 
-      version = 0,
+      entityManagerNew:set(ID, ARCHETYPE_EMPTY)
 
-      frequency = config.frequency,
+      -- informs that it has a new entity
+      entitiesNew[ID] = true
 
-      --[[
-         Create a new entity
-      ]]
-      create = function()
-         local ID = SEQ_ENTITY
-         SEQ_ENTITY = SEQ_ENTITY + 1
+      entitiesArchetypes[ID] = ARCHETYPE_EMPTY
 
-         entityManagerNew:set(ID, ARCHETYPE_EMPTY)
+      dirtyEnvironment = true
 
-         -- informs that it has a new entity
-         entitiesNew[ID] = true
+      return ID
+   end
 
-         entitiesArchetypes[ID] = ARCHETYPE_EMPTY
+   --[[
+      Get entity compoment data
+   ]]
+   local function GetComponentValue(entity, component)
+      if entitiesNew[entity] == true then
+         return entityManagerNew:getValue(entity, component)
+      elseif entitiesUpdated[entity] ~= nil then
+         return entityManagerUpdated:getValue(entity, component)
+      else
+         return entityManager:getValue(entity, component)
+      end
+   end
 
-         dirtyEnvironment = true
+   --[[
+      Defines the value of a component for an entity
+   ]]
+   local function SetComponentValue(entity, component, ...)
+      local archetype = entitiesArchetypes[entity]
+      if archetype == nil then
+         -- entity doesn exist
+         return
+      end
 
-         return ID
-      end,
+      dirtyEnvironment = true
+
+      local archetypeNew = archetype:with(component)
+      local archetypeChanged = archetype ~= archetypeNew
+      if archetypeChanged then
+         entitiesArchetypes[entity] = archetypeNew
+      end
+
+      local value
+      local arg = {...}
+      if arg and arg[1] and typeof(arg[1]) == 'table' and arg[1].__v then
+         -- invocado pelo método call
+         value = arg[1].__v[0]
+      else
+         value = COMPONENTS_CONSTRUCTOR[component](table.unpack(arg))
+      end
+
+      if entitiesNew[entity] == true then
+         if archetypeChanged then
+            entityManagerNew:set(entity, archetypeNew)
+         end
+
+         entityManagerNew:setValue(entity, component, value)
+      else
+         if archetypeChanged then
+            -- entity has undergone an archetype change. Registers a copy in another entity
+            -- manager, which will be processed after the execution of the current scripts
+            if entitiesUpdated[entity] == nil then
+               entitiesUpdated[entity] = {
+                  received = {},
+                  lost = {}
+               }
+               -- the first time you are modifying the components of this entity in
+               -- this execution, you need to copy the data of the entity
+               entityManagerUpdated:set(entity, archetypeNew)
+               entityManagerUpdated:setData(entity, entityManager:getData(entity))
+            else
+               -- just perform the archetype update on the entityManager
+               entityManagerUpdated:set(entity, archetypeNew)
+            end
+         end
+
+         if entitiesUpdated[entity]  ~= nil then
+            -- register a copy of the value
+            entityManagerUpdated:setValue(entity, component, value)
+
+            -- removed before, received again
+            local ignoreChange = false
+            for k, v in pairs(entitiesUpdated[entity].lost) do
+               if v == component then
+                  table.remove(entitiesUpdated[entity].lost, k)
+                  ignoreChange = true
+                  break
+               end
+            end
+            if not ignoreChange then
+               table.insert(entitiesUpdated[entity].received, component)
+            end
+         end
+
+         -- records the value in the current entityManager, used by the scripts
+         entityManager:setValue(entity, component, value)
+      end
+   end
 
 
-      --[[
-         Get entity compoment data
-      ]]
-      get = function(entity, component)
+   --[[
+      Invokes a utility method from a component's api
+   ]]
+   local function CallComponentAPI(entity, component, method, ...)
+
+      local fn = COMPONENTS_API[component][method]
+      if not fn then
+         return nil
+      end
+
+      local changed, value = fn(world.Get(entity, component), table.unpack({...}))
+
+      if changed then
+         world.Set(entity, component, {__v = {value}})
+      end
+
+      return value
+   end
+
+   --[[
+      Removing a entity or Removing a component from an entity at runtime
+   ]]
+   local function RemoveEntityOrComponent(entity, component)
+      local archetype = entitiesArchetypes[entity]
+      if archetype == nil then
+         return
+      end
+
+      if entitiesRemoved[entity] == true then
+         return
+      end
+
+      dirtyEnvironment = true
+
+      if component == nil then
+         -- remove entity
          if entitiesNew[entity] == true then
-            return entityManagerNew:getValue(entity, component)
-         elseif entitiesUpdated[entity] ~= nil then
-            return entityManagerUpdated:getValue(entity, component)
+            entityManagerNew:remove(entity)
+            entitiesNew[entity] = nil
+            entitiesArchetypes[entity] = nil
          else
-            return entityManager:getValue(entity, component)
+            if entitiesRemoved[entity] == nil then
+               entitiesRemoved[entity] = true
+            end
          end
-      end,
-
-      --[[
-         Defines the value of a component for an entity
-      ]]
-      set = function(entity, component, ...)
-         local archetype = entitiesArchetypes[entity]
-         if archetype == nil then
-            -- entity doesn exist
-            return
-         end
-
-         dirtyEnvironment = true
-
-         local archetypeNew = archetype:with(component)
+      else
+         -- remove component from entity
+         local archetypeNew = archetype:without(component)
          local archetypeChanged = archetype ~= archetypeNew
          if archetypeChanged then
             entitiesArchetypes[entity] = archetypeNew
          end
-
-         local value
-         local arg = {...}
-         if arg and arg[1] and typeof(arg[1]) == 'table' and arg[1].__v then
-            -- invocado pelo método call
-            value = arg[1].__v[0]
-         else
-            value = COMPONENTS_CONSTRUCTOR[component](table.unpack(arg))
-         end
-
          if entitiesNew[entity] == true then
             if archetypeChanged then
                entityManagerNew:set(entity, archetypeNew)
             end
-
-            entityManagerNew:setValue(entity, component, value)
          else
             if archetypeChanged then
-               -- entity has undergone an archetype change. Registers a copy in another entity
-               -- manager, which will be processed after the execution of the current scripts
+
+               -- entity has undergone an archetype change. Registers a copy in
+               -- another entity manager, which will be processed after the execution of the current scripts
                if entitiesUpdated[entity] == nil then
                   entitiesUpdated[entity] = {
                      received = {},
                      lost = {}
                   }
-                  -- the first time you are modifying the components of this entity in
-                  -- this execution, you need to copy the data of the entity
+                  -- the first time you are modifying the components of this entity
+                  -- in this execution, you need to copy the data of the entity
                   entityManagerUpdated:set(entity, archetypeNew)
                   entityManagerUpdated:setData(entity, entityManager:getData(entity))
                else
@@ -2185,465 +2259,235 @@ function ECS.newWorld(systems, config)
                end
             end
 
-            if entitiesUpdated[entity]  ~= nil then
+            if entitiesUpdated[entity] ~= nil then
                -- register a copy of the value
-               entityManagerUpdated:setValue(entity, component, value)
+               entityManagerUpdated:setValue(entity, component, nil)
 
-               -- removed before, received again
+               -- received before, removed again
                local ignoreChange = false
-               for k, v in pairs(entitiesUpdated[entity].lost) do
+               for k, v in pairs(entitiesUpdated[entity].received) do
                   if v == component then
-                     table.remove(entitiesUpdated[entity].lost, k)
+                     table.remove(entitiesUpdated[entity].received, k)
                      ignoreChange = true
                      break
                   end
                end
                if not ignoreChange then
-                  table.insert(entitiesUpdated[entity].received, component)
+                  table.insert(entitiesUpdated[entity].lost, component)
                end
             end
 
             -- records the value in the current entityManager, used by the scripts
-            entityManager:setValue(entity, component, value)
+            entityManager:setValue(entity, component, nil)
          end
-      end,
+      end
+   end
 
-      --[[
-         Invokes a utility method from a component's api
-      ]]
-      call = function(entity, component, method, ...)
+   --[[
+      Get entity compoment data
+   ]]
+   local function CheckComponentHas(entity, component)
+      if entitiesArchetypes[entity] == nil then
+         return false
+      end
 
-         local fn = COMPONENTS_API[component][method]
-         if not fn then
-            return nil
-         end
+      return entitiesArchetypes[entity]:has(component)
+   end
 
-         local changed, value = fn(world.get(entity, component), table.unpack({...}))
+   --[[
+      Allows you to perform the interaction between all active entities that is compatible with the informed filter
 
-         if changed then
-            world.set(entity, component, {__v = {value}})
-         end
+      Params
+         filter {ECS.Filter instance}
+            The filter that will be applied to obtain the entities
 
-         return value
-      end,
+         callback {function(stop, entity, index, [Component_N_Data...]) => bool}
+            Function that will be invoked for each filtered entity. To stop execution, use the 'stop'
+               method received in the parameters.
+            This function should return true if you have made changes to the component or data of
+               the chunk being worked on
+   ]]
+   local function FilterForeach(filter, callback)
 
-      --[[
-         Removing a entity or Removing a component from an entity at runtime
-      ]]
-      remove = function(entity, component)
-         local archetype = entitiesArchetypes[entity]
-         if archetype == nil then
-            return
-         end
+      local stopped = false
 
-         if entitiesRemoved[entity] == true then
-            return
-         end
+      -- Allows the developer to stop execution
+      local stop = function()
+         stopped = true
+      end
 
-         dirtyEnvironment = true
+      -- Gets all the chunks that apply to this filter
+      local chunks = entityManager:filterChunks(filter.match)
 
-         if component == nil then
-            -- remove entity
-            if entitiesNew[entity] == true then
-               entityManagerNew:remove(entity)
-               entitiesNew[entity] = nil
-               entitiesArchetypes[entity] = nil
+      for k, chunk in pairs(chunks) do
+         local buffers = chunk.buffers
+
+         local componentsData = table.create(table.getn(filter.components))
+         for l, compID in ipairs(filter.components) do
+            if buffers[compID] ~= nil then
+               componentsData[l] = buffers[compID]
             else
-               if entitiesRemoved[entity] == nil then
-                  entitiesRemoved[entity] = true
-               end
-            end
-         else
-            -- remove component from entity
-            local archetypeNew = archetype:without(component)
-            local archetypeChanged = archetype ~= archetypeNew
-            if archetypeChanged then
-               entitiesArchetypes[entity] = archetypeNew
-            end
-            if entitiesNew[entity] == true then
-               if archetypeChanged then
-                  entityManagerNew:set(entity, archetypeNew)
-               end
-            else
-               if archetypeChanged then
-
-                  -- entity has undergone an archetype change. Registers a copy in
-                  -- another entity manager, which will be processed after the execution of the current scripts
-                  if entitiesUpdated[entity] == nil then
-                     entitiesUpdated[entity] = {
-                        received = {},
-                        lost = {}
-                     }
-                     -- the first time you are modifying the components of this entity
-                     -- in this execution, you need to copy the data of the entity
-                     entityManagerUpdated:set(entity, archetypeNew)
-                     entityManagerUpdated:setData(entity, entityManager:getData(entity))
-                  else
-                     -- just perform the archetype update on the entityManager
-                     entityManagerUpdated:set(entity, archetypeNew)
-                  end
-               end
-
-               if entitiesUpdated[entity] ~= nil then
-                  -- register a copy of the value
-                  entityManagerUpdated:setValue(entity, component, nil)
-
-                  -- received before, removed again
-                  local ignoreChange = false
-                  for k, v in pairs(entitiesUpdated[entity].received) do
-                     if v == component then
-                        table.remove(entitiesUpdated[entity].received, k)
-                        ignoreChange = true
-                        break
-                     end
-                  end
-                  if not ignoreChange then
-                     table.insert(entitiesUpdated[entity].lost, component)
-                  end
-               end
-
-               -- records the value in the current entityManager, used by the scripts
-               entityManager:setValue(entity, component, nil)
+               componentsData[l] = {}
             end
          end
-      end,
 
-      --[[
-         Get entity compoment data
-      ]]
-      has = function(entity, component)
-         if entitiesArchetypes[entity] == nil then
-            return false
-         end
-
-         return entitiesArchetypes[entity]:has(component)
-      end,
-
-      --[[
-         Allows you to perform the interaction between all active entities that is compatible with the informed filter
-
-         Params
-            filter {ECS.Filter instance}
-               The filter that will be applied to obtain the entities
-
-            callback {function(stop, entity, index, [Component_N_Data...]) => bool}
-               Function that will be invoked for each filtered entity. To stop execution, use the 'stop'
-                  method received in the parameters.
-               This function should return true if you have made changes to the component or data of
-                  the chunk being worked on
-      ]]
-      forEach = function(filter, callback)
-
-         local stopped = false
-
-         -- Allows the developer to stop execution
-         local stop = function()
-            stopped = true
-         end
-
-         -- Gets all the chunks that apply to this filter
-         local chunks = entityManager:filterChunks(filter.match)
-
-         for k, chunk in pairs(chunks) do
-            local buffers = chunk.buffers
-
-            local componentsData = table.create(table.getn(filter.components))
-            for l, compID in ipairs(filter.components) do
-               if buffers[compID] ~= nil then
-                  componentsData[l] = buffers[compID]
-               else
-                  componentsData[l] = {}
-               end
+         local entityIDBuffer = buffers[ENTITY_ID_KEY]
+         local hasChangeThisChunk = false
+         for index = 1, chunk.count do
+            if callback(stop, entityIDBuffer[index], index, table.unpack(componentsData)) then
+               hasChangeThisChunk = true
             end
-
-            local entityIDBuffer = buffers[ENTITY_ID_KEY]
-            local hasChangeThisChunk = false
-            for index = 1, chunk.count do
-               if callback(stop, entityIDBuffer[index], index, table.unpack(componentsData)) then
-                  hasChangeThisChunk = true
-               end
-               if stopped then
-                  break
-               end
-            end
-
-            if hasChangeThisChunk then
-               -- If any system execution informs you that it has changed data in
-               -- this chunk, it then performs the versioning of the chunk
-               chunk.version = world.version
-            end
-
             if stopped then
                break
             end
          end
-      end,
 
-      --[[
-         Remove an entity from this world
-      ]]
-      addSystem = function (systemID, order, config)
-         if systemID == nil then
-            return
+         if hasChangeThisChunk then
+            -- If any system execution informs you that it has changed data in
+            -- this chunk, it then performs the versioning of the chunk
+            chunk.version = world.Version
          end
 
-         if SYSTEM[systemID] == nil then
-            error('There is no registered system with the given ID')
-         end
-
-         if SYSTEM[systemID].step == 'task' then
-            scheduler:addSystem(systemID)
-         else
-            if worldSystems[systemID] ~= nil then
-               -- This system has already been registered in this world
-               return
-            end
-   
-            -- @TODO: why?
-            if entityManager:count() > 0 or entityManagerNew:count() > 0 then
-               error('Adding systems is not allowed after adding entities in the world')
-            end
-   
-            if config == nil then
-               config = {}
-            end
-   
-            local system = {
-               id                   = systemID,
-               name                 = SYSTEM[systemID].name,
-               requireAll           = SYSTEM[systemID].requireAll,
-               requireAny           = SYSTEM[systemID].requireAny,
-               requireAllOriginal   = SYSTEM[systemID].requireAllOriginal,
-               requireAnyOriginal   = SYSTEM[systemID].requireAnyOriginal,
-               rejectAll            = SYSTEM[systemID].rejectAll,
-               rejectAny            = SYSTEM[systemID].rejectAny,
-               filter               = SYSTEM[systemID].filter,
-               beforeUpdate         = SYSTEM[systemID].beforeUpdate,
-               afterUpdate          = SYSTEM[systemID].afterUpdate,
-               update               = SYSTEM[systemID].update,
-               onCreate             = SYSTEM[systemID].onCreate,
-               onEnter              = SYSTEM[systemID].onEnter,
-               onRemove             = SYSTEM[systemID].onRemove,
-               step                 = SYSTEM[systemID].step,
-               order                = SYSTEM[systemID].order,
-               -- instance properties
-               version              = 0,
-               lastUpdate           = timeProcess,
-               config               = config
-            }
-   
-            if order ~= nil and order < 0 then
-               system.order = 50
-            end
-   
-            worldSystems[systemID] = system
-   
-            -- forces re-creation of the execution plan
-            lastKnownArchetypeInstant = 0
-
-            if system.onCreate ~= nil then
-               system.onCreate(world, system)
-            end
-         end
-      end,
-
-      --[[
-         Is the Entity still alive?
-      ]]
-      alive = function(entity)
-         if entitiesArchetypes[entity] == nil then
-            return false
-         end
-
-         if entitiesNew[entity] == true then
-            return false
-         end
-
-         if entitiesRemoved[entity] == true then
-            return false
-         end
-
-         return true
-      end,
-
-      --[[
-         Remove all entities and systems
-      ]]
-      destroy = function()
-         if world._steppedConn ~= nil then
-            world._steppedConn:Disconnect()
-            world._steppedConn = nil
-         end
-
-         if world._heartbeatConn ~= nil then
-            world._heartbeatConn:Disconnect()
-            world._heartbeatConn = nil
-         end
-
-         if world._renderSteppedConn ~= nil then
-            world._renderSteppedConn:Disconnect()
-            world._renderSteppedConn = nil
-         end
-
-         -- Clears all references. An ECS world never creates external references (cache, etc.), all variables are enclosed in this block
-         entityManager        = nil
-         entityManagerNew     = nil
-         entityManagerUpdated = nil
-         entitiesUpdated      = nil
-         entitiesRemoved      = nil
-         worldSystems         = nil
-         updateExecPlan       = nil
-         enterExecPlan        = nil
-         removeExecPlan       = nil
-         cleanupEnvironmentFn = nil
-         entitiesArchetypes   = nil
-         scheduler            = nil
-
-         -- It also removes all methods in the world, avoids external calls
-         world.create      = nil
-         world.set         = nil
-         world.get         = nil
-         world.remove      = nil
-         world.has         = nil
-         world.forEach     = nil
-         world.addSystem   = nil
-         world.alive       = nil
-         world.update      = nil
-         world.destroy     = nil
-         world             = nil
-      end,
-
-      --[[
-         Realizes world update
-      ]]
-      update = function(step, now)
-         if not RunService:IsRunning() then
-            return
-         end
-
-         if FIRST_UPDATE_TIME == nil then
-            FIRST_UPDATE_TIME = now
-         end
-
-         -- corrects for internal time
-         local nowReal = now
-         now = now - FIRST_UPDATE_TIME
-
-         -- need to update execution plan?
-         if lastKnownArchetypeInstant < LAST_ARCHETYPE_INSTANT then
-            updateExecPlan, enterExecPlan, removeExecPlan = NewExecutionPlan(world, worldSystems)
-            lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
-         end
-
-         if step ~= 'process' then
-            -- executed only once per frame
-
-            if timeProcess ~= timeProcessOld then
-               interpolation = 1 + (now - timeProcess)/processDeltaTime
-            else
-               interpolation = 1
-            end
-
-            if step == 'processIn' then
-
-               -- first step, initialize current frame time
-               timeCurrentFrame  = now
-               timeCurrentFrameReal = nowReal
-               if timeLastFrame == 0 then
-                  timeLastFrame = timeCurrentFrame
-               end
-               if timeProcess == 0 then
-                  timeProcess    = timeCurrentFrame
-                  timeProcessOld = timeCurrentFrame
-               end
-               timeDelta = timeCurrentFrame - timeLastFrame
-               interpolation = 1
-
-            elseif step == 'render' then
-               -- last step, save last frame time
-               timeLastFrame = timeCurrentFrame
-            end
-
-            local time = {
-               process        = timeProcess,
-               frame          = timeCurrentFrame,
-               frameReal      = timeCurrentFrameReal,
-               now            = now,
-               nowReal        = nowReal,
-               delta          = timeDelta
-            }
-
-            updateExecPlan(step, entityManager, time, interpolation)
-
-            while dirtyEnvironment do
-               cleanupEnvironmentFn(time)
-            end
-
-            if step == 'transform' then
-               scheduler:run(time)
-               cleanupEnvironmentFn(time)
-            end
-         else
-
-            local timeProcessOldTmp = timeProcess
-
-            --[[
-               Adjusting the framerate, the world must run on the same frequency,
-               this ensures determinism in the execution of the scripts
-
-               Each system in "transform" step is executed at a predetermined frequency (in Hz).
-
-               Ex. If the game is running on the client at 30FPS but a system needs to be run at
-               120Hz or 240Hz, this logic will ensure that this frequency is reached
-
-               @see
-                  https://gafferongames.com/post/fix_your_timestep/
-                  https://gameprogrammingpatterns.com/game-loop.html
-                  https://bell0bytes.eu/the-game-loop/
-            ]]
-            local nLoops = 0
-            local updated =  false
-            -- Fixed time is updated in regular intervals (equal to fixedDeltaTime) until time property is reached.
-            while timeProcess < timeCurrentFrame and nLoops < maxSkipFrames do
-
-               -- debugF('Update')
-
-               updated = true
-               -- need to update execution plan?
-               if lastKnownArchetypeInstant < LAST_ARCHETYPE_INSTANT then
-                  updateExecPlan, enterExecPlan = NewExecutionPlan(world, worldSystems)
-                  lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
-               end
-
-               local time = {
-                  process        = timeProcess,
-                  processDelta   = processDeltaTime,
-                  frame          = timeCurrentFrame,
-                  frameReal      = timeCurrentFrameReal,
-                  now            = now,
-                  nowReal        = nowReal,
-                  delta          = timeDelta
-               }
-
-               updateExecPlan(step, entityManager, time, 1)
-
-               while dirtyEnvironment do
-                  cleanupEnvironmentFn(time)
-               end
-
-               nLoops      = nLoops + 1
-               timeProcess = timeProcess + processDeltaTime
-            end
-
-            if updated then
-               timeProcessOld = timeProcessOldTmp
-            end
+         if stopped then
+            break
          end
       end
-   }
+   end
 
-   -- cleans up after running scripts
-   cleanupEnvironmentFn = function(time)
+   local function AddSystem(systemID, order, config)
+      if systemID == nil then
+         return
+      end
+
+      if SYSTEM[systemID] == nil then
+         error('There is no registered system with the given ID')
+      end
+
+      if SYSTEM[systemID].step == 'task' then
+         scheduler:addSystem(systemID)
+      else
+         if worldSystems[systemID] ~= nil then
+            -- This system has already been registered in this world
+            return
+         end
+
+         -- @TODO: why?
+         if entityManager:count() > 0 or entityManagerNew:count() > 0 then
+            error('Adding systems is not allowed after adding entities in the world')
+         end
+
+         if config == nil then
+            config = {}
+         end
+
+         local system = {
+            id                   = systemID,
+            name                 = SYSTEM[systemID].name,
+            requireAll           = SYSTEM[systemID].requireAll,
+            requireAny           = SYSTEM[systemID].requireAny,
+            requireAllOriginal   = SYSTEM[systemID].requireAllOriginal,
+            requireAnyOriginal   = SYSTEM[systemID].requireAnyOriginal,
+            rejectAll            = SYSTEM[systemID].rejectAll,
+            rejectAny            = SYSTEM[systemID].rejectAny,
+            filter               = SYSTEM[systemID].filter,
+            beforeUpdate         = SYSTEM[systemID].beforeUpdate,
+            afterUpdate          = SYSTEM[systemID].afterUpdate,
+            update               = SYSTEM[systemID].update,
+            onCreate             = SYSTEM[systemID].onCreate,
+            onEnter              = SYSTEM[systemID].onEnter,
+            onRemove             = SYSTEM[systemID].onRemove,
+            step                 = SYSTEM[systemID].step,
+            order                = SYSTEM[systemID].order,
+            -- instance properties
+            version              = 0,
+            lastUpdate           = timeProcess,
+            config               = config
+         }
+
+         if order ~= nil and order < 0 then
+            system.order = 50
+         end
+
+         worldSystems[systemID] = system
+
+         -- forces re-creation of the execution plan
+         lastKnownArchetypeInstant = 0
+
+         if system.onCreate ~= nil then
+            system.onCreate(world, system)
+         end
+      end
+   end
+
+   --[[
+      Is the Entity still alive?
+   ]]
+   local function IsEntityAlive(entity)
+      if entitiesArchetypes[entity] == nil then
+         return false
+      end
+
+      if entitiesNew[entity] == true then
+         return false
+      end
+
+      if entitiesRemoved[entity] == true then
+         return false
+      end
+
+      return true
+   end
+
+   --[[
+      Remove all entities and systems
+   ]]
+   local function DestroyWorld()
+      if world._steppedConn ~= nil then
+         world._steppedConn:Disconnect()
+         world._steppedConn = nil
+      end
+
+      if world._heartbeatConn ~= nil then
+         world._heartbeatConn:Disconnect()
+         world._heartbeatConn = nil
+      end
+
+      if world._renderSteppedConn ~= nil then
+         world._renderSteppedConn:Disconnect()
+         world._renderSteppedConn = nil
+      end
+
+      -- Clears all references. An ECS world never creates external references (cache, etc.), all variables are enclosed in this block
+      entityManager        = nil
+      entityManagerNew     = nil
+      entityManagerUpdated = nil
+      entitiesUpdated      = nil
+      entitiesRemoved      = nil
+      worldSystems         = nil
+      updateExecPlan       = nil
+      enterExecPlan        = nil
+      removeExecPlan       = nil
+      entitiesArchetypes   = nil
+      scheduler            = nil
+
+      -- It also removes all methods in the world, avoids external calls
+      world.Create      = nil
+      world.Set         = nil
+      world.Get         = nil
+      world.Remove      = nil
+      world.Has         = nil
+      world.ForEach     = nil
+      world.AddSystem   = nil
+      world.Alive       = nil
+      world.Update      = nil
+      world.Destroy     = nil
+      world             = nil
+   end
+
+   --[[
+      cleans up after running scripts
+   ]]
+   local function CleanupEnvironment(time)
 
       if not dirtyEnvironment then
          -- fast exit
@@ -2700,6 +2544,151 @@ function ECS.newWorld(systems, config)
       end
    end
 
+   --[[
+      Realizes world update
+   ]]
+   local function Update(step, now)
+      if not RunService:IsRunning() then
+         return
+      end
+
+      if FIRST_UPDATE_TIME == nil then
+         FIRST_UPDATE_TIME = now
+      end
+
+      -- corrects for internal time
+      local nowReal = now
+      now = now - FIRST_UPDATE_TIME
+
+      -- need to update execution plan?
+      if lastKnownArchetypeInstant < LAST_ARCHETYPE_INSTANT then
+         updateExecPlan, enterExecPlan, removeExecPlan = NewExecutionPlan(world, worldSystems)
+         lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
+      end
+
+      if step ~= 'process' then
+         -- executed only once per frame
+
+         if timeProcess ~= timeProcessOld then
+            interpolation = 1 + (now - timeProcess)/processDeltaTime
+         else
+            interpolation = 1
+         end
+
+         if step == 'processIn' then
+
+            -- first step, initialize current frame time
+            timeCurrentFrame  = now
+            timeCurrentFrameReal = nowReal
+            if timeLastFrame == 0 then
+               timeLastFrame = timeCurrentFrame
+            end
+            if timeProcess == 0 then
+               timeProcess    = timeCurrentFrame
+               timeProcessOld = timeCurrentFrame
+            end
+            timeDelta = timeCurrentFrame - timeLastFrame
+            interpolation = 1
+
+         elseif step == 'render' then
+            -- last step, save last frame time
+            timeLastFrame = timeCurrentFrame
+         end
+
+         local time = {
+            process        = timeProcess,
+            frame          = timeCurrentFrame,
+            frameReal      = timeCurrentFrameReal,
+            now            = now,
+            nowReal        = nowReal,
+            delta          = timeDelta
+         }
+
+         updateExecPlan(step, entityManager, time, interpolation)
+
+         while dirtyEnvironment do
+            CleanupEnvironment(time)
+         end
+
+         if step == 'transform' then
+            scheduler:run(time)
+            CleanupEnvironment(time)
+         end
+      else
+
+         local timeProcessOldTmp = timeProcess
+
+         --[[
+            Adjusting the framerate, the world must run on the same frequency,
+            this ensures determinism in the execution of the scripts
+
+            Each system in "transform" step is executed at a predetermined frequency (in Hz).
+
+            Ex. If the game is running on the client at 30FPS but a system needs to be run at
+            120Hz or 240Hz, this logic will ensure that this frequency is reached
+
+            @see
+               https://gafferongames.com/post/fix_your_timestep/
+               https://gameprogrammingpatterns.com/game-loop.html
+               https://bell0bytes.eu/the-game-loop/
+         ]]
+         local nLoops = 0
+         local updated =  false
+         -- Fixed time is updated in regular intervals (equal to fixedDeltaTime) until time property is reached.
+         while timeProcess < timeCurrentFrame and nLoops < maxSkipFrames do
+
+            -- debugF('Update')
+
+            updated = true
+            -- need to update execution plan?
+            if lastKnownArchetypeInstant < LAST_ARCHETYPE_INSTANT then
+               updateExecPlan, enterExecPlan = NewExecutionPlan(world, worldSystems)
+               lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
+            end
+
+            local time = {
+               process        = timeProcess,
+               processDelta   = processDeltaTime,
+               frame          = timeCurrentFrame,
+               frameReal      = timeCurrentFrameReal,
+               now            = now,
+               nowReal        = nowReal,
+               delta          = timeDelta
+            }
+
+            updateExecPlan(step, entityManager, time, 1)
+
+            while dirtyEnvironment do
+               CleanupEnvironment(time)
+            end
+
+            nLoops      = nLoops + 1
+            timeProcess = timeProcess + processDeltaTime
+         end
+
+         if updated then
+            timeProcessOld = timeProcessOldTmp
+         end
+      end
+   end
+
+   world = {
+      Version     = 0,
+      Frequency   = config.frequency,
+      -- Functions
+      Create      = CreateEntity,
+      Get         = GetComponentValue,
+      Set         = SetComponentValue,
+      Call        = CallComponentAPI,
+      Remove      = RemoveEntityOrComponent,
+      Has         = CheckComponentHas,
+      ForEach     = FilterForeach,
+      AddSystem   = AddSystem,
+      Alive       = IsEntityAlive,
+      Destroy     = DestroyWorld,
+      Update      = Update
+   }
+
    -- all managers in this world
    entityManager        = EntityManager.new(world)
    entityManagerNew     = EntityManager.new(world)
@@ -2710,29 +2699,37 @@ function ECS.newWorld(systems, config)
    -- add user systems
    if systems ~= nil then
       for i, system in pairs(systems) do
-         world.addSystem(system)
+         AddSystem(system)
       end
    end
 
    if not config.disableAutoUpdate then
-
       world._steppedConn = RunService.Stepped:Connect(function()
-         world.update('processIn',  os.clock())
-         world.update('process',    os.clock())
-         world.update('processOut', os.clock())
+         Update('processIn',  os.clock())
+         Update('process',    os.clock())
+         Update('processOut', os.clock())
       end)
 
       world._heartbeatConn = RunService.Heartbeat:Connect(function()
-         world.update('transform', os.clock())
+         Update('transform', os.clock())
       end)
 
-      world._renderSteppedConn = RunService.RenderStepped:Connect(function()
-         world.update('render', os.clock())
-      end)
+      if not RunService:IsServer() then
+         world._renderSteppedConn = RunService.RenderStepped:Connect(function()
+            Update('render', os.clock())
+         end)
+      end
    end
 
    return world
 end
 
+------------------------------------------------------------------------------------------------------------------------
 -- export ECS lib
-return ECS
+------------------------------------------------------------------------------------------------------------------------
+return {
+   RegisterComponent = RegisterComponent,
+   RegisterSystem    = RegisterSystem,
+   Filter            = Filter,
+   CreateWorld       = CreateNewWorld
+}

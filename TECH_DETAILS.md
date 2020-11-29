@@ -61,7 +61,7 @@ local FiringComponent = require(game.ReplicatedStorage:WaitForChild("FiringCompo
 
 local pool = require(game.ReplicatedStorage:WaitForChild("InputHandlerUtils"))
 
-return ECS.System.register({
+return ECS.RegisterSystem({
    name = 'InputMap',
    step = 'processIn',
    order = 5,
@@ -72,7 +72,7 @@ return ECS.System.register({
       local changed = false
 
       if pool.FIRE then
-         world.set(entity, FiringComponent, { FiredAt = time.frame })
+         world.Set(entity, FiringComponent, { FiredAt = time.frame })
          changed = true
       end
 

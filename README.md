@@ -93,7 +93,7 @@ In addition to defining the execution step, you can also define the execution or
 
    local pool = require(game.ReplicatedStorage:WaitForChild("InputHandlerUtils"))
 
-   return ECS.System.register({
+   return ECS.RegisterSystem({
       name = 'InputMap',
       step = 'processIn',
       order = 5,
@@ -104,7 +104,7 @@ In addition to defining the execution step, you can also define the execution or
          local changed = false
 
          if pool.FIRE then
-            world.set(entity, FiringComponent, { FiredAt = time.frame })
+            world.Set(entity, FiringComponent, { FiredAt = time.frame })
             changed = true
          end
 
@@ -182,7 +182,7 @@ To create a new world, use the Roblox-ECS `newWorld` method.
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-local world = ECS.newWorld(
+local world = ECS.CreateWorld(
 
    -- [Optional] systems
    {SystemA, SystemB}, 
@@ -206,7 +206,7 @@ In other words, the component labels the entity as having this particular aspect
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.Component.register(
+return ECS.RegisterComponent(
    -- name
    'Box',
 
@@ -233,7 +233,7 @@ The register method generates a new component type, which is a unique identifier
 The entity is a general purpose object. An entity is what you use to describe an object in your game. e.g. a player, a gun, etc. It consists only of a unique ID and the list of components that make up this entity
 
 ```lua
-local cubeEntity = world.create()
+local cubeEntity = world.Create()
 ```
 
 #### Adding and removing components 
@@ -245,12 +245,12 @@ local BoxComponent = require(path.to.BoxComponent)
 local ColorComponent = require(path.to.ColorComponent)
 
 -- add components to entity
-world.set(cubeEntity, BoxComponent, 10, 10, 10)
-world.set(cubeEntity, ColorComponent, Color3.new(1, 0, 0))
+world.Set(cubeEntity, BoxComponent, 10, 10, 10)
+world.Set(cubeEntity, ColorComponent, Color3.new(1, 0, 0))
 
 
 -- remove component
-world.remove(cubeEntity, BoxComponent)
+world.Remove(cubeEntity, BoxComponent)
 ```
 
 #### Accessing components data
@@ -258,7 +258,7 @@ world.remove(cubeEntity, BoxComponent)
 To gain access to the components data of an entity, simply use the `get` method of the `world`
 
 ```lua
-local color = world.get(cubeEntity, ColorComponent)
+local color = world.Get(cubeEntity, ColorComponent)
 ```
 
 #### Check if it is
@@ -266,7 +266,7 @@ local color = world.get(cubeEntity, ColorComponent)
 To find out if an entity has a specific component, use the `has` method of the `world`
 
 ```lua
-if world.has(cubeEntity, ColorComponent) then
+if world.Has(cubeEntity, ColorComponent) then
    -- your code
 end
 ```
@@ -275,13 +275,13 @@ end
 To remove an entity, use the "remove" method from the `world`, this time without informing the component.
 
 ```lua
-world.remove(cubeEntity)
+world.Remove(cubeEntity)
 ```
 
 **IMPORTANT!** The removal of the entity is only carried out at the end of the execution of the current step, when invoking the `remove` method, the engine cleans the data of that entity and marks it as removed. To check if an entity is marked for removal, use the `alive` method of the world.
 
 ```lua
-if not world.alive(cubeEntity) then
+if not world.Alive(cubeEntity) then
    -- your code
 end
 ```
@@ -301,7 +301,7 @@ local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 local FiringComponent = require(path.to.FiringComponent)
 local WeaponComponent = require(path.to.WeaponComponent)
 
-return ECS.System.register({
+return ECS.RegisterSystem({
    name = 'PlayerShooting',
 
    -- [Optional] defaults to transform
@@ -343,7 +343,7 @@ return ECS.System.register({
 
       if isFiring  then
          -- Add a firing component to all entities when mouse button is pressed
-         world.set(entity, FiringComponent, { FiredAt = time.frame })
+         world.Set(entity, FiringComponent, { FiredAt = time.frame })
          return true
       end
 
@@ -395,7 +395,7 @@ To add a system to the world, simply use the `addSystem` method. You can optiona
 ```lua
 local PlayerShootingSystem = require(path.to.PlayerShootingSystem)
 
-world.addSystem(PlayerShootingSystem, newOrder, { customConfig = 'Hello' })
+world.AddSystem(PlayerShootingSystem, newOrder, { customConfig = 'Hello' })
 ```
 
 ## @Todo

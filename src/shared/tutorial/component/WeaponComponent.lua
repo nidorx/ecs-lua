@@ -1,3 +1,3 @@
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.Component.register('Weapon')
+return ECS.RegisterComponent('Weapon')

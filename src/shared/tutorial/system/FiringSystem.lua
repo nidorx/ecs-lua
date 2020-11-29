@@ -5,7 +5,7 @@ local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 
-return ECS.System.register({
+return ECS.RegisterSystem({
    name = 'Firing',
    step = 'processIn',
    requireAll = {
@@ -32,8 +32,8 @@ return ECS.System.register({
          bulletPart.Parent       = game.Workspace
 
          local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true, true)
-         world.set(bulletEntity, ECS.Util.MoveForwardComponent)
-         world.set(bulletEntity, ECS.Util.MoveSpeedComponent, 1.0)
+         world.Set(bulletEntity, ECS.Util.MoveForwardComponent)
+         world.Set(bulletEntity, ECS.Util.MoveSpeedComponent, 1.0)
       end
 
       return false

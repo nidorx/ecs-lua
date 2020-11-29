@@ -19,10 +19,10 @@ local PlayerShootingSystem = require(Systems:WaitForChild("PlayerShootingSystem"
 local CleanupFiringSystem  = require(Systems:WaitForChild("CleanupFiringSystem"))
 
 -- Our world
-local world = ECS.newWorld(nil, { frequency = 10 })
-world.addSystem(FiringSystem)
-world.addSystem(PlayerShootingSystem)
-world.addSystem(CleanupFiringSystem)
+local world = ECS.CreateWorld(nil, { frequency = 10 })
+world.AddSystem(FiringSystem)
+world.AddSystem(PlayerShootingSystem)
+world.AddSystem(CleanupFiringSystem)
 
 -- Our weapon
 local rightHand = Character:WaitForChild("RightHand")
@@ -54,4 +54,4 @@ weldBulletSpawn.Part1 = weapon
 local bulletSpawnEntity = ECS.Util.NewBasePartEntity(world, BulletSpawnPart, true, false)
 
 -- Mark as weapon
-world.set(bulletSpawnEntity, WeaponComponent)
+world.Set(bulletSpawnEntity, WeaponComponent)

@@ -56,7 +56,7 @@ Roblox-ECS already offers a generic method, some components and systems that alr
 In the script above, before the creation of our weapon, we will define our ECS world, and below, at the end of the script, we will use the Roblox-ECS utility components to synchronize the `BulletSpawnPart` position and rotation
 
  ```lua
-local world = ECS.newWorld()
+local world = ECS.CreateWorld()
 ECSUtil.AddDefaultSystems(world)
 
 
@@ -76,7 +76,7 @@ In `ReplicatedStorage > tutorial > component`, create a `ModuleScript` with the 
  ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.Component.register('Weapon')
+return ECS.RegisterComponent('Weapon')
 ```
  
 That’s it, there’s no logic, no data typing
@@ -90,7 +90,7 @@ local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild(
 local WeaponComponent = require(Components:WaitForChild("WeaponComponent"))
 
 
-world.set(bulletSpawnEntity, WeaponComponent)
+world.Set(bulletSpawnEntity, WeaponComponent)
 ```
 
 Ok. We created the world, we created an entity, we added features but nothing happened on the screen yet. This is because we only add features (components) to our entity, we have not yet defined any behavior that must be performed for those features
@@ -104,7 +104,7 @@ Before moving on, let's create this component now. Create a `ModuleScript` in` R
  ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.Component.register('Firing', nil, true)
+return ECS.RegisterComponent('Firing', nil, true)
 ```
 
 Now, going back to our system, create a `ModuleScript` in `ReplicatedStorage > tutorial > system` with the name `PlayerShootingSystem` and the content below. This system is responsible for adding the `FiringComponent` tag to the entity that has the `WeaponComponent` component whenever the mouse button is pressed. Realize that when we make changes to the data currently being processed (entity or data array), it is necessary that our `update` method returns `true`, so that Roblox-ECS can inform other systems that this chunk has been changed, using dirty parameter
@@ -117,7 +117,7 @@ local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild(
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 local WeaponComponent = require(Components:WaitForChild("WeaponComponent"))
 
-return ECS.System.register({
+return ECS.RegisterSystem({
    name = 'PlayerShooting',
    step = 'processIn',
    order = 1,
@@ -129,7 +129,7 @@ return ECS.System.register({
       local isFiring = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 
       if isFiring  then
-         world.set(entity, FiringComponent)
+         world.Set(entity, FiringComponent)
          return true
       end
 
@@ -153,7 +153,7 @@ local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 
-return ECS.System.register({
+return ECS.RegisterSystem({
    name = 'Firing',
    step = 'processIn', 
    requireAll = {      
@@ -179,8 +179,8 @@ return ECS.System.register({
          bulletPart.Parent       = game.Workspace
 
          local bulletEntity = ECSUtil.NewBasePartEntity(world, bulletPart, false, true)
-         world.set(bulletEntity, ECSUtil.MoveForwardComponent)
-         world.set(bulletEntity, ECSUtil.MoveSpeedComponent, 0.1)
+         world.Set(bulletEntity, ECSUtil.MoveForwardComponent)
+         world.Set(bulletEntity, ECSUtil.MoveSpeedComponent, 0.1)
       end
 
       return false
@@ -195,8 +195,8 @@ local Systems = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("sy
 local FiringSystem         = require(Systems:WaitForChild("FiringSystem"))
 local PlayerShootingSystem = require(Systems:WaitForChild("PlayerShootingSystem"))
 
-world.addSystem(FiringSystem)
-world.addSystem(PlayerShootingSystem)
+world.AddSystem(FiringSystem)
+world.AddSystem(PlayerShootingSystem)
 ```
 
 Okay, let's test our game.
@@ -214,7 +214,7 @@ Let's change the `ReplicatedStorage > tutorial > component > FiringComponent.lua
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.Component.register('Firing', function(firedAt)
+return ECS.RegisterComponent('Firing', function(firedAt)
    if firedAt == nil then
       error("firedAt is required")
    end
@@ -243,7 +243,7 @@ We will update the `ReplicatedStorage > tutorial > system > PlayerShootingSystem
 
 ```lua
 if isFiring  then
-   world.set(entity, FiringComponent, time.frame)
+   world.Set(entity, FiringComponent, time.frame)
    return true
 end
 ```
@@ -258,7 +258,7 @@ local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 
-return ECS.System.register({
+return ECS.RegisterSystem({
    name = 'CleanupFiring',
    step = 'process',
    requireAll = {
@@ -272,7 +272,7 @@ return ECS.System.register({
             return false
          end
 
-         world.remove(entity, FiringComponent)
+         world.Remove(entity, FiringComponent)
 
          return true
       end
@@ -288,12 +288,12 @@ We will also change the `tutorial` script to add the new system to the world
 local CleanupFiringSystem  = require(Systems:WaitForChild("CleanupFiringSystem"))
 
 
-world.addSystem(CleanupFiringSystem)
+world.AddSystem(CleanupFiringSystem)
 ```
 
 OK, now we can shoot more than once, however, we still have another problem. Realize that by pressing and holding the mouse button, our weapon does not fire anymore, it is only firing if I click, wait `0.5` seconds and click again
 
-This is happening because the `update` method of `PlayerShootingSystem` is being invoked with each new frame, updating the time of the `FiringComponent` of our entity in each update (`world.set(entity, FiringComponent, time.frame)`) , this means that the logic of `CleanupFiringSystem` is not validated, since the elapsed time (`firedAt`) never exceeds 0.5 seconds. We need to filter this behavior.
+This is happening because the `update` method of `PlayerShootingSystem` is being invoked with each new frame, updating the time of the `FiringComponent` of our entity in each update (`world.Set(entity, FiringComponent, time.frame)`) , this means that the logic of `CleanupFiringSystem` is not validated, since the elapsed time (`firedAt`) never exceeds 0.5 seconds. We need to filter this behavior.
 
 Let's change the `PlayerShootingSystem` to obtain the desired behavior. We want him to add the `FiringComponent` to any entity that does not yet have this component, so he will never make changes to the data for that component.
 
@@ -336,7 +336,7 @@ Another problem is if you increase the frequency of the simulation on your serve
 Just for the sake of experimentation, we will increase the frequency of execution of our world. Change the `tutorial` script to the following world boot configuration:
 
 ```lua
-local world = ECS.newWorld(nil, { frequency = 60 })
+local world = ECS.CreateWorld(nil, { frequency = 60 })
 ```
 
 ![](docs/tut_03.gif)
@@ -364,7 +364,7 @@ We will then make the changes to verify the use of interpolation and decrease th
 In the `tutorial` script, we will decrease the execution frequency of the world, say for 10Hz
 
 ```lua
-local world = ECS.newWorld(nil, { frequency = 10 })
+local world = ECS.CreateWorld(nil, { frequency = 10 })
 ```
 
 ![](docs/tut_04.gif)

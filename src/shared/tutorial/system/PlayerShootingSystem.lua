@@ -7,7 +7,7 @@ local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild(
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 local WeaponComponent = require(Components:WaitForChild("WeaponComponent"))
 
-return ECS.System.register({
+return ECS.RegisterSystem({
    name = 'PlayerShooting',
    step = 'processIn',
    order = 1,
@@ -22,7 +22,7 @@ return ECS.System.register({
       local isFiring = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 
       if isFiring  then
-         world.set(entity, FiringComponent, time.frame)
+         world.Set(entity, FiringComponent, time.frame)
          return true
       end
 
