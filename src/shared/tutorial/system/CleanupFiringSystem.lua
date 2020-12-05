@@ -6,12 +6,12 @@ local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild(
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 
 return ECS.RegisterSystem({
-   name = 'CleanupFiring',
-   step = 'transform',
-   requireAll = {
+   Name = 'CleanupFiring',
+   Step = 'transform',
+   RequireAll = {
       FiringComponent
    },
-   update = function (time, world, dirty, entity, index, firings)
+   Update = function (time, world, dirty, entity, index, firings)
 
       local firedAt = firings[index]
       if firedAt ~= nil then

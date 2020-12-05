@@ -8,16 +8,16 @@ local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 local WeaponComponent = require(Components:WaitForChild("WeaponComponent"))
 
 return ECS.RegisterSystem({
-   name = 'PlayerShooting',
-   step = 'processIn',
-   order = 1,
-   requireAll = {
+   Name = 'PlayerShooting',
+   Step = 'processIn',
+   Order = 1,
+   RequireAll = {
       WeaponComponent
    },
-   rejectAny = {
+   RejectAny = {
       FiringComponent
    },
-   update = function (time, world, dirty, entity, index, weapons)
+   Update = function (time, world, dirty, entity, index, weapons)
 
       local isFiring = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 

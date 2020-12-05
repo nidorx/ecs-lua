@@ -204,38 +204,38 @@ end
 
 -- copia dados de basepart para entidade no inicio do processamento, ignora entidades marcadas com Interpolation
 ECSUtil.BasePartToEntityProcessInSystem = ECS.RegisterSystem({
-   name  = 'BasePartToEntityProcessIn',
-   step  = 'processIn',
-   order = 10,
-   requireAll = {
+   Name  = 'BasePartToEntityProcessIn',
+   Step  = 'processIn',
+   Order = 10,
+   RequireAll = {
       ECSUtil.BasePartComponent,
       ECSUtil.PositionComponent,
       ECSUtil.RotationComponent,
       ECSUtil.BasePartToEntitySyncComponent
    },
-   rejectAny = {
+   RejectAny = {
       ECSUtil.PositionInterpolationComponent,
       ECSUtil.RotationInterpolationComponent
    },
-   update = BasePartToEntityUpdate
+   Update = BasePartToEntityUpdate
 })
 
 -- copia dados de um BasePart para entidade no inicio do passo transform
 ECSUtil.BasePartToEntityTransformSystem = ECS.RegisterSystem({
-   name  = 'BasePartToEntityTransform',
-   step  = 'transform',
-   order = 10,
-   requireAll = {
+   Name  = 'BasePartToEntityTransform',
+   Step  = 'transform',
+   Order = 10,
+   RequireAll = {
       ECSUtil.BasePartComponent,
       ECSUtil.PositionComponent,
       ECSUtil.RotationComponent,
       ECSUtil.BasePartToEntitySyncComponent
    },
-   rejectAny = {
+   RejectAny = {
       ECSUtil.PositionInterpolationComponent,
       ECSUtil.RotationInterpolationComponent
    },
-   update = BasePartToEntityUpdate
+   Update = BasePartToEntityUpdate
 })
 ----------------------------------------<<
 
@@ -288,44 +288,44 @@ end
 
 -- copia dados da entidade para um BaseParte no fim do processamento
 ECSUtil.EntityToBasePartProcessOutSystem = ECS.RegisterSystem({
-   name  = 'EntityToBasePartProcess',
-   step  = 'processOut',
-   order = 100,
-   requireAll = {
+   Name  = 'EntityToBasePartProcess',
+   Step  = 'processOut',
+   Order = 100,
+   RequireAll = {
       ECSUtil.BasePartComponent,
       ECSUtil.PositionComponent,
       ECSUtil.RotationComponent,
       ECSUtil.EntityToBasePartSyncComponent
    },
-   update = EntityToBasePartUpdate
+   Update = EntityToBasePartUpdate
 })
 
 -- copia dados de uma entidade para um BsePart no passo de transformação, ignora entidades com interpolação
 ECSUtil.EntityToBasePartTransformSystem = ECS.RegisterSystem({
-   name  = 'EntityToBasePartTransform',
-   step  = 'transform',
-   order = 100,
-   requireAll = {
+   Name  = 'EntityToBasePartTransform',
+   Step  = 'transform',
+   Order = 100,
+   RequireAll = {
       ECSUtil.BasePartComponent,
       ECSUtil.PositionComponent,
       ECSUtil.RotationComponent,
       ECSUtil.EntityToBasePartSyncComponent
    },
-   rejectAny = {
+   RejectAny = {
       ECSUtil.PositionInterpolationComponent,
       ECSUtil.RotationInterpolationComponent
    },
-   update = EntityToBasePartUpdate
+   Update = EntityToBasePartUpdate
 })
 
 -- Interpolates the position and rotation of a BasePart in the transform step.
 -- Allows the process step to be performed at low frequency and with smooth rendering
 local interpolationFactor = 1
 ECSUtil.EntityToBasePartInterpolationTransformSystem = ECS.RegisterSystem({
-   name  = 'EntityToBasePartInterpolationTransform',
-   step  = 'transform',
-   order = 100,
-   requireAll = {
+   Name  = 'EntityToBasePartInterpolationTransform',
+   Step  = 'transform',
+   Order = 100,
+   RequireAll = {
       ECSUtil.BasePartComponent,
       ECSUtil.PositionComponent,
       ECSUtil.RotationComponent,
@@ -333,13 +333,13 @@ ECSUtil.EntityToBasePartInterpolationTransformSystem = ECS.RegisterSystem({
       ECSUtil.RotationInterpolationComponent,
       ECSUtil.EntityToBasePartSyncComponent
    },
-   rejectAny ={
+   RejectAny ={
       ECSUtil.InterpolationCustomComponent
    },
-   beforeUpdate = function(time, interpolation, world, system)
+   BeforeUpdate = function(time, interpolation, world, system)
       interpolationFactor = interpolation
    end,
-   update = function(time, world, dirty, entity, index, parts, positions, rotations, positionsInt, rotationsInt)
+   Update = function(time, world, dirty, entity, index, parts, positions, rotations, positionsInt, rotationsInt)
 
       local part     = parts[index]
       local position = positions[index]
@@ -393,17 +393,17 @@ ECSUtil.EntityToBasePartInterpolationTransformSystem = ECS.RegisterSystem({
 
 -- Customized interpolation, the developer is responsible for indicating the necessary parameters for calculating the interpolation 
 ECSUtil.EntityToBasePartInterpolationCustomTransformSystem = ECS.RegisterSystem({
-   name  = 'EntityToBasePartInterpolationCustomTransform',
-   step  = 'transform',
-   order = 100,
-   requireAll = {
+   Name  = 'EntityToBasePartInterpolationCustomTransform',
+   Step  = 'transform',
+   Order = 100,
+   RequireAll = {
       ECSUtil.BasePartComponent,
       ECSUtil.PositionComponent,
       ECSUtil.RotationComponent,
       ECSUtil.InterpolationCustomComponent,
       ECSUtil.EntityToBasePartSyncComponent
    },
-   update = function(time, world, dirty, entity, index, parts, positions, rotations, interpolations)
+   Update = function(time, world, dirty, entity, index, parts, positions, rotations, interpolations)
 
       local part     = parts[index]
       local position = positions[index]
@@ -428,18 +428,18 @@ ECSUtil.EntityToBasePartInterpolationCustomTransformSystem = ECS.RegisterSystem(
 -- Simple forward movement system (position = position + speed * lookVector)
 local moveForwardSpeedFactor = 1
 ECSUtil.MoveForwardSystem = ECS.RegisterSystem({
-   name = 'MoveForward',
-   step = 'process',
-   requireAll = {
+   Name = 'MoveForward',
+   Step = 'process',
+   RequireAll = {
       ECSUtil.MoveSpeedComponent,
       ECSUtil.PositionComponent,
       ECSUtil.RotationComponent,
       ECSUtil.MoveForwardComponent,
    },
-   beforeUpdate = function(time, interpolation, world, system)
+   BeforeUpdate = function(time, interpolation, world, system)
       moveForwardSpeedFactor = world.Frequency/60
    end,
-   update = function (time, world, dirty, entity, index, speeds, positions, rotations, forwards)
+   Update = function (time, world, dirty, entity, index, speeds, positions, rotations, forwards)
 
       local position = positions[index]
       if position ~= nil then

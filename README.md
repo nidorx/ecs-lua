@@ -94,13 +94,13 @@ In addition to defining the execution step, you can also define the execution or
    local pool = require(game.ReplicatedStorage:WaitForChild("InputHandlerUtils"))
 
    return ECS.RegisterSystem({
-      name = 'InputMap',
-      step = 'processIn',
-      order = 5,
-      requireAll = {
+      Name = 'InputMap',
+      Step = 'processIn',
+      Order = 5,
+      RequireAll = {
          PlayerComponent
       },
-      update = function (time, world, dirty, entity, index, players)
+      Update = function (time, world, dirty, entity, index, players)
          local changed = false
 
          if pool.FIRE then
@@ -165,8 +165,8 @@ At this stage, the following procedures are performed, in that order
    - Entities are grouped in chunk based on their archetype (types of existing components). When you add or remove components from an entity you are modifying its archetype, which should modify the chunk of that entity. When this happens, Roblox-ECS starts to work internally with a copy of that entity, without removing it from the original chunk. This chunk change only occurs during this cleaning phase
 3. **Creation of new entities**
    - When a new entity is added to the world by its systems, Roblox-ECS houses that entity in specific chunks of new entities, and only at that moment these entities are copied to their definitive chunk
-4. **Invocation of the systems "onEnter" method**
-   - After cleaning the environment, Roblox-ECS invokes the `onEnter` method for each entity that has been added (or that has undergone component changes and now matches the signature expected by some system)
+4. **Invocation of the systems "OnEnter" method**
+   - After cleaning the environment, Roblox-ECS invokes the `OnEnter` method for each entity that has been added (or that has undergone component changes and now matches the signature expected by some system)
 
 
 ## Roblox-ECS
@@ -189,9 +189,8 @@ local world = ECS.CreateWorld(
 
    -- [Optional] config
    { 
-      frequency = 30, 
-      disableDefaultSystems = false, 
-      disableAutoUpdate = false
+      Frequency = 30, 
+      DisableAutoUpdate = false
    }
 )
 ```
@@ -302,40 +301,57 @@ local FiringComponent = require(path.to.FiringComponent)
 local WeaponComponent = require(path.to.WeaponComponent)
 
 return ECS.RegisterSystem({
-   name = 'PlayerShooting',
+   Name = 'PlayerShooting',
 
    -- [Optional] defaults to transform
-   step = 'processIn',
+   Step = 'processIn',
 
    -- [Optional] Order of execution within that step. defaults to 50
-   order = 10,
+   Order = 10,
 
-   -- requireAll or requireAny
-   requireAll = {
+   -- RequireAll or RequireAny
+   RequireAll = {
       WeaponComponent
    },
 
-   --  [Optional] rejectAll or rejectAny
-   rejectAny = {
+   --  [Optional] RejectAll or RejectAny
+   RejectAny = {
       FiringComponent
    },
 
-   --  [Optional] Invoked when an entity with these characteristics appears
-   onEnter = function(time, world, entity, index, weapons)
+   -- [Optional] Invoked when this system is added in a world
+   OnCreate = function(world, system)
+   end,
+
+   -- [Optional] Invoked when an entity with these characteristics appears
+   OnEnter = function(time, world, entity, index, weapons)
       -- on new entity
       print('New entity added ', entity)
       return false
    end,
 
+   --  [Optional] Invoked when an entity with these characteristics is removed
+   OnRemove = function(time, world, entity, index, weapons)
+      -- on new entity
+      print('Entity removed ', entity)
+      return false
+   end,
+
+   -- [Optional] Invoked before any update. If false, the BeforeUpdate, Update and AfterUpdate methods will not be 
+   -- invoked for this interaction
+   ShouldUpdate = function(time, interpolation, world, system)
+      return true
+   end,
+
    --  [Optional] Invoked before executing the update method
-   beforeUpdate = function(time, interpolation, world, system)
+   BeforeUpdate = function(time, interpolation, world, system)
       -- called before update
       print(system.config.customConfig)
    end,
 
    -- [Optional] Invoked for each entity that has the characteristics 
    -- expected by this system
-   update = function (time, world, dirty, entity, index, weapons)
+   Update = function (time, world, dirty, entity, index, weapons)
 
       local isFiring = UserInputService:IsMouseButtonPressed(
          Enum.UserInputType.MouseButton1
@@ -348,13 +364,19 @@ return ECS.RegisterSystem({
       end
 
       return false
+   end,
+
+   --  [Optional] Invoked after executing the update method
+   AfterUpdate = function(time, interpolation, world, system)
+      -- called before update
+      print(system.config.customConfig)
    end
 })
 ```
 
-#### update
+#### Update
 
-The `update` method has the following signature:
+The `Update` method has the following signature:
 
 ```lua
 update = function (time, world, dirty, entity, index, [component_N_data...])
@@ -381,7 +403,7 @@ As with Unity ECS, Roblox-ECS systems are processed in batch.
 
 Component data is saved in chunks, which allows queries by entities with the expected characteristics to be made more quickly.
 
-In the `update` method, your system is able to know if this chunk being processed at the moment has entities that have changed, through the `dirty` parameter. Using this parameter you can skip the execution of your system when there has been no change since the last execution of your system for this specific chunk
+In the `Update` method, your system is able to know if this chunk being processed at the moment has entities that have changed, through the `dirty` parameter. Using this parameter you can skip the execution of your system when there has been no change since the last execution of your system for this specific chunk
 
 See that this parameter says only if there are any entities modified in this chunk, but it does not say exactly which entity is
 
@@ -390,7 +412,7 @@ For more details, see the links [The Chunk data structure in Unity](https://game
 
 #### Adding to the world
 
-To add a system to the world, simply use the `addSystem` method. You can optionally change the order of execution and pass any configuration parameters that are expected by your system
+To add a system to the world, simply use the `AddSystem` method. You can optionally change the order of execution and pass any configuration parameters that are expected by your system
 
 ```lua
 local PlayerShootingSystem = require(path.to.PlayerShootingSystem)

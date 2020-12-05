@@ -6,7 +6,8 @@ local Character	= Player.Character
 
    
 -- services
-local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
+local ECS      = require(game.ReplicatedStorage:WaitForChild("ECS"))
+local ECSUtil  = require(game.ReplicatedStorage:WaitForChild("ECSUtil"))
 
 -- Components
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
@@ -19,10 +20,11 @@ local PlayerShootingSystem = require(Systems:WaitForChild("PlayerShootingSystem"
 local CleanupFiringSystem  = require(Systems:WaitForChild("CleanupFiringSystem"))
 
 -- Our world
-local world = ECS.CreateWorld(nil, { frequency = 10 })
+local world = ECS.CreateWorld(nil, { Frequency = 10 })
 world.AddSystem(FiringSystem)
 world.AddSystem(PlayerShootingSystem)
 world.AddSystem(CleanupFiringSystem)
+ECSUtil.AddDefaultSystems(world)
 
 -- Our weapon
 local rightHand = Character:WaitForChild("RightHand")
@@ -51,7 +53,7 @@ weldBulletSpawn.Part0 = BulletSpawnPart
 weldBulletSpawn.Part1 = weapon
 
 -- Create our entity
-local bulletSpawnEntity = ECS.Util.NewBasePartEntity(world, BulletSpawnPart, true, false)
+local bulletSpawnEntity = ECSUtil.NewBasePartEntity(world, BulletSpawnPart, true, false)
 
 -- Mark as weapon
 world.Set(bulletSpawnEntity, WeaponComponent)

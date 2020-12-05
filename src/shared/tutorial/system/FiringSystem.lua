@@ -1,19 +1,20 @@
 
-local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
+local ECS      = require(game.ReplicatedStorage:WaitForChild("ECS"))
+local ECSUtil  = require(game.ReplicatedStorage:WaitForChild("ECSUtil"))
 
 -- Components
 local Components = game.ReplicatedStorage:WaitForChild("tutorial"):WaitForChild("component")
 local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 
 return ECS.RegisterSystem({
-   name = 'Firing',
-   step = 'processIn',
-   requireAll = {
-      ECS.Util.PositionComponent,
-      ECS.Util.RotationComponent,
+   Name = 'Firing',
+   Step = 'processIn',
+   RequireAll = {
+      ECSUtil.PositionComponent,
+      ECSUtil.RotationComponent,
       FiringComponent
    },
-   onEnter = function(time, world, entity, index,  positions, rotations, firings)
+   OnEnter = function(time, world, entity, index,  positions, rotations, firings)
 
       local position = positions[index]
       local rotation = rotations[index]
@@ -31,9 +32,9 @@ return ECS.RegisterSystem({
          bulletPart.CFrame       = CFrame.fromMatrix(position, rotation[1], rotation[2], rotation[3] * -1)
          bulletPart.Parent       = game.Workspace
 
-         local bulletEntity = ECS.Util.NewBasePartEntity(world, bulletPart, false, true, true)
-         world.Set(bulletEntity, ECS.Util.MoveForwardComponent)
-         world.Set(bulletEntity, ECS.Util.MoveSpeedComponent, 1.0)
+         local bulletEntity = ECSUtil.NewBasePartEntity(world, bulletPart, false, true, true)
+         world.Set(bulletEntity, ECSUtil.MoveForwardComponent)
+         world.Set(bulletEntity, ECSUtil.MoveSpeedComponent, 1.0)
       end
 
       return false
