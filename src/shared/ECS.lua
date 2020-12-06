@@ -746,7 +746,7 @@ end
    Checks whether this archetype has the informed component
 ]]
 function Archetype:Has(component)
-   return table.find(self.components, component) ~= nil
+   return table.find(self.Components, component) ~= nil
 end
 
 -- Generic archetype, for entities that do not have components
@@ -2302,7 +2302,7 @@ local function CreateNewWorld(systems, config)
       end
 
       -- Gets all the chunks that apply to this filter
-      local chunks = entityManager:filterChunks(filter.match)
+      local chunks = entityManager:FilterChunks(filter.Match)
 
       for k, chunk in pairs(chunks) do
          local buffers = chunk.Buffers
