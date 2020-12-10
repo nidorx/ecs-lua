@@ -1,5 +1,5 @@
 --[[
-   Roblox-ECS v1.2 [2020-12-05 20:03]
+   Roblox-ECS v1.2.1 [2020-12-10 02:40]
 
    Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
    game development on the Roblox platform
@@ -1771,7 +1771,7 @@ local function NewExecutionPlan(world, systems)
    -- systems that process the onRemove event
    local onRemoveSystems = {}
 
-   for k, system in pairs(systems) do
+   for k, system in pairs(systems) do 
       if system.Update ~= nil then
          if updateSteps[system.Step][system.Order] == nil then
             updateSteps[system.Step][system.Order] = {}
@@ -1790,7 +1790,7 @@ local function NewExecutionPlan(world, systems)
       end
    end
 
-   for _, order in ipairs(updateStepsOrder) do
+   for _, order in pairs(updateStepsOrder) do
       table.sort(order)
    end
 
