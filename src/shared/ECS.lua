@@ -126,7 +126,7 @@ local function Filter(config)
       config.RequireAnyOriginal = config.RequireAny
       config.RequireAny = safeNumberTable(config.RequireAny)
       if table.getn(config.RequireAny) == 0 then
-         error('You must enter at least one component id in the "RequireAny" field')
+         error('You must enter at least one component id in the "RequireAny" field, Or entity is missing components')
       end
    end
 
