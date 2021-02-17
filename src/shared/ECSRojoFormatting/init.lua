@@ -32,8 +32,9 @@
    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
    SOFTWARE.
 ]]
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Signal = require(ReplicatedStorage:FindFirstChild("Signal",true))
+
+--Version relies on hierarchy
+local Signal = require(script.Signal)
 
 -- Services
 local RunService = game:GetService('RunService')
@@ -128,7 +129,7 @@ local function Filter(config)
       config.RequireAnyOriginal = config.RequireAny
       config.RequireAny = safeNumberTable(config.RequireAny)
       if table.getn(config.RequireAny) == 0 then
-         error('You must enter at least one component id in the "RequireAny" field, Or entity is missing components')
+         error('You must enter at least one component id in the "RequireAny" field')
       end
    end
 
@@ -2690,8 +2691,6 @@ local function CreateNewWorld(systems, config)
          end
       end
    end  
-
-
 
    world = {
       Version        = 0,
