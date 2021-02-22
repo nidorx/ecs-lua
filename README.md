@@ -195,6 +195,38 @@ local world = ECS.CreateWorld(
 )
 ```
 
+
+#### World Api
+
+
+- _`world.`_**`Create`** _()_
+  - Create a new Entity
+- _`world.`_**`Get`** _(`entity`, `component`)_
+  - Get entity compoment data 
+- _`world.`_**`Set`** _(`entity`, `component`, `...args`)_
+  - Defines the value of a component for an entity
+- _`world.`_**`Call`** _(`entity`, `component`, `method`, `...args`)_
+  - Invokes a utility method from a component's API
+- _`world.`_**`Remove`** _(`entity`, `component`)_
+  - Removing a entity or Removing a component from an entity at runtime
+- _`world.`_**`Has`** _(`entity`, `component`)_
+  - Check if entity has a component
+- _`world.`_**`ForEach`** _(`<ECS.Filter> filter`, `callback`)_
+  - Allows you to perform the interaction between all active entities that is compatible with the informed filter
+    - `<ECS.Filter> filter` The filter that will be applied to obtain the entities
+    - `callback {function(stop, entity, index, [Component_N_Data...]) => bool`  Function that will be invoked for each filtered entity. To stop execution, use the `stop` method received in the parameters. This function should return true if you have made changes to the component or data of the chunk being worked on
+- _`world.`_**`AddSystem`** _(`system`, `order`, `config {optional}`)_
+  - Add a new system to the world
+- _`world.`_**`Alive`** _(`entity`)_
+  - Is the Entity still alive?
+- _`world.`_**`Destroy`** _()_
+  - Remove all entities and systems
+- _`world.`_**`Update`** _(`step`, `now`)_
+  - Realizes world update
+- _`world.`_**`SetFrequency`** _(`frequency`)_
+  - Allows you to change the frequency of the 'process' step at run time
+
+
 ### Component
 
 Represents the different facets of an entity, such as position, velocity, geometry, physics, and hit points for example. Components store only raw data for one aspect of the object, and how it interacts with the world
@@ -206,10 +238,10 @@ In other words, the component labels the entity as having this particular aspect
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
 return ECS.RegisterComponent(
-   -- name
+   -- Name - Unique identifier for this component
    'Box',
 
-   -- [Optional] constructor
+   -- [Optional] constructor 
    function( width, height, depth)
       if width == nil then width = 1 end
 
@@ -217,7 +249,14 @@ return ECS.RegisterComponent(
    end,
 
    -- [Optional] is tag? Defaults false
-   false
+   false,
+
+   -- [Optional] Api
+   {
+     MethodA = function(component, paramA){
+       return false
+     }
+   }
 )
 ```
 
@@ -225,7 +264,7 @@ The register method generates a new component type, which is a unique identifier
 
 - **constructor** - you can pass a constructor to the component register. The constructor will be invoked whenever the component is added to an entity
 - **Tag component** - The tag component or "zero size component" is a special case where a component does not contain any data. (Eg: **EnemyComponent** can indicate that an entity is an enemy, with no data, just a marker)
-
+- **API** - allows you to add "methods" to that component. The methods are invoked as follows: `world.Call(entity, Component, 'MethodName', param1, paramN)`
 
 ### Entity
 
@@ -337,8 +376,7 @@ return ECS.RegisterSystem({
       return false
    end,
 
-   -- [Optional] Invoked before any update. If false, the BeforeUpdate, Update and AfterUpdate methods will not be 
-   -- invoked for this interaction
+   -- [Optional] Invoked before any update. If false, the BeforeUpdate, Update and AfterUpdate methods will not be invoked for this interaction
    ShouldUpdate = function(time, interpolation, world, system)
       return true
    end,
@@ -349,8 +387,7 @@ return ECS.RegisterSystem({
       print(system.config.customConfig)
    end,
 
-   -- [Optional] Invoked for each entity that has the characteristics 
-   -- expected by this system
+   -- [Optional] Invoked for each entity that has the characteristics expected by this system
    Update = function (time, world, dirty, entity, index, weapons)
 
       local isFiring = UserInputService:IsMouseButtonPressed(

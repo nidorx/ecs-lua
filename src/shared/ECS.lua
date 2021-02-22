@@ -2269,7 +2269,7 @@ local function CreateNewWorld(systems, config)
    end
 
    --[[
-      Get entity compoment data
+      Check if entity has a component 
    ]]
    local function CheckComponentHas(entity, component)
       if entitiesArchetypes[entity] == nil then
@@ -2339,6 +2339,9 @@ local function CreateNewWorld(systems, config)
       end
    end
 
+   --[[
+      Add a new system to the world
+   ]]
    local function AddSystem(systemID, order, config)
       if systemID == nil then
          return
