@@ -205,6 +205,13 @@ local world = ECS.CreateWorld(
   - Get entity compoment data 
 - _`world.`_**`Set`** _(`entity`, `component`, `...args`)_
   - Defines the value of a component for an entity
+- _`world.`_**`Dirty`** _(`entity`)_
+  - It allows informing that this component has undergone some change outside the common flow of systems
+  ```lua
+  local data = world.Get(entity, Component)
+  data.Value = 2
+  world.Dirty(entity)
+  ```
 - _`world.`_**`Call`** _(`entity`, `component`, `method`, `...args`)_
   - Invokes a utility method from a component's API
 - _`world.`_**`Remove`** _(`entity`, `component`)_
@@ -330,7 +337,7 @@ Represents the logic that transforms component data of an entity from its curren
 
 In **Roblox-ECS**, a system has a strong connection with component types. You must define which components this system works on in the `System` registry.
 
-If the `update` method is implemented, it will be invoked respecting the order parameter within the configured step. Whenever an entity with the characteristics expected by this system is added on world, the system is informed via the `onEnter` method.
+If the `Update` method is implemented, it will be invoked respecting the order parameter within the configured step. Whenever an entity with the characteristics expected by this system is added on world, the system is informed via the `OnEnter` method. When these characteristics are lost, the `OnExit` method is invoked 
 
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
@@ -366,6 +373,12 @@ return ECS.RegisterSystem({
    OnEnter = function(time, world, entity, index, weapons)
       -- on new entity
       print('New entity added ', entity)
+      return false
+   end,
+
+   -- [Optional] Invoked when an entity loses these characteristics
+   OnExit = function(time, world, entity, index, weapons)
+      print('Entity loses these characteristics ', entity)
       return false
    end,
 

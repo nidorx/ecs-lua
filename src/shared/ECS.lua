@@ -1,5 +1,5 @@
 --[[
-   Roblox-ECS v1.2.1 [2020-12-10 02:40]
+   Roblox-ECS v1.2.2 [2021-02-22 15:55]
 
    Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
    game development on the Roblox platform
@@ -720,6 +720,17 @@ function Archetype:With(component)
 end
 
 --[[
+   Gets the reference to an archetype that has the current components + the informed components
+]]
+function Archetype:WithAll(components)
+   local arch = self
+   for _, component in ipairs(components) do
+      arch = arch:With(component)
+   end
+   return arch
+end
+
+--[[
    Gets the reference to an archetype that has the current components - the informed component
 ]]
 function Archetype:Without(component)
@@ -740,6 +751,17 @@ function Archetype:Without(component)
    end
 
    return Archetype.Get(newCoomponents)
+end
+
+--[[
+   Gets the reference to an archetype that has the current components - the informed components
+]]
+function Archetype:WithoutAll(components)
+   local arch = self
+   for _, component in ipairs(components) do
+      arch = arch:Without(component)
+   end
+   return arch
 end
 
 --[[
@@ -1222,6 +1244,21 @@ function EntityManager:SetValue(entityID, component, value)
 end
 
 --[[
+   It allows informing that this component has undergone some change outside the common flow of systems
+]]
+function EntityManager:SetDirty(entityID)
+   local entity = self.Entities[entityID]
+   if entity == nil then
+      return
+   end
+
+   local chunk = self.Archetypes[entity.Archetype].Chunks[entity.Chunk]
+
+   self.World.Version = self.World.Version + 1
+   chunk.Version = self.World.Version
+end
+
+--[[
    Gets all values of the components of an entity
 
    Params
@@ -1344,14 +1381,9 @@ local SYSTEM_STEPS = {
 
          AfterUpdate(time: number, interpolation:number, world, system): void
 
-         OnEnter(entity: Entity): void;
-            Invoked when:
-               a) An entity with the characteristics (components) expected by this system is
-                  added in the world;
-               b) This system is added in the world and this world has one or more entities with
-                  the characteristics expected by this system;
-               c) An existing entity in the same world receives a new component at runtime
-                  and all of its new components match the standard expected by this system.
+         OnEnter(time, world, entity, index, [component_N_items...]) -> boolean
+         
+         OnExit(time, world, entity, index, [component_N_items...]) -> boolean
 
          OnRemove(time, world, enity, index, [component_N_items...])
    }
@@ -1403,6 +1435,10 @@ local function RegisterSystem(config)
          error('Task-type systems do not accept the "OnEnter" parameter')
       end
 
+      if config.OnExit ~= nil then
+         error('Task-type systems do not accept the "OnExit" parameter')
+      end
+
       if config.Execute == nil then
          error('The task "Execute" method is required for registration')
       end
@@ -1428,6 +1464,7 @@ local function RegisterSystem(config)
       AfterUpdate          = config.AfterUpdate,
       OnCreate             = config.OnCreate,
       OnEnter              = config.OnEnter,
+      OnExit               = config.OnExit,
       OnRemove             = config.OnRemove,
       BeforeExecute        = config.BeforeExecute,
       Execute              = config.Execute,
@@ -1766,7 +1803,7 @@ local function NewExecutionPlan(world, systems)
    }
 
    -- systems that process the onEnter event
-   local onEnterSystems = {}
+   local onEnterOrExitSystems = {}
 
    -- systems that process the onRemove event
    local onRemoveSystems = {}
@@ -1781,8 +1818,8 @@ local function NewExecutionPlan(world, systems)
          table.insert(updateSteps[system.Step][system.Order], system)
       end
 
-      if system.OnEnter ~= nil then
-         table.insert(onEnterSystems, system)
+      if system.OnEnter ~= nil or system.OnExit ~= nil then
+         table.insert(onEnterOrExitSystems, system)
       end
 
       if system.OnRemove ~= nil then
@@ -1869,49 +1906,58 @@ local function NewExecutionPlan(world, systems)
       end
    end
 
-   local onEnter = function(onEnterEntities, entityManager, time)
+   local onEnterOrExit = function(onEnterOrExitEntities, entityManager, time)
+
       -- increment Global System Version (GSV), before system update
       world.Version = world.Version + 1
 
-      for entityID, newComponents in pairs(onEnterEntities) do
-
-         -- temporary filter
-         local filterHasAny = Filter({ RequireAny = newComponents })
+      for entityID, newComponents in pairs(onEnterOrExitEntities) do
 
          -- get the chunk and index of this entity
          local chunk, index = entityManager:GetEntityChunk(entityID)
          if chunk ~= nil then
             local buffers = chunk.Buffers
 
-            for j, system in pairs(onEnterSystems) do
+            -- o arquétipo anterior da entidade
+            local newArchetype = chunk.Archetype
+            local oldArchetype = newArchetype:WithAll(newComponents.Lost):WithoutAll(newComponents.Received)
 
-               -- system does not apply to the archetype of that entity
-               if system.Filter.Match(chunk.Archetype.Components) then
+            for j, system in pairs(onEnterOrExitSystems) do
 
+               local matchNew = system.Filter.Match(newArchetype.Components)
+               local matchOld = system.Filter.Match(oldArchetype.Components)
+
+               local fn = nil
+               if system.OnEnter ~= nil and matchNew and not matchOld then
+                  -- OnEnter
+                  fn = system.OnEnter
+               elseif system.OnExit ~= nil and matchOld and not matchNew then
+                  -- OnExit
+                  fn = system.OnExit
+               end
+
+               if fn ~= nil then
                   -- what components the system expects
                   local whatComponents = system.RequireAllOriginal
                   if whatComponents == nil then
                      whatComponents = system.RequireAnyOriginal
                   end
 
-                  -- components received are not in the list of components expected by the system
-                  if filterHasAny.Match(whatComponents) then
-                     local componentsData = table.create(table.getn(whatComponents))
+                  local componentsData = table.create(table.getn(whatComponents))
 
-                     for l, compID in ipairs(whatComponents) do
-                        if buffers[compID] ~= nil then
-                           componentsData[l] = buffers[compID]
-                        else
-                           componentsData[l] = {}
-                        end
+                  for l, compID in ipairs(whatComponents) do
+                     if buffers[compID] ~= nil then
+                        componentsData[l] = buffers[compID]
+                     else
+                        componentsData[l] = {}
                      end
+                  end
 
-                     -- onEnter: function(world, entity, index, [component_N_items...]) -> boolean
-                     if system.OnEnter(time, world, entityID, index, table.unpack(componentsData)) then
-                        -- If any system execution informs you that it has changed data in
-                        -- this chunk, it then performs the versioning of the chunk
-                        chunk.Version = world.Version
-                     end
+                  -- onEnter/onExit: function(time, world, entity, index, [component_N_items...]) -> boolean
+                  if fn(time, world, entityID, index, table.unpack(componentsData)) then
+                     -- If any system execution informs you that it has changed data in
+                     -- this chunk, it then performs the versioning of the chunk
+                     chunk.Version = world.Version
                   end
                end
             end
@@ -1920,6 +1966,7 @@ local function NewExecutionPlan(world, systems)
    end
 
    local onRemove = function(removedEntities, entityManager, time)
+
       -- increment Global System Version (GSV), before system update
       world.Version = world.Version + 1
 
@@ -1963,7 +2010,7 @@ local function NewExecutionPlan(world, systems)
       end
    end
 
-   return onUpdate, onEnter, onRemove
+   return onUpdate, onEnterOrExit, onRemove
 end
 
 --[[
@@ -1986,7 +2033,7 @@ local function CreateNewWorld(systems, config)
    local scheduler
 
    -- System execution plan
-   local updateExecPlan, enterExecPlan, removeExecPlan
+   local updateExecPlan, enterOrExitExecPlan, removeExecPlan
 
    local processDeltaTime
 
@@ -2093,6 +2140,21 @@ local function CreateNewWorld(systems, config)
    end
 
    --[[
+      It allows informing that this component has undergone some change outside the common flow of systems
+   ]]
+   local function SetDirty(entity)
+      if entitiesNew[entity] == true then
+         entityManagerNew:SetDirty(entity)
+      else
+         if entitiesUpdated[entity]  ~= nil then
+            entityManagerUpdated:SetDirty(entity)
+         end
+
+         entityManager:SetDirty(entity)
+      end
+   end
+
+   --[[
       Defines the value of a component for an entity
    ]]
    local function SetComponentValue(entity, component, ...)
@@ -2191,6 +2253,8 @@ local function CreateNewWorld(systems, config)
       Removing a entity or Removing a component from an entity at runtime
    ]]
    local function RemoveEntityOrComponent(entity, component)
+
+      
       local archetype = entitiesArchetypes[entity]
       if archetype == nil then
          return
@@ -2384,6 +2448,7 @@ local function CreateNewWorld(systems, config)
             Update               = SYSTEM[systemID].Update,
             AfterUpdate          = SYSTEM[systemID].AfterUpdate,
             OnEnter              = SYSTEM[systemID].OnEnter,
+            OnExit               = SYSTEM[systemID].OnExit,
             OnRemove             = SYSTEM[systemID].OnRemove,
             Step                 = SYSTEM[systemID].Step,
             Order                = SYSTEM[systemID].Order,
@@ -2454,7 +2519,7 @@ local function CreateNewWorld(systems, config)
       entitiesRemoved      = nil
       worldSystems         = nil
       updateExecPlan       = nil
-      enterExecPlan        = nil
+      enterOrExitExecPlan        = nil
       removeExecPlan       = nil
       entitiesArchetypes   = nil
       scheduler            = nil
@@ -2462,6 +2527,7 @@ local function CreateNewWorld(systems, config)
       -- It also removes all methods in the world, avoids external calls
       world.Create      = nil
       world.Set         = nil
+      world.Dirty       = nil
       world.Get         = nil
       world.Remove      = nil
       world.Has         = nil
@@ -2485,8 +2551,8 @@ local function CreateNewWorld(systems, config)
 
       dirtyEnvironment = false
 
-      local haveOnEnter = false
-      local onEnterEntities = {}
+      local haveOnEnterOrOnExit = false
+      local onEnterOrExitEntities = {}
 
       -- 1: remove entities
       -- Event onRemove
@@ -2510,9 +2576,27 @@ local function CreateNewWorld(systems, config)
          entityManager:SetData(entityID, entityManagerUpdated:GetData(entityID))
          entityManagerUpdated:Remove(entityID)
 
-         if table.getn(updated.received) > 0 then
-            onEnterEntities[entityID] = updated.received
-            haveOnEnter = true
+         if table.getn(updated.received) > 0 or table.getn(updated.lost) > 0 then
+            if onEnterOrExitEntities[entityID] == nil then
+               onEnterOrExitEntities[entityID] = {
+                  Received = {},
+                  Lost = {}
+               }
+            end
+
+            if table.getn(updated.received) > 0 then
+               for _, component in ipairs(updated.received) do
+                  table.insert(onEnterOrExitEntities[entityID].Received, component)
+               end
+            end
+
+            if table.getn(updated.lost) > 0 then
+               for _, component in ipairs(updated.lost) do
+                  table.insert(onEnterOrExitEntities[entityID].Lost, component)
+               end
+            end
+
+            haveOnEnterOrOnExit = true
          end
       end
       entitiesUpdated = {}
@@ -2522,14 +2606,25 @@ local function CreateNewWorld(systems, config)
          entityManager:Set(entityID, entitiesArchetypes[entityID])
          entityManager:SetData(entityID,  entityManagerNew:GetData(entityID))
          entityManagerNew:Remove(entityID)
-         onEnterEntities[entityID] = entitiesArchetypes[entityID].Components
-         haveOnEnter = true
+
+         if onEnterOrExitEntities[entityID] == nil then
+            onEnterOrExitEntities[entityID] = {
+               Received = {},
+               Lost = {}
+            }
+         end
+
+         for _, component in ipairs(entitiesArchetypes[entityID].Components) do
+            table.insert(onEnterOrExitEntities[entityID].Received, component)
+         end
+
+         haveOnEnterOrOnExit = true
       end
       entitiesNew = {}
 
-      if haveOnEnter then
-         enterExecPlan(onEnterEntities, entityManager, time)
-         onEnterEntities = nil
+      if haveOnEnterOrOnExit then
+         enterOrExitExecPlan(onEnterOrExitEntities, entityManager, time)
+         onEnterOrExitEntities = nil
       end
    end
 
@@ -2578,7 +2673,7 @@ local function CreateNewWorld(systems, config)
 
       -- need to update execution plan?
       if lastKnownArchetypeInstant < LAST_ARCHETYPE_INSTANT then
-         updateExecPlan, enterExecPlan, removeExecPlan = NewExecutionPlan(world, worldSystems)
+         updateExecPlan, enterOrExitExecPlan, removeExecPlan = NewExecutionPlan(world, worldSystems)
          lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
       end
 
@@ -2658,7 +2753,7 @@ local function CreateNewWorld(systems, config)
             updated = true
             -- need to update execution plan?
             if lastKnownArchetypeInstant < LAST_ARCHETYPE_INSTANT then
-               updateExecPlan, enterExecPlan = NewExecutionPlan(world, worldSystems)
+               updateExecPlan, enterOrExitExecPlan, removeExecPlan = NewExecutionPlan(world, worldSystems)
                lastKnownArchetypeInstant = LAST_ARCHETYPE_INSTANT
             end
 
@@ -2697,6 +2792,7 @@ local function CreateNewWorld(systems, config)
       Create         = CreateEntity,
       Get            = GetComponentValue,
       Set            = SetComponentValue,
+      Dirty          = SetDirty,
       Call           = CallComponentAPI,
       Remove         = RemoveEntityOrComponent,
       Has            = CheckComponentHas,
