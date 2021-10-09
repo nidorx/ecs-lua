@@ -63,7 +63,7 @@ local pool = require(game.ReplicatedStorage:WaitForChild("InputHandlerUtils"))
 
 return ECS.RegisterSystem({
    name = 'InputMap',
-   step = 'processIn',
+   step = 'process',
    order = 5,
    requireAll = {
       PlayerComponent

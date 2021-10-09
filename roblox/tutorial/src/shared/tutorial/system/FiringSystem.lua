@@ -8,7 +8,7 @@ local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 
 return ECS.RegisterSystem({
    Name = 'Firing',
-   Step = 'processIn',
+   Step = 'process0',
    RequireAll = {
       ECSUtil.PositionComponent,
       ECSUtil.RotationComponent,

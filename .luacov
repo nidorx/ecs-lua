@@ -1,0 +1,12 @@
+return {
+	include = {
+		"^src",
+      "src%/.+$"
+	},
+	exclude = {
+		"%.test$",
+	},
+   runreport = true,
+   deletestats = true,
+   --reporter = "html"
+}

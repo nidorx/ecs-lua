@@ -1,3 +1,5 @@
 # IDE
 .idea
 .vscode
+
+luacov.report.out

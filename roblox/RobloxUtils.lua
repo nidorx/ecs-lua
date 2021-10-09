@@ -32,7 +32,7 @@ local ECSUtil = {}
 
 
 -- A component that facilitates access to BasePart
-ECSUtil.BasePartComponent = ECS.RegisterComponent('BasePart', function(object)
+ECSUtil.BasePartComponent = ECS.Component('BasePart', function(object)
    if object == nil or object['IsA'] == nil or object:IsA('BasePart') == false then
       error("This component only works with BasePart objects")
    end
@@ -41,13 +41,13 @@ ECSUtil.BasePartComponent = ECS.RegisterComponent('BasePart', function(object)
 end)
 
 -- Tag, indicates that the entity must be synchronized with the data from the BasePart (workspace)
-ECSUtil.BasePartToEntitySyncComponent = ECS.RegisterComponent('BasePartToEntitySync', nil, true)
+ECSUtil.BasePartToEntitySyncComponent = ECS.Component('BasePartToEntitySync', nil, true)
 
 -- Tag, indicates that the BasePart (workspace) must be synchronized with the existing data in the Entity (ECS)
-ECSUtil.EntityToBasePartSyncComponent = ECS.RegisterComponent('EntityToBasePartSync', nil, true)
+ECSUtil.EntityToBasePartSyncComponent = ECS.Component('EntityToBasePartSync', nil, true)
 
 -- Component that works with a position Vector3
-ECSUtil.PositionComponent = ECS.RegisterComponent('Position', function(position)
+ECSUtil.PositionComponent = ECS.Component('Position', function(position)
    if position ~= nil and typeof(position) ~= 'Vector3' then
       error("This component only works with Vector3 objects")
    end
@@ -60,7 +60,7 @@ ECSUtil.PositionComponent = ECS.RegisterComponent('Position', function(position)
 end)
 
 -- Allows to register two last positions (Vector3) to allow interpolation
-ECSUtil.PositionInterpolationComponent = ECS.RegisterComponent('PositionInterpolation', function(position)
+ECSUtil.PositionInterpolationComponent = ECS.Component('PositionInterpolation', function(position)
    if position ~= nil and typeof(position) ~= 'Vector3' then
       error("This component only works with Vector3 objects")
    end
@@ -73,7 +73,7 @@ ECSUtil.PositionInterpolationComponent = ECS.RegisterComponent('PositionInterpol
 end)
 
 -- {avgDelta, lastUpdate, position, rightVector, upVector, lookVector}
-ECSUtil.InterpolationCustomComponent = ECS.RegisterComponent('InterpolationCustom', function(avgDelta, lastUpdate, lastPosition, lastRightVector, lastUpVector, lastLookVector)
+ECSUtil.InterpolationCustomComponent = ECS.Component('InterpolationCustom', function(avgDelta, lastUpdate, lastPosition, lastRightVector, lastUpVector, lastLookVector)
    if avgDelta == nil then
       return nil
    end
@@ -97,7 +97,7 @@ local VEC3_F = Vector3.new(0, 0, 1)
       https://devforum.roblox.com/t/understanding-cframe-frommatrix-the-replacement-for-cframe-new/593742
       https://devforum.roblox.com/t/handling-the-edge-cases-of-cframe-frommatrix/632465
 ]]
-ECSUtil.RotationComponent = ECS.RegisterComponent('Rotation', function(rightVector, upVector, lookVector)
+ECSUtil.RotationComponent = ECS.Component('Rotation', function(rightVector, upVector, lookVector)
 
    if rightVector ~= nil and typeof(rightVector) ~= 'Vector3' then
       error("This component only works with Vector3 objects [param=rightVector]")
@@ -127,7 +127,7 @@ ECSUtil.RotationComponent = ECS.RegisterComponent('Rotation', function(rightVect
 end)
 
 -- Allows to record two last rotations (rightVector, upVector, lookVector) to allow interpolation
-ECSUtil.RotationInterpolationComponent = ECS.RegisterComponent('RotationInterpolation', function(rightVector, upVector, lookVector)
+ECSUtil.RotationInterpolationComponent = ECS.Component('RotationInterpolation', function(rightVector, upVector, lookVector)
 
    if rightVector ~= nil and typeof(rightVector) ~= 'Vector3' then
       error("This component only works with Vector3 objects [param=rightVector]")
@@ -157,10 +157,10 @@ ECSUtil.RotationInterpolationComponent = ECS.RegisterComponent('RotationInterpol
 end)
 
 -- Tag, indicates that the forward movement system must act on this entity
-ECSUtil.MoveForwardComponent = ECS.RegisterComponent('MoveForward', nil, true)
+ECSUtil.MoveForwardComponent = ECS.Component('MoveForward', nil, true)
 
 -- Allows you to define a movement speed for specialized handling systems
-ECSUtil.MoveSpeedComponent = ECS.RegisterComponent('MoveSpeed', function(speed)
+ECSUtil.MoveSpeedComponent = ECS.Component('MoveSpeed', function(speed)
    if speed == nil or typeof(speed) ~= 'number' then
       error("This component only works with number value")
    end
@@ -205,7 +205,7 @@ end
 -- copia dados de basepart para entidade no inicio do processamento, ignora entidades marcadas com Interpolation
 ECSUtil.BasePartToEntityProcessInSystem = ECS.RegisterSystem({
    Name  = 'BasePartToEntityProcessIn',
-   Step  = 'processIn',
+   Step  = 'process',
    Order = 10,
    RequireAll = {
       ECSUtil.BasePartComponent,
@@ -289,7 +289,7 @@ end
 -- copia dados da entidade para um BaseParte no fim do processamento
 ECSUtil.EntityToBasePartProcessOutSystem = ECS.RegisterSystem({
    Name  = 'EntityToBasePartProcess',
-   Step  = 'processOut',
+   Step  = 'process',
    Order = 100,
    RequireAll = {
       ECSUtil.BasePartComponent,
@@ -437,7 +437,7 @@ ECSUtil.MoveForwardSystem = ECS.RegisterSystem({
       ECSUtil.MoveForwardComponent,
    },
    BeforeUpdate = function(time, interpolation, world, system)
-      moveForwardSpeedFactor = world.Frequency/60
+      moveForwardSpeedFactor = world.GetFrequency()/60
    end,
    Update = function (time, world, dirty, entity, index, speeds, positions, rotations, forwards)
 
@@ -486,13 +486,8 @@ end
 
 -- add default systems
 function  ECSUtil.AddDefaultSystems(world)
-   -- processIn
    world.AddSystem(ECSUtil.BasePartToEntityProcessInSystem)
-
-   -- process
    world.AddSystem(ECSUtil.MoveForwardSystem)
-
-   -- processOut
    world.AddSystem(ECSUtil.EntityToBasePartProcessOutSystem)
 
    -- transform

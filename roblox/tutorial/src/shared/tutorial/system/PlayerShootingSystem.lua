@@ -9,7 +9,7 @@ local WeaponComponent = require(Components:WaitForChild("WeaponComponent"))
 
 return ECS.RegisterSystem({
    Name = 'PlayerShooting',
-   Step = 'processIn',
+   Step = 'process',
    Order = 1,
    RequireAll = {
       WeaponComponent

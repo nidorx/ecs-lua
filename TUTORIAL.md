@@ -76,7 +76,7 @@ In `ReplicatedStorage > tutorial > component`, create a `ModuleScript` with the 
  ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.RegisterComponent('Weapon')
+return ECS.Component('Weapon')
 ```
  
 That’s it, there’s no logic, no data typing
@@ -104,7 +104,7 @@ Before moving on, let's create this component now. Create a `ModuleScript` in` R
  ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.RegisterComponent('Firing', nil, true)
+return ECS.Component('Firing', nil, true)
 ```
 
 Now, going back to our system, create a `ModuleScript` in `ReplicatedStorage > tutorial > system` with the name `PlayerShootingSystem` and the content below. This system is responsible for adding the `FiringComponent` tag to the entity that has the `WeaponComponent` component whenever the mouse button is pressed. Realize that when we make changes to the data currently being processed (entity or data array), it is necessary that our `update` method returns `true`, so that Roblox-ECS can inform other systems that this chunk has been changed, using dirty parameter
@@ -119,7 +119,7 @@ local WeaponComponent = require(Components:WaitForChild("WeaponComponent"))
 
 return ECS.RegisterSystem({
    name = 'PlayerShooting',
-   step = 'processIn',
+   step = 'process',
    order = 1,
    requireAll = {
       WeaponComponent
@@ -155,7 +155,7 @@ local FiringComponent = require(Components:WaitForChild("FiringComponent"))
 
 return ECS.RegisterSystem({
    name = 'Firing',
-   step = 'processIn', 
+   step = 'process', 
    requireAll = {      
       ECSUtil.PositionComponent,
       ECSUtil.RotationComponent,
@@ -214,7 +214,7 @@ Let's change the `ReplicatedStorage > tutorial > component > FiringComponent.lua
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.RegisterComponent('Firing', function(firedAt)
+return ECS.Component('Firing', function(firedAt)
    if firedAt == nil then
       error("firedAt is required")
    end

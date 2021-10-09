@@ -1,3 +1,5 @@
+# IMPORTANT! REFACTORING FOR NEW ARCHITECTURE
+
 ![](repository-open-graph.png)
 
 **Roblox-ECS** is a tiny and easy to use [ECS _(Entity Component System)_](https://en.wikipedia.org/wiki/Entity_component_system) engine for game development on the Roblox platform
@@ -95,7 +97,7 @@ In addition to defining the execution step, you can also define the execution or
 
    return ECS.RegisterSystem({
       Name = 'InputMap',
-      Step = 'processIn',
+      Step = 'process',
       Order = 5,
       RequireAll = {
          PlayerComponent
@@ -244,7 +246,7 @@ In other words, the component labels the entity as having this particular aspect
 ```lua
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
-return ECS.RegisterComponent(
+return ECS.Component(
    -- Name - Unique identifier for this component
    'Box',
 
@@ -271,7 +273,7 @@ The register method generates a new component type, which is a unique identifier
 
 - **constructor** - you can pass a constructor to the component register. The constructor will be invoked whenever the component is added to an entity
 - **Tag component** - The tag component or "zero size component" is a special case where a component does not contain any data. (Eg: **EnemyComponent** can indicate that an entity is an enemy, with no data, just a marker)
-- **API** - allows you to add "methods" to that component. The methods are invoked as follows: `world.Call(entity, Component, 'MethodName', param1, paramN)`
+- **API** - allows you to add "methods" to that component. The methods are invoked as follows: `Component:MethodName(entity, param1, paramN)`
 
 ### Entity
 
@@ -350,7 +352,7 @@ return ECS.RegisterSystem({
    Name = 'PlayerShooting',
 
    -- [Optional] defaults to transform
-   Step = 'processIn',
+   Step = 'process',
 
    -- [Optional] Order of execution within that step. defaults to 50
    Order = 10,
@@ -366,7 +368,7 @@ return ECS.RegisterSystem({
    },
 
    -- [Optional] Invoked when this system is added in a world
-   OnCreate = function(world, system)
+   Initialize = function(world, system)
    end,
 
    -- [Optional] Invoked when an entity with these characteristics appears

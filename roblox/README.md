@@ -29,9 +29,9 @@ ECSUtil provides some basic systems and components, described below
 
 ### Systems
 - _ECSUtil._**BasePartToEntityProcessInSystem**
-   - Synchronizes the `Entity` _(ECS)_ with the data of a `BasePart` _(workspace)_ at the beginning of the `processIn` step
+   - Synchronizes the `Entity` _(ECS)_ with the data of a `BasePart` _(workspace)_ at the beginning of the `process` step
    -  ```lua
-      step  = 'processIn',
+      step  = 'process',
       order = 10,
       requireAll = {
          ECSUtil.BasePartComponent,
@@ -63,7 +63,7 @@ ECSUtil provides some basic systems and components, described below
 - _ECSUtil._**EntityToBasePartProcessOutSystem**
    - Synchronizes the `BasePart` _(workspace)_ with the `Entity` _(ECS)_ data at the end of the `processOut` step _(before Roblox's physics engine runs)_
    -  ```lua
-      step  = 'processOut',
+      step  = 'process',
       order = 100,
       requireAll = {
          ECSUtil.BasePartComponent,
