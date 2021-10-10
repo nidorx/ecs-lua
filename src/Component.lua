@@ -1,19 +1,19 @@
 local Utility = require("Utility")
 local ComponentFSM = require("ComponentFSM")
 
-local function defaultInitializer(value)
-   return value or {}
-end
+local CLASS_SEQ = 0
 
-local SEQ = 0
-
-local Component = {}
-
+--[[
+   @param isTag {bool}
+   @param initializer {function(table) => table}
+   @param superClass {ComponentClass}
+   @return ComponentClass
+]]
 local function createComponentClass(isTag, initializer, superClass)
-   SEQ = SEQ + 1
+   CLASS_SEQ = CLASS_SEQ + 1
 
    local ComponentClass = {
-      Id = SEQ,
+      Id = CLASS_SEQ,
       IsTag = isTag,
       IsCType = true,
       -- Primary component
@@ -52,7 +52,7 @@ local function createComponentClass(isTag, initializer, superClass)
                      ComponentFSM.AddCapability(superClass, value)
                      for _, qualifiedClass in pairs(Qualifiers) do
                         if qualifiedClass ~= superClass then
-                           ComponentFSM.AddMethods(qualifiedClass, superClass)               
+                           ComponentFSM.AddMethods(superClass, qualifiedClass)               
                         end
                      end
                   end
@@ -67,11 +67,15 @@ local function createComponentClass(isTag, initializer, superClass)
    })
 
    if superClass.IsFSM then
-      ComponentFSM.AddMethods(ComponentClass, superClass)               
+      ComponentFSM.AddMethods(superClass, ComponentClass)               
    end
 
    --[[
-      Obtém um qualificador para esse tipo de component
+      Gets a qualifier for this type of component. If the qualifier does not exist, a new class will be created, 
+      otherwise it brings the already registered class qualifier reference with the same name.
+
+      @param qualifier {string|ComponentClass}
+      @return ComponentClass
    ]]
    function ComponentClass.Qualifier(qualifier)
       if type(qualifier) ~= "string" then
@@ -94,7 +98,8 @@ local function createComponentClass(isTag, initializer, superClass)
    --[[
       Get all qualified class
 
-      @param ... {string} (Optional) filter 
+      @param ... {string|ComponentClass} (Optional) filter 
+      @return ComponentClass[]
    ]]
    function ComponentClass.Qualifiers(...)
       
@@ -119,6 +124,12 @@ local function createComponentClass(isTag, initializer, superClass)
       return qualifiers      
    end
 
+   --[[
+      Constructor
+
+      @param value {any} If the value is not a table, it will be converted to the format "{ Value = value}"
+      @return Component
+   ]]
    function ComponentClass.New(value)
       if (value ~= nil and type(value) ~= 'table') then
          -- local MyComponent = Component({ Value = Vector3.new(0, 0, 0) })
@@ -135,25 +146,47 @@ local function createComponentClass(isTag, initializer, superClass)
    end
 
    --[[
-      Obtem a classe desse component
+      Get this component's class
+
+      @return ComponentClass
    ]]
    function ComponentClass:GetType()
       return ComponentClass
    end
 
+   --[[
+      Check if this component is of the type informed
+
+      @return bool
+   ]]
    function ComponentClass:Is(cType)
       return cType == ComponentClass or cType == superClass
    end
 
-   -- OBTER a instancia primaria
+   --[[
+      Get the instance for the primary qualifier of this class
+
+      @return Component|nil
+   ]]
    function ComponentClass:Primary()
       return self._Qualifiers[superClass]
    end
 
-   function ComponentClass:Qualified(name)
-      return self._Qualifiers[ComponentClass.Qualifier(name)]
+   --[[
+      Get the instance for the given qualifier of this class
+
+      @param name {string|ComponentClass}
+      @return Component|nil
+   ]]
+   function ComponentClass:Qualified(qualifier)
+      return self._Qualifiers[ComponentClass.Qualifier(qualifier)]
    end
 
+   --[[
+      Get all instances for all qualifiers of that class
+
+      @return Component[]
+   ]]
    function ComponentClass:QualifiedAll()
       local qualifiedAll = {}
       for name, qualifiedClass in pairs(Qualifiers) do
@@ -163,7 +196,10 @@ local function createComponentClass(isTag, initializer, superClass)
    end
 
    --[[
-      Faz o merge dos dados do outro componente no componente atual
+      Merges data from the other component into the current component. This method should not be invoked, it is used
+      by the entity to ensure correct retrieval of a component's qualifiers.
+
+      @param other {Component}
    ]]
    function ComponentClass:Merge(other)
       if self == other then
@@ -181,7 +217,7 @@ local function createComponentClass(isTag, initializer, superClass)
       local selfClass = ComponentClass
       local otherClass = other:GetType()
 
-      -- alguem conhece a referencia para a entidade primaria?
+      -- does anyone know the reference to the primary entity?
       local primaryQualifiers
       if selfClass == superClass then
          primaryQualifiers = self._Qualifiers
@@ -212,7 +248,7 @@ local function createComponentClass(isTag, initializer, superClass)
             end
          end
       else
-         -- nenhuma das instancias conhece o Primary, usa a referencia do objeto atual
+         -- none of the instances know the Primary, use the current object reference
          for qualifiedClass, component in pairs(other._Qualifiers) do
             if selfClass ~= qualifiedClass then
                self._Qualifiers[qualifiedClass] = component
@@ -225,58 +261,21 @@ local function createComponentClass(isTag, initializer, superClass)
    return ComponentClass
 end
 
+local function defaultInitializer(value)
+   return value or {}
+end
+
+--[[
+   A Component is an object that can store data but should have not behaviour (As that should be handled by systems). 
+]]
+local Component = {}
+
 --[[
    Register a new component
 
-   @param template {table|Function(args...) -> table}
-   @param isTag {Boolean}
-
-   @TODO: shared see https://docs.unity3d.com/Packages/com.unity.entities@0.7/manual/shared_component_data.html
-   
-
-   @TODO: Componentes tem significado.
-      Position = Vector3
-      Velocity = Vector3
-
-      Os tipos de dados sao os mesmos, mas o significado é outro
-
-
-   [Qualifier]
-      @TODO: Adicionar Qualificadores para Componentes (@Qualifier). Permite a definicao de um componente especializado 
-      resolvendo o problema de uma entidade ter varios qualificadores
-         local HealthBuff = ECS.Component({ Percent = 10 })
-         local HealthBuffMission = HealthBuff.Qualifier("Mission")
-
-         local allQualifiers = HealthBuff.Qualifiers()
-
-         ECS.Query.All({HealthBuff}) --> {HealthBuff, HealthBuffMission}
-         ECS.Query.All({HealthBuffMission}) --> {HealthBuffMission}
-
-         entity[HealthBuff|HealthBuffMission] --> component
-         entity:Get(HealthBuff|HealthBuffMission) --> component
-         component.Percent = 1
-
-         component:Primary().Time = 2
-         component:Qualified("Primary") --> component
-         component:Qualified("Mission") --> component
-         component:QualifiedAll() --> { ["Primary"] = component, ["Mission"] = component }
-
-
-         [SYSTEM]
-            function Update()
-               local healthBuff = 0
-               local buffers = entity[HealthBuff]:QualifiedAll()
-               for ctype, component in pairs(buffers) do
-                  healthBuff = healthBuff + component.Percent
-               end
-               print(healthBuff)
-            end
-
-         https://ajmmertens.medium.com/doing-a-lot-with-a-little-ecs-identifiers-25a72bd2647
-
-   [@TODO: Serializaton]
-      entity:Serialize()
-      component:Serialize()
+   @param template {table|function(table?) -> table}
+   @param isTag {bool}
+   @return ComponentClass  
 ]]
 function Component.Create(template, isTag)
 
@@ -311,13 +310,8 @@ function Component.Create(template, isTag)
          end
       end
    end
-
-   local Qualifiers = {}
    
-   SEQ = SEQ + 1
-
-   local ComponentClass = createComponentClass(isTag, initializer, nil)
-   return ComponentClass
+   return createComponentClass(isTag, initializer, nil)
 end
 
 return Component

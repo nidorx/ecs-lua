@@ -1,64 +1,75 @@
 
-local function OperationFilter(predicate, value, count)
-   -- newValue, acceptItem, mustContinue
+--[[
+   OperatorFunction = function(param, value, count) => newValue, acceptItem, mustContinue
+]]
+
+local function operatorFilter(predicate, value, count)
    return value, (predicate(value) == true), true
 end
 
-local function OperationMap(mapper, value, count)
-   -- newValue, acceptItem, mustContinue
+local function operatorMap(mapper, value, count)
    return mapper(value), true, true
 end
 
-local function OperationLimit(limit, value, count)
-   -- newValue, acceptItem, mustContinue
+local function operatorLimit(limit, value, count)
    local accept = (count <= limit)
    return value, accept, accept
 end
 
-local function OperationClauseNone(clauses, value, count)
+local function operatorClauseNone(clauses, value, count)
    local acceptItem = true
    for _,clause in ipairs(clauses) do
-      if (clause.Filter.Function(value, clause.Filter.Config) == true) then
+      if (clause.Filter(value, clause.Config) == true) then
          acceptItem = false
          break
       end 
    end
-
-   -- newValue, acceptItem, mustContinue
    return value, acceptItem, true
 end
 
-local function OperationClauseAll(clauses, value, count)
+local function operatorClauseAll(clauses, value, count)
    local acceptItem = true
    for _,clause in ipairs(clauses) do
-      if (clause.Filter.Function(value, clause.Filter.Config) == false) then
+      if (clause.Filter(value, clause.Config) == false) then
          acceptItem = false
          break
       end
    end
-
-   -- newValue, acceptItem, mustContinue
    return value, acceptItem, true
 end
 
-local function OperationClauseAny(clauses, value, count)
+local function operatorClauseAny(clauses, value, count)
    local acceptItem = false
    for _,clause in ipairs(clauses) do
-      if (clause.Filter.Function(value, clause.Filter.Config) == true) then
+      if (clause.Filter(value, clause.Config) == true) then
          acceptItem = true
          break
       end
    end
-
-   -- newValue, acceptItem, mustContinue
    return value, acceptItem, true
 end
 
 local EMPTY_OBJECT = {}
 
+--[[
+   The result of a Query that was executed on an EntityStorage.
+
+   QueryResult provides several methods to facilitate the filtering of entities resulting from the execution of the 
+   query.
+]]
 local QueryResult = {}
 QueryResult.__index = QueryResult
 
+--[[
+   Build a new QueryResult
+
+   @param chunks { Array<{ [Entity] = true }> }
+   @clauses {Clause[]}
+
+   @see Query.lua
+   @see EntityRepository:Query(query)
+   @return QueryResult
+]]
 function QueryResult.New(chunks, clauses)
 
    local pipeline = EMPTY_OBJECT
@@ -80,15 +91,15 @@ function QueryResult.New(chunks, clauses)
       end
 
       if (#none > 0) then
-         table.insert(pipeline, {OperationClauseNone, none})
+         table.insert(pipeline, {operatorClauseNone, none})
       end
       
       if (#all > 0) then
-         table.insert(pipeline, {OperationClauseAll, all})
+         table.insert(pipeline, {operatorClauseAll, all})
       end
 
       if (#any > 0) then
-         table.insert(pipeline, {OperationClauseAny, any})
+         table.insert(pipeline, {operatorClauseAny, any})
       end
      
    end
@@ -135,7 +146,7 @@ end
    @return the new QueryResult
 ]]
 function QueryResult:Filter(predicate)
-   return self:With(OperationFilter, predicate)
+   return self:With(operatorFilter, predicate)
 end
 
 --[[
@@ -145,7 +156,7 @@ end
    @return the new QueryResult
 ]]
 function QueryResult:Map(mapper)
-   return self:With(OperationMap, mapper)
+   return self:With(operatorMap, mapper)
 end
 
 --[[
@@ -157,7 +168,7 @@ end
    @return the new QueryResult
 ]]
 function QueryResult:Limit(maxSize)
-   return self:With(OperationLimit, maxSize)
+   return self:With(operatorLimit, maxSize)
 end
 
 --[[ -------------------------------------------------------------------------------------------------------------------

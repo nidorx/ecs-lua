@@ -157,7 +157,7 @@ end
    Executa uma query
 ]]
 function World:Exec(query)
-   if (query.IsBuilder) then
+   if (query.IsQueryBuilder) then
       query = query.Build()
    end
 

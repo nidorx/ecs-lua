@@ -14,6 +14,7 @@ require("test/TestComponent")
 require("test/TestEntity")
 require("test/TestEntityRepository")
 require("test/TestEvent")
+require("test/TestQuery")
 require("test/TestQueryResult")
 
 -- local runner = lu.LuaUnit.new()

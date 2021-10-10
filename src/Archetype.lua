@@ -1,16 +1,10 @@
 
---[[
-    Archetype:
-      An entity has an Archetype (defined by the components it has).
-      An archetype is an identifier for each unique combination of components.
-      An archetype is singleton
-]]
 local archetypes = {}
 
 local CACHE_WITH = {}
 local CACHE_WITHOUT = {}
 
--- Moment when the last archetype was recorded. Used to cache the systems execution plan
+-- Version of the last registered archetype. Used to cache the systems execution plan
 local Version = 0
 
 --[[
@@ -32,7 +26,7 @@ local Version = 0
    component data in blocks of memory called chunks. A given chunk stores only entities having the same archetype. 
    You can get the Archetype object for a chunk from its Archetype property.
 
-   Use ECS.Archetype.Of(Components[]) to create Archetype values.
+   Use ECS.Archetype.Of(Components[]) to get a Archetype reference.
 ]]
 local Archetype  = {}
 Archetype.__index = Archetype
@@ -40,14 +34,15 @@ Archetype.__index = Archetype
 --[[
    Gets the reference to an archetype from the informed components
 
-   @param componentTs {ComponentClass[]} Component that define this archetype
+   @param componentClasses {ComponentClass[]} Component that define this archetype
+   @return Archetype
 ]]
-function Archetype.Of(componentTs)
+function Archetype.Of(componentClasses)
 
    local ids = {}
    local cTypes = {}
-   for _, cType in ipairs(componentTs) do
-      if (cType.IsCType) then
+   for _, cType in ipairs(componentClasses) do
+      if (cType.IsCType and not cType.IsComponent) then
          if cType.IsQualifier then
             if cTypes[cType] == nil then    
                cTypes[cType] = true
@@ -76,25 +71,36 @@ function Archetype.Of(componentTs)
    return archetypes[Id]
 end
 
+--[[
+   Get the version of archetype definitions
+
+   @return number
+]]
 function Archetype.Version()
    return Version
 end
 
 --[[
    Checks whether this archetype has the informed component
+
+   @param componentClasses {ComponentClass}
+   @return bool
 ]]
-function Archetype:Has(component)
+function Archetype:Has(componentClass)
    -- for ct,_ in pairs(self._Components) do
    --    print(ct.Id, component.Id)
    -- end
-   return (self._Components[component] == true)
+   return (self._Components[componentClass] == true)
 end
 
 --[[
    Gets the reference to an archetype that has the current components + the informed component
+
+   @param componentClasses {ComponentClass}
+   @return Archetype
 ]]
-function Archetype:With(cType)
-   if self._Components[cType] == true then
+function Archetype:With(componentClass)
+   if self._Components[componentClass] == true then
       -- component exists in that list, returns the archetype itself
       return self
    end
@@ -105,14 +111,14 @@ function Archetype:With(cType)
       CACHE_WITH[self] = cache
    end
 
-   local other = cache[cType]
+   local other = cache[componentClass]
    if other == nil then
-      local componentTs = {cType}
+      local componentTs = {componentClass}
       for component,_ in pairs(self._Components) do
          table.insert(componentTs, component)
       end
       other = Archetype.Of(componentTs)
-      cache[cType] = other
+      cache[componentClass] = other
    end
    return other
 end
@@ -120,16 +126,17 @@ end
 --[[
    Gets the reference to an archetype that has the current components + the informed components
 
-   @param componentTs {ComponentClass[]}
+   @param componentClasses {ComponentClass[]}
+   @return Archetype
 ]]
-function Archetype:WithAll(componentTs)
+function Archetype:WithAll(componentClasses)
 
    local cTypes = {}
    for component,_ in pairs(self._Components) do
       table.insert(cTypes, component)
    end
    
-   for _,component in ipairs(componentTs) do
+   for _,component in ipairs(componentClasses) do
       if self._Components[component] == nil then
          table.insert(cTypes, component)
       end
@@ -141,11 +148,12 @@ end
 --[[
    Gets the reference to an archetype that has the current components - the informed component
    
-   @param cType {ComponentClass}
+   @param componentClass {ComponentClass}
+   @return Archetype
 ]]
-function Archetype:Without(cType)
+function Archetype:Without(componentClass)
 
-   if self._Components[cType] == nil then
+   if self._Components[componentClass] == nil then
       -- component does not exist in this list, returns the archetype itself
       return self
    end
@@ -156,16 +164,16 @@ function Archetype:Without(cType)
       CACHE_WITHOUT[self] = cache
    end
 
-   local other = cache[cType]
+   local other = cache[componentClass]
    if other == nil then      
       local componentTs = {}
       for component,_ in pairs(self._Components) do
-         if component ~= cType then
+         if component ~= componentClass then
             table.insert(componentTs, component)
          end
       end
       other =  Archetype.Of(componentTs)
-      cache[cType] = other
+      cache[componentClass] = other
    end
       
    return other
@@ -173,11 +181,14 @@ end
 
 --[[
    Gets the reference to an archetype that has the current components - the informed components
+
+   @param componentClasses {ComponentClass[]}
+   @return Archetype
 ]]
-function Archetype:WithoutAll(componentTs)
+function Archetype:WithoutAll(componentClasses)
 
    local toIgnoreIdx = {}
-   for _,component in ipairs(componentTs) do
+   for _,component in ipairs(componentClasses) do
       toIgnoreIdx[component] = true
    end
    

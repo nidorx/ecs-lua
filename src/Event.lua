@@ -25,8 +25,6 @@ end
    Observer Pattern
 
    Allows the application to fire events of a particular type.
-
-   https://www.dofactory.com/javascript/design-patterns/observer
 ]]
 local Event = {}
 Event.__index = Event

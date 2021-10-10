@@ -67,6 +67,10 @@ end
       - Benchmark (Local Script vs ECS implementation)
       - Basic physics (managed)
       - SharedComponent?
+      - Serializaton
+         - world:Serialize()
+         - entity:Serialize()
+         - component:Serialize()
 ]]
 return {
    Query = Query.Create,

@@ -1,9 +1,5 @@
 
-local Utility = require("Utility")
 local QueryResult = require("QueryResult")
-
-local hash = Utility.hash
-local unique = Utility.unique
 
 --[[
    Global cache result.
@@ -12,50 +8,66 @@ local unique = Utility.unique
    in this way, you can save the result of a query in an archetype, reducing the overall execution
    time (since we don't need to iterate all the time)
 
-   @Type { [key:Array<number>] : { matchAll,matchAny,None: {[key:string]:boolean} } }
+   @type KEY string = concat(Array<ComponentClass.Id>, "_")
+   @Type {
+      [Archetype] = {
+         Any  = { [KEY] = bool },
+         All  = { [KEY] = bool },
+         None = { [KEY] = bool },
+      }
+   }
 ]]
-local CacheGlobal = {}
+local CACHE = {}
 
+--[[
+   Interface for creating filters for existing entities in the ECS world
+]]
 local Query = {}
 Query.__index = Query
+setmetatable(Query, {
+   __call = function(t, all, any, none)
+      return Query.New(all, any, none)
+   end,
+})
 
-local function Builder()
-   local builder = {
-      IsBuilder = true
-   }
-
-   function builder.All(components)
-      builder._All = components
-      return builder
-   end
+local function parseFilters(list, clauseGroup, clauses)
+   local indexed = {}
+   local cTypes = {}
+   local cTypeIds = {}
    
-   function builder.Any(components)
-      builder._Any = components
-      return builder
+   for i,item in ipairs(list) do
+      if (indexed[item] == nil) then
+         if (item.IsCType and not item.IsComponent) then
+            indexed[item] = true
+            table.insert(cTypes, item)
+            table.insert(cTypeIds, item.Id)
+         else
+            if item.Components then
+               indexed[item] = true   
+               for _,cType in ipairs(item.Components) do
+                  if (not indexed[cType] and cType.IsCType and not cType.IsComponent) then
+                     indexed[cType] = true
+                     table.insert(cTypes, cType)
+                     table.insert(cTypeIds, item.Id)
+                  end
+               end
+            end   
+
+            -- clauses
+            if item.Filter then
+               indexed[item] = true
+               item[clauseGroup] = true
+               table.insert(clauses, item)
+            end
+         end
+      end
    end
-   
-   function builder.None(components)
-      builder._None = components
-      return builder
+
+   if #cTypes > 0 then
+      table.sort(cTypeIds)
+      local cTypesKey = '_' .. table.concat(cTypeIds, '_')   
+      return cTypes, cTypesKey
    end
-
-   function builder.Build()
-      return Query.Create(builder._All, builder._Any, builder._None)
-   end
-
-   return builder
-end
-
-function Query.All(components)
-   return Builder().All(components)
-end
-
-function Query.Any(components)
-   return Builder().Any(components)
-end
-
-function Query.None(components)
-   return Builder().None(components)
 end
 
 --[[
@@ -64,154 +76,189 @@ end
 
    ECS.Query.All({ Movement.In("Standing") })
 
-   @param all {ComponentType[]} All component types in this array must exist in the archetype
-   @param any {ComponentType[]} At least one of the component types in this array must exist in the archetype
-   @param none {ComponentType[]} None of the component types in this array can exist in the archetype
-
+   @param all {Array<ComponentClass|Clause>[]} All component types in this array must exist in the archetype
+   @param any {Array<ComponentClass|Clause>[]} At least one of the component types in this array must exist in the archetype
+   @param none {Array<ComponentClass|Clause>[]} None of the component types in this array can exist in the archetype
 ]]
-local function Query.Create(all, any, none)
+function Query.New(all, any, none)
 
-   if (all == nil and any == nil and none == nil) then
-      error('It is necessary to define the components using the "All", "Any" or "None" parameters')
+   -- used by QueryResult
+   local clauses = {}
+
+   local anyKey, allKey, noneKey
+
+   if (any ~= nil) then
+      any, anyKey = parseFilters(any, "IsAnyFilter", clauses)
    end
 
-   if (all ~= nil and any ~= nil) then
-      error('It is not allowed to use the "All" and "Any" settings simultaneously')
+   if (all ~= nil) then
+      all, allKey = parseFilters(all, "IsAllFilter", clauses)
    end
 
-   if all ~= nil then
-      all = unique(all)
-      if table.getn(all) == 0 then
-         error('You must enter at least one component id in the "All" field')
-      end
-
-   elseif any ~= nil then
-      any = unique(any)
-      if table.getn(any) == 0 then
-         error('You must enter at least one component id in the "Any" field')
-      end
+   if (none ~= nil) then
+      none, noneKey = parseFilters(none, "IsNoneFilter", clauses)
    end
 
-   if none ~= nil then
-      none = unique(none)
-      if table.getn(none) == 0 then
-         error('You must enter at least one component id in the "None" field')
-      end
-   end
-
-   local allKey, all = hash(all)
-   local anyKey, any = hash(any)
-   local noneKey, none = hash(none)
-
-   -- match function
    return setmetatable({
-      _cache = {}, -- local cache (L1)
-      any = any,
-      all = all,
-      none = none,
-      allKey = allKey, 
-      anyKey = anyKey, 
-      noneKey = noneKey,
       IsQuery = true,
+      _Any = any,
+      _All = all,
+      _None = none,
+      _AnyKey = anyKey,
+      _AllKey = allKey,
+      _NoneKey = noneKey,
+      _Cache = {}, -- local cache (L1)
+      _Clauses = #clauses > 0 and clauses or nil,
    }, Query)
 end
 
-function Query:Match(archetype)
+--[[
+   Generate a QueryResult with the chunks entered and the clauses of the current query
 
-   -- cache L1
-   local cache = self._cache
-   
-   -- check local cache
-   local cacheResult = cache[archetype]
-   if cacheResult == false then
-      return false
-
-   elseif cacheResult == true then
-      return true
-   else
-      
-      -- check global cache (executed by other filter instance)
-      cacheResult = CacheGlobal[archetype]
-      if cacheResult == nil then
-         cacheResult = {
-            Any = {}, 
-            All = {}, 
-            None = {} 
-         }
-         CacheGlobal[archetype] = cacheResult
-      end
-      
-      -- check if these combinations exist in this component array
-      local acceptNoneKey = self._acceptNoneKey
-      if acceptNoneKey ~= '_' then
-
-         if cacheResult.None[acceptNoneKey] then
-            cache[archetype] = false
-            return false
-         end
-
-         for _, v in pairs(self._acceptNone) do
-            if table.find(archetype, v) then
-               cache[archetype] = false
-               cacheResult.None[acceptNoneKey] = true
-               cacheResult.Any[acceptNoneKey] = true
-               return false
-            end
-         end
-      end
-
-      local requireAnyKey = self._requireAnyKey
-      if requireAnyKey ~= '_' then
-         if cacheResult.Any[requireAnyKey] or cacheResult.All[requireAnyKey] then
-            cache[archetype] = true
-            return true
-         end
-
-         for _, v in pairs(self._requireAny) do
-            if table.find(archetype, v) then
-               cacheResult.Any[requireAnyKey] = true
-               cache[archetype] = true
-               return true
-            end
-         end
-      end
-
-      local requireAllKey = self._requireAllKey
-      if requireAllKey ~= '_' then
-         if cacheResult.All[requireAllKey] then
-            cache[archetype] = true
-            return true
-         end
-
-         local haveAll = true
-         for _, v in pairs(self._requireAll) do
-            if not table.find(archetype, v) then
-               haveAll = false
-               break
-            end
-         end
-
-         if haveAll then
-            cache[archetype] = true
-            cacheResult.All[requireAllKey] = true
-            return true
-         end
-      end
-
-      cache[archetype] = false
-      return false
-   end
+   @param chunks {Chunk}
+   @return QueryResult
+]]
+function Query:Result(chunks)
+   return QueryResult.New(chunks, self._Clauses)
 end
 
 --[[
-   Executa essa query no mundo informado
+   Checks if the entered archetype is valid by the query definition
 
-   @Return QueryResult
+   @param archetype {Archetype}
+   @return bool
 ]]
-function Query:Exec(world)
-   local chunks = {}
+function Query:Match(archetype)
 
-   return QueryResult.Create(chunks)
+   -- cache L1
+   local localCache = self._Cache
+   
+   -- check local cache (L1)
+   local cacheResult = localCache[archetype]
+   if cacheResult ~= nil then
+      return cacheResult
+   else
+      -- check global cache (executed by other filter instance)
+      local globalCache = CACHE[archetype]
+      if (globalCache == nil) then
+         globalCache = { Any = {}, All = {}, None = {} }
+         CACHE[archetype] = globalCache
+      end
+      
+      -- check if these combinations exist in this component array
+
+      local noneKey = self._NoneKey
+      if noneKey then
+         local isNoneValid = globalCache.None[noneKey]
+         if (isNoneValid == nil) then
+            isNoneValid = true
+            for _, cType in ipairs(self._None) do
+               if archetype:Has(cType) then
+                  isNoneValid = false
+                  break
+               end
+            end
+            globalCache.None[noneKey] = isNoneValid
+         end
+
+         if (isNoneValid == false) then
+            localCache[archetype] = false
+            return false
+         end     
+      end
+
+      local anyKey = self._AnyKey
+      if anyKey then
+         local isAnyValid = globalCache.Any[anyKey]
+         if (isAnyValid == nil) then
+            isAnyValid = false
+            if (globalCache.All[anyKey] == true) then
+               isAnyValid = true
+            else
+               for _, cType in ipairs(self._Any) do
+                  if archetype:Has(cType) then
+                     isAnyValid = true
+                     break
+                  end
+               end
+            end
+            globalCache.Any[anyKey] = isAnyValid
+         end
+
+         if (isAnyValid == false) then
+            localCache[archetype] = false
+            return false
+         end
+      end
+
+      local allKey = self._AllKey
+      if allKey then
+         local isAllValid = globalCache.All[allKey]
+         if (isAllValid == nil) then
+            local haveAll = true
+            for _, cType in ipairs(self._All) do
+               if (not archetype:Has(cType)) then
+                  haveAll = false
+                  break
+               end
+            end
+
+            if haveAll then
+               isAllValid = true
+            else
+               isAllValid = false
+            end
+
+            globalCache.All[allKey] = isAllValid
+         end
+
+         localCache[archetype] = isAllValid
+         return isAllValid
+      end
+
+      -- empty query = SELECT * FROM
+      localCache[archetype] = true
+      return true
+   end
+end
+
+local function builder()
+   local builder = {
+      IsQueryBuilder = true
+   }
+
+   function builder.All(items)
+      builder._All = items
+      return builder
+   end
+   
+   function builder.Any(items)
+      builder._Any = items
+      return builder
+   end
+   
+   function builder.None(items)
+      builder._None = items
+      return builder
+   end
+
+   function builder.Build()
+      return Query.New(builder._All, builder._Any, builder._None)
+   end
+
+   return builder
+end
+
+function Query.All(items)
+   return builder().All(items)
+end
+
+function Query.Any(items)
+   return builder().Any(items)
+end
+
+function Query.None(items)
+   return builder().None(items)
 end
 
 return Query

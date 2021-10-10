@@ -63,7 +63,7 @@ function System.Create(step, order, query)
    end
 
    if (query) then
-      if (query.IsBuilder) then
+      if (query.IsQueryBuilder) then
          query = query.Build()
       end
 

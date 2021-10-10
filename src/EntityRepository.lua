@@ -1,7 +1,18 @@
 
+--[[
+   The repository (database) of entities in a world.
+
+   The repository indexes entities by archetype. Whenever the entity's archetype is changed, the entity is 
+   transported to the correct storage.
+]]
 local EntityRepository = {}
 EntityRepository.__index = EntityRepository
 
+--[[
+   Create a new repository
+
+   @return EntityRepository
+]]
 function EntityRepository.New()
    return setmetatable({
       _Archetypes = {},
@@ -9,6 +20,11 @@ function EntityRepository.New()
    }, EntityRepository)
 end
 
+--[[
+   Insert an entity into this repository
+
+   @param entity {Entity}
+]]
 function EntityRepository:Insert(entity)
    if (self._EntitiesArchetype[entity] == nil) then
       local archetype = entity.Archetype
@@ -27,6 +43,11 @@ function EntityRepository:Insert(entity)
    end
 end
 
+--[[
+   Remove an entity from this repository
+
+   @param entity {Entity}
+]]
 function EntityRepository:Remove(entity)
    local archetypeOld = self._EntitiesArchetype[entity]
    if archetypeOld == nil then
@@ -44,6 +65,11 @@ function EntityRepository:Remove(entity)
    end
 end
 
+--[[
+   Updates the entity in the repository, if necessary, moves the entity from one storage to another
+
+   @param entity {Entity}
+]]
 function EntityRepository:Update(entity)
    local archetypeOld = self._EntitiesArchetype[entity]
    if (archetypeOld == nil or archetypeOld == entity.Archetype) then
@@ -55,10 +81,10 @@ function EntityRepository:Update(entity)
 end
 
 --[[
-   Gets all chunks that match the given filter
+   Execute the query entered in this repository
 
-   Params
-      filterFn {function(components) => boolean}
+   @param query {Query}
+   @return QueryResult
 ]]
 function EntityRepository:Query(query)
    local chunks = {}

@@ -393,27 +393,12 @@ function TestComponent:test_Should_CreateFSM()
    lu.assertEquals(CountCall.From.Standing, 0)
    lu.assertEquals(CountCall.From.Walking, 0)
    lu.assertEquals(CountCall.From.Running, 0)
-
-
-
-
-
-   -- movement:GetState() -> "Running"
-   -- movement:SetState("Walking")
-   -- movement:GetPrevState()
-   -- movement:GetStateTime()
-
-   -- if movement:GetState() == "Standing" then
-   --    movement.Speed = 0
-   -- end
 end
-
-
 
 function TestComponent:test_Should_QueryFSM_InState()
    
    local function execClause(clause, entity)
-      return clause.Filter.Function(entity, clause.Filter.Config)
+      return clause.Filter(entity, clause.Config)
    end
 
    local Movement = Component.Create({ Speed = 0 })

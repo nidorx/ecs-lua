@@ -1,23 +1,7 @@
 --[[
-   Identifies an entity.
-
    The entity is a fundamental part of the Entity Component System. Everything in your game that has data or an 
    identity of its own is an entity. However, an entity does not contain either data or behavior itself. Instead, 
    the data is stored in the components and the behavior is provided by the systems that process those components. 
-   The entity acts as an identifier or key to the data stored in components.
-
-   Entities are managed by the EntityManager class and exist within a World. An Entity struct refers to an entity, but 
-   is not a reference. Rather the Entity struct contains an Index used to access entity data and a Version used to 
-   check whether the Index is still valid. Note that you generally do not use the Index or Version values directly, 
-   but instead pass the Entity struct to the relevant API methods.
-
-   Pass an Entity struct to methods of the EntityManager, the EntityCommandBuffer, or the ComponentSystem in order to 
-   add or remove components, to access components, or to destroy the entity.
-
-   local entity = world:Entity(comp1, comp2, ...)
-   local entity = Entity.New(world, onChange, comp1, comp2, ...)
-
-
 ]]
 
 local Archetype = require("Archetype")
@@ -32,17 +16,17 @@ local SEQ  = 0
    03) comps = entity[{CompType1, CompType2, ...}]
    04) comps = entity:Get({CompType1, CompType2, ...})
 ]]
-local function getComponent(entity, cType)
+local function getComponent(entity, componentClass)
 
-   if (cType.IsCType == true) then
+   if (componentClass.IsCType) then
       -- 01) comp1 = entity[CompType1]
       -- 02) comp1 = entity:Get(CompType1)
-      return entity._Data[cType]
+      return entity._Data[componentClass]
    end
    
    -- 03) comps = entity[{CompType1, CompType2, ...}]
    -- 04) comps = entity:Get({CompType1, CompType2, ...})
-   local cTypes = cType
+   local cTypes = componentClass
    local components = {}
    local data = entity._Data
    
@@ -247,8 +231,7 @@ local Entity = {
 --[[
    Creates an entity having components of the specified types.
 
-   @param world {World}
-   @param OnChangeArchetype {Event}
+   @param onChange {Event}
    @param components {Component[]} (Optional)
 ]]
 function Entity.New(onChange, components)
