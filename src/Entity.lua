@@ -79,7 +79,7 @@ local function setComponent(self, cType, value)
       else
          -- 04) entity[CompType1] = value
          -- 05) entity:Set(CompType1, value)
-         if (value.IsComponent) then
+         if (type(value) == 'table' and value.IsComponent) then
             cType = value:GetType()
             data[cType] = value
          else

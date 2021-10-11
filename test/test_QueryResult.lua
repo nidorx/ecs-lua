@@ -99,6 +99,34 @@ function TestQueryResult:test_ToArray()
    })
 end
 
+function TestQueryResult:test_Iterator()
+   local result = QueryResult.New(chunks)
+
+   local entities = {}
+   local indexes = {}
+
+   for count, entity in result:Iterator() do
+      table.insert(entities, entity)
+      table.insert(indexes, count)
+   end
+
+   lu.assertEquals(indexes, {1,2,3,4,5,6,7,8,9,10,11,12})
+   lu.assertItemsEquals(entities, {
+      entity_A,
+      entity_B,
+      entity_B_QL,
+      entity_FSM_Standing,
+      entity_FSM_Walking,
+      entity_FSM_Running,
+      entity_FSM_2_Standing,
+      entity_FSM_2_Walking,
+      entity_FSM_2_Running,
+      entity_FSM_2_ql_Standing,
+      entity_FSM_2_ql_Walking,
+      entity_FSM_2_ql_Running
+   })
+end
+
 local function spy(method, callback)
    return function(...)
       return callback(method, table.unpack({...}))

@@ -267,6 +267,28 @@ function QueryResult:ToArray()
 end
 
 --[[
+   Returns an Iterator, to use in for loop
+
+   for entity, count in result:Iterator() do
+      print(entity.Id)
+   end
+]]
+function QueryResult:Iterator()
+   local thread = coroutine.create(function()
+      self:Run(function(value, count)
+         -- These will be passed back again next iteration
+         coroutine.yield(value, count)
+      end)
+   end)
+
+   return function()
+      local success, item, index = coroutine.resume(thread)
+      return index, item
+   end
+end
+
+
+--[[
    Pipeline this QueryResult, applying callback to each value
 
    @param callback {function(value, count) => bool} Break execution case returns true

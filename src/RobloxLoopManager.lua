@@ -1,13 +1,13 @@
---[[
-   Implementacao padrao para Roblox
-]]
-local function InitHost()
+local function InitManager()
    local RunService = game:GetService('RunService')
 
-   local HostRoblox = {}
-   HostRoblox.__index = HostRoblox
+   local RobloxLoop = {}
 
-   function HostRoblox:Create(world)
+   -- if not RunService:IsRunning() then
+   --    return
+   -- end
+
+   function RobloxLoop.Register(world)
       local processConn = RunService.Stepped:Connect(function()
          world:Update('process', os.clock())
       end)
@@ -27,20 +27,16 @@ local function InitHost()
          _ProcessConn = processConn,
          _TransformConn = transformConn,
          _RenderConn = renderConn,
-      }, HostRoblox)
+      }, RobloxLoop)
+
+      return function ()
+         processConn:Disconnect()
+         processConn:Disconnect()
+         processConn:Disconnect()
+      end
    end
 
-   function HostRoblox:Destroy()
-      self._RenderConn:Disconnect()
-      self._ProcessConn:Disconnect()
-      self._TransformConn:Disconnect()
-      
-      self._RenderConn = nil
-      self._ProcessConn = nil
-      self._TransformConn = nil
-   end
-
-   return HostRoblox
+   return RobloxLoop
 end
 
-return InitHost
+return InitManager

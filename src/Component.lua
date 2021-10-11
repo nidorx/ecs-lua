@@ -1,6 +1,9 @@
 local Utility = require("Utility")
 local ComponentFSM = require("ComponentFSM")
 
+local copyDeep = Utility.copyDeep
+local mergeDeep = Utility.mergeDeep
+
 local CLASS_SEQ = 0
 
 --[[
@@ -302,9 +305,9 @@ function Component.Create(template, isTag)
          end
 
          initializer = function(value)
-            local data = Utility.copyDeep(template)
+            local data = copyDeep(template)
             if (value ~= nil) then
-               Utility.mergeDeep(data, value)
+               mergeDeep(data, value)
             end
             return data
          end

@@ -33,27 +33,24 @@
    SOFTWARE.
 ]]
 
-local isRoblox, err = pcall(function()
-   if game and game.ClassName == 'DataModel' then
-      return true
-   end
-   error('Not Roblox')
-end)
-
 local Query = require("Query")
 local World = require("World")
 local System = require("System")
 local Archetype = require("Archetype")
 local Component = require("Component")
 
-local function setHost(host)
-   World.Host = host
+local function setLoopManager(manager)
+   World.LoopManager = manager
 end
 
+local isRoblox, err = pcall(function()
+   if game and game.ClassName == 'DataModel' then
+      return true
+   end
+   error('Not Roblox')
+end)
 if isRoblox then
-   setHost(require("HostRoblox"))
-else
-   setHost(require("HostDummy"))
+   setLoopManager(require("RobloxLoopManager"))
 end
 
 --[[
@@ -69,6 +66,7 @@ end
       - SharedComponent?
       - Serializaton
          - world:Serialize()
+         - world:Serialize(entity)
          - entity:Serialize()
          - component:Serialize()
 ]]
@@ -78,5 +76,5 @@ return {
    System = System.Create,
    Archetype = Archetype,
    Component = Component.Create,
-   SetHost = setHost
+   SetLoopManager = setLoopManager
 }

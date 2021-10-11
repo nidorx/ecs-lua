@@ -1,25 +1,23 @@
 
 package.path = package.path .. ";modules/?.lua"
 package.path = package.path .. ";src/?.lua"
--- package.path = package.path .. ";?/init.lua"
--- package.path = package.path .. ";../?.lua"
--- package.path = package.path .. ";./modules/luacov.lua"
--- package.path = package.path .. ";../modules/luaunit.lua"
 local lu = require('luaunit')
 local luacov = require("luacov")
 
 -- tests
-require("test/TestArchetype")
-require("test/TestComponent")
-require("test/TestEntity")
-require("test/TestEntityRepository")
-require("test/TestEvent")
-require("test/TestQuery")
-require("test/TestQueryResult")
-
--- local runner = lu.LuaUnit.new()
--- runner:setOutputType("text")
--- os.exit( runner:runSuite() )
--- lu.LuaUnit.verbosity = 2
+require("test/test_Archetype")
+require("test/test_Component")
+-- require("test/test_ECS")
+require("test/test_Entity")
+require("test/test_EntityRepository")
+require("test/test_Event")
+require("test/test_Query")
+require("test/test_QueryResult")
+-- require("test/test_RobloxLoopManager")
+-- require("test/test_System")
+require("test/test_SystemExecutor")
+-- require("test/test_Timer")
+-- require("test/test_Utility")
+require("test/test_World")
 
 os.exit(lu.LuaUnit.run())
