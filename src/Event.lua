@@ -45,7 +45,7 @@ end
 function Event:Fire(...)
 	if not self._Destroyed then
       for i,handler in ipairs(self._Handlers) do
-         handler(unpack({...}))
+         handler(table.unpack({...}))
       end
 	end
 end
