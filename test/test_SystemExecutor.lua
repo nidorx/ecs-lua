@@ -13,7 +13,7 @@ function TestSystemExecutor:test_ExecProcessTransformRender()
    }
 
    for step, method in pairs(steps) do      
-      local world = { Version = 10 }   
+      local world = { version = 10 }   
       local log = {}
    
       local system1 = {
@@ -22,7 +22,7 @@ function TestSystemExecutor:test_ExecProcessTransformRender()
          Update = function()
             table.insert(log, 1)
          end,
-         Version = 0,
+         version = 0,
          ShouldUpdate = function()
             return true
          end
@@ -34,7 +34,7 @@ function TestSystemExecutor:test_ExecProcessTransformRender()
          Update = function()
             table.insert(log, 2)
          end,
-         Version = 0,
+         version = 0,
          ShouldUpdate = function()
             return false
          end
@@ -46,7 +46,7 @@ function TestSystemExecutor:test_ExecProcessTransformRender()
          Update = function()
             table.insert(log, 3)
          end,
-         Version = 0,
+         version = 0,
          ShouldUpdate = function()
             return true
          end
@@ -56,9 +56,9 @@ function TestSystemExecutor:test_ExecProcessTransformRender()
       executor[method](executor, {})
    
       lu.assertEquals(log, {1, 3})  
-      lu.assertEquals(system1.Version, 11)  
-      lu.assertEquals(system2.Version, 0)  
-      lu.assertEquals(system3.Version, 12)  
+      lu.assertEquals(system1.version, 11)  
+      lu.assertEquals(system2.version, 0)  
+      lu.assertEquals(system3.version, 12)  
    end
 end
 
@@ -113,7 +113,7 @@ function TestSystemExecutor:test_ExecTasks()
       transform = 'ExecTransform'
    }
 
-   local world = { Version = 10 }   
+   local world = { version = 10 }   
    local log = {}
    local logBeforeYield = {}
    local logAfterYield = {}
@@ -215,21 +215,18 @@ function TestSystemExecutor:test_ExecTasks()
    lu.assertEquals(log, {'B','D','G','A','C','E','F','H'}) 
    lu.assertEquals(logBeforeYield, {1000, 2000, 3000, 4000})  
    lu.assertEquals(logAfterYield, {1001, 2001, 3001, 4001})   
-   -- lu.assertEquals(task_a.Version, 12)  
-   -- lu.assertEquals(task_b.Version, 13)  
-   -- lu.assertEquals(task_c.Version, 11)
 end
 
 function TestSystemExecutor:test_ExecOnEnter()
-   local world = { Version = 10 }   
+   local world = { version = 10 }   
       
    local changedEntities = {
-      [{Id = 1, Archetype='Arch_1'}] = 'Arch_0',
-      [{Id = 2, Archetype='Arch_1'}] = 'Arch_0',
-      [{Id = 3, Archetype='Arch_2'}] = 'Arch_1',
-      [{Id = 4, Archetype='Arch_3'}] = 'Arch_1',
-      [{Id = 5, Archetype='Arch_3'}] = 'Arch_3',
-      [{Id = 6, Archetype='Arch_3'}] = 'Arch_0',
+      [{id = 1, archetype='Arch_1'}] = 'Arch_0',
+      [{id = 2, archetype='Arch_1'}] = 'Arch_0',
+      [{id = 3, archetype='Arch_2'}] = 'Arch_1',
+      [{id = 4, archetype='Arch_3'}] = 'Arch_1',
+      [{id = 5, archetype='Arch_3'}] = 'Arch_3',
+      [{id = 6, archetype='Arch_3'}] = 'Arch_0',
    }
 
    local log = {
@@ -247,11 +244,11 @@ function TestSystemExecutor:test_ExecOnEnter()
       Step = 'process',
       Order = 1,
       OnEnter = function(s, Time, entity)
-         log.Arch_1["1_"..entity.Id] = true
+         log.Arch_1["1_"..entity.id] = true
       end,
-      Version = 0,
+      version = 0,
       Query = {
-         IsQuery = true,
+         isQuery = true,
          Match = function(s, archetypeNew)
             return archetypeNew == 'Arch_1'
          end
@@ -262,20 +259,20 @@ function TestSystemExecutor:test_ExecOnEnter()
       Step = 'process',
       Order = 2,
       OnEnter = function(s, Time, entity)
-         log.Arch_1["2_"..entity.Id] = true
+         log.Arch_1["2_"..entity.id] = true
       end,
-      Version = 0
+      version = 0
    }
 
    local systemArch3 = {
       Step = 'process',
       Order = 3,
       OnEnter = function(s, Time, entity)
-         log.Arch_3["3_"..entity.Id] = true
+         log.Arch_3["3_"..entity.id] = true
       end,
-      Version = 0,
+      version = 0,
       Query = {
-         IsQuery = true,
+         isQuery = true,
          Match = function(s, archetypeNew)
             return archetypeNew == 'Arch_3'
          end
@@ -288,37 +285,37 @@ function TestSystemExecutor:test_ExecOnEnter()
 
    executor:ExecOnExitEnter({}, changedEntities)
    lu.assertEquals(log, logExpected)  
-   lu.assertEquals(systemArch1.Version, 12)  
-   lu.assertEquals(systemNoQuery.Version, 0)  
-   lu.assertEquals(systemArch3.Version, 14)  
-   lu.assertEquals(world.Version, 14)  
+   lu.assertEquals(systemArch1.version, 12)  
+   lu.assertEquals(systemNoQuery.version, 0)  
+   lu.assertEquals(systemArch3.version, 14)  
+   lu.assertEquals(world.version, 14)  
 
 
    executor:ExecOnExitEnter({}, changedEntities)
    lu.assertEquals(log, logExpected)  
-   lu.assertEquals(systemArch1.Version, 16)  
-   lu.assertEquals(systemNoQuery.Version, 0)  
-   lu.assertEquals(systemArch3.Version, 18)  
-   lu.assertEquals(world.Version, 18)  
+   lu.assertEquals(systemArch1.version, 16)  
+   lu.assertEquals(systemNoQuery.version, 0)  
+   lu.assertEquals(systemArch3.version, 18)  
+   lu.assertEquals(world.version, 18)  
 
    executor:ExecOnExitEnter({}, {})
    lu.assertEquals(log, logExpected)  
-   lu.assertEquals(systemArch1.Version, 16)  
-   lu.assertEquals(systemNoQuery.Version, 0)  
-   lu.assertEquals(systemArch3.Version, 18)  
-   lu.assertEquals(world.Version, 18)
+   lu.assertEquals(systemArch1.version, 16)  
+   lu.assertEquals(systemNoQuery.version, 0)  
+   lu.assertEquals(systemArch3.version, 18)  
+   lu.assertEquals(world.version, 18)
 end
 
 function TestSystemExecutor:test_ExecOnExit()
-   local world = { Version = 10 }   
+   local world = { version = 10 }   
       
    local changedEntities = {
-      [{Id = 1, Archetype='Arch_1'}] = 'Arch_0',
-      [{Id = 2, Archetype='Arch_1'}] = 'Arch_3',
-      [{Id = 3, Archetype='Arch_2'}] = 'Arch_1',
-      [{Id = 4, Archetype='Arch_3'}] = 'Arch_1',
-      [{Id = 5, Archetype='Arch_2'}] = 'Arch_3',
-      [{Id = 6, Archetype='Arch_3'}] = 'Arch_3',
+      [{id = 1, archetype='Arch_1'}] = 'Arch_0',
+      [{id = 2, archetype='Arch_1'}] = 'Arch_3',
+      [{id = 3, archetype='Arch_2'}] = 'Arch_1',
+      [{id = 4, archetype='Arch_3'}] = 'Arch_1',
+      [{id = 5, archetype='Arch_2'}] = 'Arch_3',
+      [{id = 6, archetype='Arch_3'}] = 'Arch_3',
    }
 
    local log = {
@@ -336,11 +333,11 @@ function TestSystemExecutor:test_ExecOnExit()
       Step = 'process',
       Order = 1,
       OnExit = function(s, Time, entity)
-         log.Arch_1["1_"..entity.Id] = true
+         log.Arch_1["1_"..entity.id] = true
       end,
-      Version = 0,
+      version = 0,
       Query = {
-         IsQuery = true,
+         isQuery = true,
          Match = function(s, archetypeNew)
             return archetypeNew == 'Arch_1'
          end
@@ -351,20 +348,20 @@ function TestSystemExecutor:test_ExecOnExit()
       Step = 'process',
       Order = 2,
       OnExit = function(s, Time, entity)
-         log.Arch_1["2_"..entity.Id] = true
+         log.Arch_1["2_"..entity.id] = true
       end,
-      Version = 0
+      version = 0
    }
 
    local systemArch3 = {
       Step = 'process',
       Order = 3,
       OnExit = function(s, Time, entity)
-         log.Arch_3["3_"..entity.Id] = true
+         log.Arch_3["3_"..entity.id] = true
       end,
-      Version = 0,
+      version = 0,
       Query = {
-         IsQuery = true,
+         isQuery = true,
          Match = function(s, archetypeNew)
             return archetypeNew == 'Arch_3'
          end
@@ -375,37 +372,37 @@ function TestSystemExecutor:test_ExecOnExit()
 
    executor:ExecOnExitEnter({}, changedEntities)
    lu.assertEquals(log, logExpected)  
-   lu.assertEquals(systemArch1.Version, 12)  
-   lu.assertEquals(systemNoQuery.Version, 0)  
-   lu.assertEquals(systemArch3.Version, 14)  
-   lu.assertEquals(world.Version, 14)  
+   lu.assertEquals(systemArch1.version, 12)  
+   lu.assertEquals(systemNoQuery.version, 0)  
+   lu.assertEquals(systemArch3.version, 14)  
+   lu.assertEquals(world.version, 14)  
 
 
    executor:ExecOnExitEnter({}, changedEntities)
    lu.assertEquals(log, logExpected)  
-   lu.assertEquals(systemArch1.Version, 16)  
-   lu.assertEquals(systemNoQuery.Version, 0)  
-   lu.assertEquals(systemArch3.Version, 18)  
-   lu.assertEquals(world.Version, 18)  
+   lu.assertEquals(systemArch1.version, 16)  
+   lu.assertEquals(systemNoQuery.version, 0)  
+   lu.assertEquals(systemArch3.version, 18)  
+   lu.assertEquals(world.version, 18)  
 
    executor:ExecOnExitEnter({}, {})
    lu.assertEquals(log, logExpected)  
-   lu.assertEquals(systemArch1.Version, 16)  
-   lu.assertEquals(systemNoQuery.Version, 0)  
-   lu.assertEquals(systemArch3.Version, 18)  
-   lu.assertEquals(world.Version, 18)
+   lu.assertEquals(systemArch1.version, 16)  
+   lu.assertEquals(systemNoQuery.version, 0)  
+   lu.assertEquals(systemArch3.version, 18)  
+   lu.assertEquals(world.version, 18)
 end
 
 function TestSystemExecutor:test_ExecOnRemove()
-   local world = { Version = 10 }   
+   local world = { version = 10 }   
       
    local removedEntities = {
-      [{Id = 1, Archetype='Arch_1'}] = 'Arch_0',
-      [{Id = 2, Archetype='Arch_1'}] = 'Arch_0',
-      [{Id = 3, Archetype='Arch_2'}] = 'Arch_1',
-      [{Id = 4, Archetype='Arch_2'}] = 'Arch_1',
-      [{Id = 5, Archetype='Arch_0'}] = 'Arch_3',
-      [{Id = 6, Archetype='Arch_0'}] = 'Arch_3',
+      [{id = 1, archetype='Arch_1'}] = 'Arch_0',
+      [{id = 2, archetype='Arch_1'}] = 'Arch_0',
+      [{id = 3, archetype='Arch_2'}] = 'Arch_1',
+      [{id = 4, archetype='Arch_2'}] = 'Arch_1',
+      [{id = 5, archetype='Arch_0'}] = 'Arch_3',
+      [{id = 6, archetype='Arch_0'}] = 'Arch_3',
    }
 
    local log = {
@@ -423,11 +420,11 @@ function TestSystemExecutor:test_ExecOnRemove()
       Step = 'process',
       Order = 1,
       OnRemove = function(s, Time, entity)
-         log.Arch_1["1_"..entity.Id] = true
+         log.Arch_1["1_"..entity.id] = true
       end,
-      Version = 0,
+      version = 0,
       Query = {
-         IsQuery = true,
+         isQuery = true,
          Match = function(s, archetypeNew)
             return archetypeNew == 'Arch_1'
          end
@@ -438,20 +435,20 @@ function TestSystemExecutor:test_ExecOnRemove()
       Step = 'process',
       Order = 2,
       OnRemove = function(s, Time, entity)
-         log.Arch_1["2_"..entity.Id] = true
+         log.Arch_1["2_"..entity.id] = true
       end,
-      Version = 0
+      version = 0
    }
 
    local systemArch3 = {
       Step = 'process',
       Order = 3,
       OnRemove = function(s, Time, entity)
-         log.Arch_3["3_"..entity.Id] = true
+         log.Arch_3["3_"..entity.id] = true
       end,
-      Version = 0,
+      version = 0,
       Query = {
-         IsQuery = true,
+         isQuery = true,
          Match = function(s, archetypeNew)
             return archetypeNew == 'Arch_3'
          end
@@ -462,23 +459,23 @@ function TestSystemExecutor:test_ExecOnRemove()
 
    executor:ExecOnRemove({}, removedEntities)
    lu.assertEquals(log, logExpected)  
-   lu.assertEquals(systemArch1.Version, 12)  
-   lu.assertEquals(systemNoQuery.Version, 0)  
-   lu.assertEquals(systemArch3.Version, 14)  
-   lu.assertEquals(world.Version, 14)  
+   lu.assertEquals(systemArch1.version, 12)  
+   lu.assertEquals(systemNoQuery.version, 0)  
+   lu.assertEquals(systemArch3.version, 14)  
+   lu.assertEquals(world.version, 14)  
 
 
    executor:ExecOnRemove({}, removedEntities)
    lu.assertEquals(log, logExpected)  
-   lu.assertEquals(systemArch1.Version, 16)  
-   lu.assertEquals(systemNoQuery.Version, 0)  
-   lu.assertEquals(systemArch3.Version, 18)  
-   lu.assertEquals(world.Version, 18)  
+   lu.assertEquals(systemArch1.version, 16)  
+   lu.assertEquals(systemNoQuery.version, 0)  
+   lu.assertEquals(systemArch3.version, 18)  
+   lu.assertEquals(world.version, 18)  
 
    executor:ExecOnRemove({}, {})
    lu.assertEquals(log, logExpected)  
-   lu.assertEquals(systemArch1.Version, 16)  
-   lu.assertEquals(systemNoQuery.Version, 0)  
-   lu.assertEquals(systemArch3.Version, 18)  
-   lu.assertEquals(world.Version, 18)
+   lu.assertEquals(systemArch1.version, 16)  
+   lu.assertEquals(systemNoQuery.version, 0)  
+   lu.assertEquals(systemArch3.version, 18)  
+   lu.assertEquals(world.version, 18)
 end

@@ -43,15 +43,12 @@ local function setLoopManager(manager)
    World.LoopManager = manager
 end
 
-local isRoblox, err = pcall(function()
-   if game and game.ClassName == 'DataModel' then
-      return true
+pcall(function()
+   if (game and game.ClassName == 'DataModel') then
+      -- is roblox
+      setLoopManager(require("RobloxLoopManager")())
    end
-   error('Not Roblox')
 end)
-if isRoblox then
-   setLoopManager(require("RobloxLoopManager"))
-end
 
 --[[
   @TODO
@@ -70,11 +67,20 @@ end
          - entity:Serialize()
          - component:Serialize()
 ]]
-return {
-   Query = Query.Create,
-   World = World.Create
+local ECS = {
+   Query = Query,
+   World = World.New,
    System = System.Create,
    Archetype = Archetype,
    Component = Component.Create,
    SetLoopManager = setLoopManager
 }
+
+if _G.ECS == nil then
+   _G.ECS = ECS
+else
+   local warn = _G.warn or print
+   warn("ECS Lua was not registered in the global variables, there is already another object registered.")
+end
+
+return ECS

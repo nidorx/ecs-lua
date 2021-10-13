@@ -20,11 +20,11 @@ local function result(...)
    local result = {}
    local archetypes = {}
    for i, entity in ipairs({...}) do
-      if archetypes[entity.Archetype] == nil then
-         archetypes[entity.Archetype] = {}
-         table.insert(result, archetypes[entity.Archetype])
+      if archetypes[entity.archetype] == nil then
+         archetypes[entity.archetype] = {}
+         table.insert(result, archetypes[entity.archetype])
       end
-      archetypes[entity.Archetype][entity] = true
+      archetypes[entity.archetype][entity] = true
    end
    return result
 end
@@ -35,12 +35,12 @@ function TestEntityRepository:test_InsertRemoveUpdateQuery()
 
    local repo = EntityRepository.New()
 
-   local ett_Foo_1 = { Archetype = 'foo' }
-   local ett_Foo_2 = { Archetype = 'foo' }
-   local ett_Bar_1 = { Archetype = 'bar' }
-   local ett_Bar_2 = { Archetype = 'bar' }
-   local ett_Baz_1 = { Archetype = 'baz' }
-   local ett_Baz_2 = { Archetype = 'baz' }
+   local ett_Foo_1 = { archetype = 'foo' }
+   local ett_Foo_2 = { archetype = 'foo' }
+   local ett_Bar_1 = { archetype = 'bar' }
+   local ett_Bar_2 = { archetype = 'bar' }
+   local ett_Baz_1 = { archetype = 'baz' }
+   local ett_Baz_2 = { archetype = 'baz' }
 
    local q_Foo = query('foo')
    local q_Bar = query('bar')
@@ -90,8 +90,8 @@ function TestEntityRepository:test_InsertRemoveUpdateQuery()
    lu.assertItemsEquals(repo:Query(q_Foo_Bar_Baz), result(ett_Foo_2, ett_Bar_2))
 
    -- update
-   ett_Foo_2.Archetype = 'bar'
-   ett_Bar_2.Archetype = 'baz'
+   ett_Foo_2.archetype = 'bar'
+   ett_Bar_2.archetype = 'baz'
    repo:Insert(ett_Foo_2)
    repo:Update(ett_Bar_2)
    lu.assertItemsEquals(repo:Query(q_Foo), result())

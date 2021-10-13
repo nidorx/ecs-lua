@@ -33,7 +33,7 @@ function System.Create(step, order, query, updateFn)
       query = nil
    end
 
-   if (query and query.IsQueryBuilder) then
+   if (query and query.isQueryBuilder) then
       query = query.Build()
    end
 
@@ -63,13 +63,13 @@ function System.Create(step, order, query, updateFn)
    -- Cria uma instancia desse system
    function SystemClass.New(world, config)
       local system = setmetatable({
-         Version = 0,
-         World = world,
-         Config = config,
+         version = 0,
+         _world = world,
+         _config = config,
       }, SystemClass)
 
       if system.Initialize then
-         system:Initialize()
+         system:Initialize(config)
       end
 
       return system
@@ -84,8 +84,8 @@ function System.Create(step, order, query, updateFn)
       return SystemClass
    end
 
-   function SystemClass:Result(newQuery)
-      return self.World:Exec(newQuery or query)
+   function SystemClass:Result(query)
+      return self._world:Exec(query or SystemClass.Query)
    end
 
    function SystemClass:Destroy() 

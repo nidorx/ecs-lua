@@ -137,26 +137,26 @@ function TestQueryResult:test_AnyMatch_AllMatch_FindAny()
    local result = QueryResult.New(chunks)
 
    lu.assertIsTrue(result:AnyMatch(function(entity)
-      return entity.Archetype == entity_FSM_Standing.Archetype
+      return entity.archetype == entity_FSM_Standing.archetype
    end))
 
    local count = 0
    lu.assertIsFalse(result:AnyMatch(function(entity)
       count = count + 1
-      return entity.Archetype == Archetype.EMPTY
+      return entity.archetype == Archetype.EMPTY
    end))
    lu.assertEquals(count, 12)
 
 
    lu.assertIsFalse(result:AllMatch(function(entity)
-      return entity.Archetype == entity_FSM_Standing.Archetype
+      return entity.archetype == entity_FSM_Standing.archetype
    end))
 
    -- short-circuiting terminal
    local count = 0
    lu.assertIsFalse(result:AllMatch(function(entity)
       count = count + 1
-      return entity.Archetype == Archetype.EMPTY
+      return entity.archetype == Archetype.EMPTY
    end))
    lu.assertEquals(count, 1)
 
@@ -201,17 +201,17 @@ function TestQueryResult:test_Filter_Map_Limit()
    lu.assertIsFalse(
       result
          :Filter(function(entity)
-            return entity.Archetype == Archetype.EMPTY
+            return entity.archetype == Archetype.EMPTY
          end)
          :AnyMatch(function(entity)
-            return entity.Archetype == entity_FSM_Standing.Archetype
+            return entity.archetype == entity_FSM_Standing.archetype
          end)
    )
 
    lu.assertIsTrue(
       result
          :Filter(function(entity)
-            return entity.Archetype == entity_FSM_Standing.Archetype
+            return entity.archetype == entity_FSM_Standing.archetype
          end)
          :AnyMatch(function(entity)
             return entity == entity_FSM_Walking
@@ -221,7 +221,7 @@ function TestQueryResult:test_Filter_Map_Limit()
    lu.assertItemsEquals(
       result
          :Filter(function(entity)
-            return entity.Archetype == entity_FSM_Standing.Archetype
+            return entity.archetype == entity_FSM_Standing.archetype
          end)
          :ToArray(), 
       {
@@ -234,7 +234,7 @@ function TestQueryResult:test_Filter_Map_Limit()
    lu.assertEquals(
       result
          :Filter(function(entity)
-            return entity.Archetype == Archetype.EMPTY
+            return entity.archetype == Archetype.EMPTY
          end)
          :ToArray(), 
       {}
@@ -243,7 +243,7 @@ function TestQueryResult:test_Filter_Map_Limit()
    lu.assertItemsEquals(
       result
          :Filter(function(entity)
-            return entity.Archetype == entity_FSM_Standing.Archetype
+            return entity.archetype == entity_FSM_Standing.archetype
          end)
          :Map(function(entity)            
             return entity[Comp_FSM]:GetState()
@@ -256,7 +256,7 @@ function TestQueryResult:test_Filter_Map_Limit()
       #(
          result
             :Filter(function(entity)
-               return entity.Archetype == entity_FSM_Standing.Archetype
+               return entity.archetype == entity_FSM_Standing.archetype
             end)
             :Limit(2)
             :ToArray()

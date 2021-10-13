@@ -12,10 +12,10 @@ end
 -- Unsubscribe
 function Connection:Disconnect()
    local event = self._Event
-   if (event and not event._Destroyed) then
-      local idx = table.find(event._Handlers, self._Handler)
+   if (event and not event.destroyed) then
+      local idx = table.find(event._handlers, self._Handler)
       if idx ~= nil then
-         table.remove(event._Handlers, idx)
+         table.remove(event._handlers, idx)
       end
    end
    setmetatable(self, nil)
@@ -30,12 +30,12 @@ local Event = {}
 Event.__index = Event
 
 function Event.New()
-	return setmetatable({ _Handlers = {} }, Event)
+	return setmetatable({ _handlers = {} }, Event)
 end
 
 function Event:Connect(handler)
 	if (type(handler) == "function") then
-      table.insert(self._Handlers, handler)
+      table.insert(self._handlers, handler)
       return Connection.New(self, handler)
 	end
 
@@ -43,8 +43,8 @@ function Event:Connect(handler)
 end
 
 function Event:Fire(...)
-	if not self._Destroyed then
-      for i,handler in ipairs(self._Handlers) do
+	if not self.destroyed then
+      for i,handler in ipairs(self._handlers) do
          handler(table.unpack({...}))
       end
 	end
@@ -52,8 +52,8 @@ end
 
 function Event:Destroy()
 	setmetatable(self, nil)
-   self._Handlers = nil
-   self._Destroyed = true
+   self._handlers = nil
+   self.destroyed = true
 end
 
 return Event

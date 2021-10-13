@@ -105,8 +105,8 @@ function QueryResult.New(chunks, clauses)
    end
 
    return setmetatable({
-      Chunks = chunks,
-      _Pipeline = pipeline,
+      chunks = chunks,
+      _pipeline = pipeline,
    }, QueryResult)
 end
 
@@ -128,14 +128,14 @@ end
 ]]
 function QueryResult:With(operation, param)
    local pipeline = {}
-   for _,operator in ipairs(self._Pipeline) do
+   for _,operator in ipairs(self._pipeline) do
       table.insert(pipeline, operator)
    end
    table.insert(pipeline, { operation, param })
 
    return setmetatable({
-      Chunks = self.Chunks,
-      _Pipeline = pipeline,
+      chunks = self.chunks,
+      _pipeline = pipeline,
    }, QueryResult)
 end
 
@@ -270,7 +270,7 @@ end
    Returns an Iterator, to use in for loop
 
    for entity, count in result:Iterator() do
-      print(entity.Id)
+      print(entity.id)
    end
 ]]
 function QueryResult:Iterator()
@@ -295,12 +295,12 @@ end
 ]]
 function QueryResult:Run(callback)
    local count = 1
-   local pipeline = self._Pipeline
+   local pipeline = self._pipeline
 
    local hasPipeline = #pipeline > 0 
    if (not hasPipeline) then
       -- faster
-      for _, entities in ipairs(self.Chunks) do
+      for _, entities in ipairs(self.chunks) do
          for entity, _ in pairs(entities) do
             if (callback(entity, count) == true) then
                return
@@ -309,7 +309,7 @@ function QueryResult:Run(callback)
          end
       end
    else
-      for i, entities in ipairs(self.Chunks) do
+      for i, entities in ipairs(self.chunks) do
          for entity,_ in pairs(entities) do
             local mustStop = false
             local itemAccepted = true

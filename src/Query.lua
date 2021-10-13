@@ -37,7 +37,7 @@ local function parseFilters(list, clauseGroup, clauses)
    
    for i,item in ipairs(list) do
       if (indexed[item] == nil) then
-         if (item.IsCType and not item.IsComponent) then
+         if (item.IsCType and not item.isComponent) then
             indexed[item] = true
             table.insert(cTypes, item)
             table.insert(cTypeIds, item.Id)
@@ -45,7 +45,7 @@ local function parseFilters(list, clauseGroup, clauses)
             if item.Components then
                indexed[item] = true   
                for _,cType in ipairs(item.Components) do
-                  if (not indexed[cType] and cType.IsCType and not cType.IsComponent) then
+                  if (not indexed[cType] and cType.IsCType and not cType.isComponent) then
                      indexed[cType] = true
                      table.insert(cTypes, cType)
                      table.insert(cTypeIds, item.Id)
@@ -74,7 +74,7 @@ end
    Generate a function responsible for performing the filter on a list of components.
    It makes use of local and global cache in order to decrease the validation time (avoids looping in runtime of systems)
 
-   ECS.Query.All({ Movement.In("Standing") })
+   ECS.Query.All(Movement.In("Standing"))
 
    @param all {Array<ComponentClass|Clause>[]} All component types in this array must exist in the archetype
    @param any {Array<ComponentClass|Clause>[]} At least one of the component types in this array must exist in the archetype
@@ -100,15 +100,15 @@ function Query.New(all, any, none)
    end
 
    return setmetatable({
-      IsQuery = true,
-      _Any = any,
-      _All = all,
-      _None = none,
-      _AnyKey = anyKey,
-      _AllKey = allKey,
-      _NoneKey = noneKey,
-      _Cache = {}, -- local cache (L1)
-      _Clauses = #clauses > 0 and clauses or nil,
+      isQuery = true,
+      _any = any,
+      _all = all,
+      _none = none,
+      _anyKey = anyKey,
+      _allKey = allKey,
+      _noneKey = noneKey,
+      _cache = {}, -- local cache (L1)
+      _clauses = #clauses > 0 and clauses or nil,
    }, Query)
 end
 
@@ -119,7 +119,7 @@ end
    @return QueryResult
 ]]
 function Query:Result(chunks)
-   return QueryResult.New(chunks, self._Clauses)
+   return QueryResult.New(chunks, self._clauses)
 end
 
 --[[
@@ -131,7 +131,7 @@ end
 function Query:Match(archetype)
 
    -- cache L1
-   local localCache = self._Cache
+   local localCache = self._cache
    
    -- check local cache (L1)
    local cacheResult = localCache[archetype]
@@ -147,12 +147,12 @@ function Query:Match(archetype)
       
       -- check if these combinations exist in this component array
 
-      local noneKey = self._NoneKey
+      local noneKey = self._noneKey
       if noneKey then
          local isNoneValid = globalCache.None[noneKey]
          if (isNoneValid == nil) then
             isNoneValid = true
-            for _, cType in ipairs(self._None) do
+            for _, cType in ipairs(self._none) do
                if archetype:Has(cType) then
                   isNoneValid = false
                   break
@@ -167,7 +167,7 @@ function Query:Match(archetype)
          end     
       end
 
-      local anyKey = self._AnyKey
+      local anyKey = self._anyKey
       if anyKey then
          local isAnyValid = globalCache.Any[anyKey]
          if (isAnyValid == nil) then
@@ -175,7 +175,7 @@ function Query:Match(archetype)
             if (globalCache.All[anyKey] == true) then
                isAnyValid = true
             else
-               for _, cType in ipairs(self._Any) do
+               for _, cType in ipairs(self._any) do
                   if archetype:Has(cType) then
                      isAnyValid = true
                      break
@@ -191,12 +191,12 @@ function Query:Match(archetype)
          end
       end
 
-      local allKey = self._AllKey
+      local allKey = self._allKey
       if allKey then
          local isAllValid = globalCache.All[allKey]
          if (isAllValid == nil) then
             local haveAll = true
-            for _, cType in ipairs(self._All) do
+            for _, cType in ipairs(self._all) do
                if (not archetype:Has(cType)) then
                   haveAll = false
                   break
@@ -224,41 +224,41 @@ end
 
 local function builder()
    local builder = {
-      IsQueryBuilder = true
+      isQueryBuilder = true
    }
 
-   function builder.All(items)
-      builder._All = items
+   function builder.All(...)
+      builder._all = {...}
       return builder
    end
    
-   function builder.Any(items)
-      builder._Any = items
+   function builder.Any(...)
+      builder._any = {...}
       return builder
    end
    
-   function builder.None(items)
-      builder._None = items
+   function builder.None(...)
+      builder._none = {...}
       return builder
    end
 
    function builder.Build()
-      return Query.New(builder._All, builder._Any, builder._None)
+      return Query.New(builder._all, builder._any, builder._none)
    end
 
    return builder
 end
 
-function Query.All(items)
-   return builder().All(items)
+function Query.All(...)
+   return builder().All(...)
 end
 
-function Query.Any(items)
-   return builder().Any(items)
+function Query.Any(...)
+   return builder().Any(...)
 end
 
-function Query.None(items)
-   return builder().None(items)
+function Query.None(...)
+   return builder().None(...)
 end
 
 return Query

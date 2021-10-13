@@ -42,7 +42,7 @@ function Archetype.Of(componentClasses)
    local ids = {}
    local cTypes = {}
    for _, cType in ipairs(componentClasses) do
-      if (cType.IsCType and not cType.IsComponent) then
+      if (cType.IsCType and not cType.isComponent) then
          if cType.IsQualifier then
             if cTypes[cType] == nil then    
                cTypes[cType] = true
@@ -58,17 +58,17 @@ function Archetype.Of(componentClasses)
    end
 
    table.sort(ids)
-   local Id = '_' .. table.concat(ids, '_')
+   local id = '_' .. table.concat(ids, '_')
 
-   if archetypes[Id] == nil then
-      archetypes[Id] = setmetatable({
-         Id = Id,
-         _Components = cTypes
+   if archetypes[id] == nil then
+      archetypes[id] = setmetatable({
+         id = id,
+         _components = cTypes
       }, Archetype)
       Version = Version + 1
    end
 
-   return archetypes[Id]
+   return archetypes[id]
 end
 
 --[[
@@ -87,10 +87,10 @@ end
    @return bool
 ]]
 function Archetype:Has(componentClass)
-   -- for ct,_ in pairs(self._Components) do
+   -- for ct,_ in pairs(self._components) do
    --    print(ct.Id, component.Id)
    -- end
-   return (self._Components[componentClass] == true)
+   return (self._components[componentClass] == true)
 end
 
 --[[
@@ -100,7 +100,7 @@ end
    @return Archetype
 ]]
 function Archetype:With(componentClass)
-   if self._Components[componentClass] == true then
+   if self._components[componentClass] == true then
       -- component exists in that list, returns the archetype itself
       return self
    end
@@ -114,7 +114,7 @@ function Archetype:With(componentClass)
    local other = cache[componentClass]
    if other == nil then
       local componentTs = {componentClass}
-      for component,_ in pairs(self._Components) do
+      for component,_ in pairs(self._components) do
          table.insert(componentTs, component)
       end
       other = Archetype.Of(componentTs)
@@ -132,12 +132,12 @@ end
 function Archetype:WithAll(componentClasses)
 
    local cTypes = {}
-   for component,_ in pairs(self._Components) do
+   for component,_ in pairs(self._components) do
       table.insert(cTypes, component)
    end
    
    for _,component in ipairs(componentClasses) do
-      if self._Components[component] == nil then
+      if self._components[component] == nil then
          table.insert(cTypes, component)
       end
    end
@@ -153,7 +153,7 @@ end
 ]]
 function Archetype:Without(componentClass)
 
-   if self._Components[componentClass] == nil then
+   if self._components[componentClass] == nil then
       -- component does not exist in this list, returns the archetype itself
       return self
    end
@@ -167,7 +167,7 @@ function Archetype:Without(componentClass)
    local other = cache[componentClass]
    if other == nil then      
       local componentTs = {}
-      for component,_ in pairs(self._Components) do
+      for component,_ in pairs(self._components) do
          if component ~= componentClass then
             table.insert(componentTs, component)
          end
@@ -193,7 +193,7 @@ function Archetype:WithoutAll(componentClasses)
    end
    
    local cTypes = {}
-   for component,_ in pairs(self._Components) do
+   for component,_ in pairs(self._components) do
       if toIgnoreIdx[component] == nil then
          table.insert(cTypes, component)
       end

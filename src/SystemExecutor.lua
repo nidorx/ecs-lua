@@ -93,7 +93,7 @@ function SystemExecutor.New(world, systems)
          end
       end
 
-      if (system.Query and system.Query.IsQuery and step ~= 'task') then
+      if (system.Query and system.Query.isQuery and step ~= 'task') then
          if system.OnExit then
             table.insert(onExit, system)
          end
@@ -119,15 +119,15 @@ function SystemExecutor.New(world, systems)
 
    -- tasks = resolveDependecy(systems)
    return setmetatable({
-      _World = world,
-      _OnExit = onExit,
-      _OnEnter = onEnter,
-      _OnRemove = onRemove,
-      _Task = updateTask,
-      _Render = updateRender,
-      _Process = updateProcess,
-      _Transform = updateTransform,
-      _Schedulers = {},
+      _world = world,
+      _onExit = onExit,
+      _onEnter = onEnter,
+      _onRemove = onRemove,
+      _task = updateTask,
+      _render = updateRender,
+      _process = updateProcess,
+      _transform = updateTransform,
+      _schedulers = {},
    }, SystemExecutor)
 end
 
@@ -147,7 +147,7 @@ function SystemExecutor:ExecOnExitEnter(Time, changedEntities)
          newIndexed = {}
          oldIndexed[archetypeOld] = newIndexed
       end
-      local archetypeNew = entity.Archetype
+      local archetypeNew = entity.archetype
 
       local entities = newIndexed[archetypeNew]
       if not entities then
@@ -171,17 +171,17 @@ end
    @param entities {{[Key=Entity] => Archetype}}
    ]]
 function SystemExecutor:_ExecOnEnter(Time, oldIndexed)
-   local world = self._World
-   for _, system in ipairs(self._OnEnter) do
+   local world = self._world
+   for _, system in ipairs(self._onEnter) do
       local query = system.Query
       for archetypeOld, newIndexed in pairs(oldIndexed) do
          if not query:Match(archetypeOld) then
             for archetypeNew, entities in pairs(newIndexed) do
                if query:Match(archetypeNew) then
                   for i,entity in ipairs(entities) do                  
-                     world.Version = world.Version + 1   -- increment Global System Version (GSV)
-                     system:OnEnter(Time, entity)        -- local dirty = entity.Version > system.Version
-                     system.Version = world.Version      -- update last system version with GSV
+                     world.version = world.version + 1   -- increment Global System Version (GSV)
+                     system:OnEnter(Time, entity)        -- local dirty = entity.version > system.version
+                     system.version = world.version      -- update last system version with GSV
                   end
                end
             end
@@ -197,17 +197,17 @@ end
    @param entities {{[Key=Entity] => Archetype}}
 ]]
 function SystemExecutor:_ExecOnExit(Time, oldIndexed)
-   local world = self._World
-   for _, system in ipairs(self._OnExit) do
+   local world = self._world
+   for _, system in ipairs(self._onExit) do
       local query = system.Query
       for archetypeOld, newIndexed in pairs(oldIndexed) do
          if query:Match(archetypeOld) then
             for archetypeNew, entities in pairs(newIndexed) do
                if not query:Match(archetypeNew) then
                   for i,entity in ipairs(entities) do                  
-                     world.Version = world.Version + 1   -- increment Global System Version (GSV)
-                     system:OnExit(Time, entity)         -- local dirty = entity.Version > system.Version
-                     system.Version = world.Version      -- update last system version with GSV
+                     world.version = world.version + 1   -- increment Global System Version (GSV)
+                     system:OnExit(Time, entity)         -- local dirty = entity.version > system.version
+                     system.version = world.version      -- update last system version with GSV
                   end
                end
             end
@@ -239,14 +239,14 @@ function SystemExecutor:ExecOnRemove(Time, removedEntities)
       return
    end
    
-   local world = self._World
-   for _, system in ipairs(self._OnRemove) do 
+   local world = self._world
+   for _, system in ipairs(self._onRemove) do 
       for archetypeOld, entities in pairs(oldIndexed) do
          if system.Query:Match(archetypeOld) then
             for i,entity in ipairs(entities) do  
-               world.Version = world.Version + 1   -- increment Global System Version (GSV)
-               system:OnRemove(Time, entity)       -- local dirty = entity.Version > system.Version
-               system.Version = world.Version      -- update last system version with GSV
+               world.version = world.version + 1   -- increment Global System Version (GSV)
+               system:OnRemove(Time, entity)       -- local dirty = entity.version > system.version
+               system.version = world.version      -- update last system version with GSV
             end
          end
       end
@@ -256,23 +256,23 @@ end
 local function execUpdate(world, systems, Time)
    for j, system in ipairs(systems) do
       if (system.ShouldUpdate == nil or system.ShouldUpdate(Time)) then
-         world.Version = world.Version + 1   -- increment Global System Version (GSV)
-         system:Update(Time)                 -- local dirty = entity.Version == 0 or entity.Version > system.Version
-         system.Version = world.Version      -- update last system version with GSV
+         world.version = world.version + 1   -- increment Global System Version (GSV)
+         system:Update(Time)                 -- local dirty = entity.version > system.version
+         system.version = world.version      -- update last system version with GSV
       end
    end
 end
 
 function SystemExecutor:ExecProcess(Time)
-   execUpdate(self._World, self._Process, Time)
+   execUpdate(self._world, self._process, Time)
 end
 
 function SystemExecutor:ExecTransform(Time)
-   execUpdate(self._World, self._Transform, Time)
+   execUpdate(self._world, self._transform, Time)
 end
 
 function SystemExecutor:ExecRender(Time)
-   execUpdate(self._World, self._Render, Time)
+   execUpdate(self._world, self._render, Time)
 end
 
 --[[
@@ -287,11 +287,11 @@ function SystemExecutor:ExecTasks(maxExecTime)
       local hasMore = false
 
       -- https://github.com/wahern/cqueues/issues/231#issuecomment-562838785
-      local i, len = 0, #self._Schedulers-1
+      local i, len = 0, #self._schedulers-1
       while i <= len do
          i = i + 1
 
-         local scheduler = self._Schedulers[i]
+         local scheduler = self._schedulers[i]
          local tasksTime, hasMoreTask = scheduler.Resume(maxExecTime)
          
          if hasMoreTask then
@@ -315,9 +315,9 @@ local function execTask(node, Time, world, onComplete)
    local system = node.System
    system._TaskState = "running"
    if (system.ShouldUpdate == nil or system.ShouldUpdate(Time)) then
-      world.Version = world.Version + 1   -- increment Global System Version (GSV)
-      system:Update(Time)                 -- local dirty = entity.Version == 0 or entity.Version > system.Version
-      system.Version = world.Version      -- update last system version with GSV
+      world.version = world.version + 1   -- increment Global System Version (GSV)
+      system:Update(Time)                 -- local dirty = entity.version > system.version
+      system.version = world.version      -- update last system version with GSV
    end
    system._TaskState = "suspended"
    onComplete(node)
@@ -327,7 +327,7 @@ end
    Invoked at the beginning of each frame, it schedules the execution of the next tasks
 ]]
 function SystemExecutor:ScheduleTasks(Time)
-   local world = self._World
+   local world = self._world
 
    local rootNodes = {}    -- Node[]
    local runningNodes = {} -- Node[]
@@ -335,10 +335,10 @@ function SystemExecutor:ScheduleTasks(Time)
    local completed = {}    -- { [Node] = true }
    local dependents = {}   -- { [Node] = Node[] }
 
-   local i, len = 0, #self._Task-1
+   local i, len = 0, #self._task-1
    while i <= len do
       i = i + 1
-      local node = self._Task[i]
+      local node = self._task[i]
       
       if (node.System._TaskState == "suspended") then
          -- will be executed
@@ -452,9 +452,9 @@ function SystemExecutor:ScheduleTasks(Time)
             local hasMore = #runningNodes > 0
    
             if (not hasMore) then
-               local idx = table.find(self._Schedulers, scheduler)
+               local idx = table.find(self._schedulers, scheduler)
                if idx ~= nil then
-                  table.remove(self._Schedulers, idx)
+                  table.remove(self._schedulers, idx)
                end
             end
 
@@ -462,7 +462,7 @@ function SystemExecutor:ScheduleTasks(Time)
          end
       }
 
-      table.insert(self._Schedulers, scheduler)
+      table.insert(self._schedulers, scheduler)
    end
 end
 

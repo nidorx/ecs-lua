@@ -21,14 +21,14 @@ local function getComponent(entity, componentClass)
    if (componentClass.IsCType) then
       -- 01) comp1 = entity[CompType1]
       -- 02) comp1 = entity:Get(CompType1)
-      return entity._Data[componentClass]
+      return entity._data[componentClass]
    end
    
    -- 03) comps = entity[{CompType1, CompType2, ...}]
    -- 04) comps = entity:Get({CompType1, CompType2, ...})
    local cTypes = componentClass
    local components = {}
-   local data = entity._Data
+   local data = entity._data
    
    for i,cType in ipairs(cTypes) do
       local component = data[cType]
@@ -58,11 +58,11 @@ end
 ]]
 local function setComponent(self, cType, value)
 
-   local data = self._Data
-   local archetypeOld = self.Archetype
+   local data = self._data
+   local archetypeOld = self.archetype
    local archetypeNew = archetypeOld
 
-   if cType.IsComponent then
+   if cType.isComponent then
       -- 01) entity:Set(comp1)
       local component = cType
       cType = component:GetType()
@@ -79,7 +79,7 @@ local function setComponent(self, cType, value)
       else
          -- 04) entity[CompType1] = value
          -- 05) entity:Set(CompType1, value)
-         if (type(value) == 'table' and value.IsComponent) then
+         if (type(value) == 'table' and value.isComponent) then
             cType = value:GetType()
             data[cType] = value
          else
@@ -90,10 +90,10 @@ local function setComponent(self, cType, value)
       end
    elseif #cType > 0 then
       local first = cType[1]
-      if first.IsComponent then
+      if first.isComponent then
          -- 06) entity:Set({comp1, comp2, ...})
          for _,component in ipairs(cType) do
-            if (component.IsComponent) then
+            if (component.isComponent) then
                cType = component:GetType()
                data[cType] = component
                archetypeNew = archetypeNew:With(cType)
@@ -119,7 +119,7 @@ local function setComponent(self, cType, value)
                   data[cType] = nil
                   archetypeNew = archetypeNew:Without(cType)
 
-               elseif (component.IsComponent) then
+               elseif (component.isComponent) then
                   cType = component:GetType()                     
                   data[cType] = component
                   archetypeNew = archetypeNew:With(cType)
@@ -135,8 +135,8 @@ local function setComponent(self, cType, value)
    end
 
    if (archetypeOld ~= archetypeNew) then
-      self.Archetype = archetypeNew
-      self._OnChange:Fire(self, archetypeOld)
+      self.archetype = archetypeNew
+      self._onChange:Fire(self, archetypeOld)
    end
 end
 
@@ -152,11 +152,11 @@ end
 ]]
 local function unsetComponent(self, cType)
 
-   local data = self._Data
-   local archetypeOld = self.Archetype
+   local data = self._data
+   local archetypeOld = self.archetype
    local archetypeNew = archetypeOld
    
-   if cType.IsComponent then
+   if cType.isComponent then
       -- 01) enity:Unset(comp1)
       local component = cType
       cType = component:GetType()                     
@@ -172,7 +172,7 @@ local function unsetComponent(self, cType)
    else
       local values = cType
       for _,value in ipairs(values) do
-         if value.IsComponent then
+         if value.isComponent then
             -- 04) enity:Unset({comp1, comp1, ...})
             cType = value:GetType()  
             data[cType] = nil
@@ -188,9 +188,9 @@ local function unsetComponent(self, cType)
       end
    end
 
-   if self.Archetype ~= archetypeNew then
-      self.Archetype = archetypeNew
-      self._OnChange:Fire(self, archetypeOld)
+   if self.archetype ~= archetypeNew then
+      self.archetype = archetypeNew
+      self._onChange:Fire(self, archetypeOld)
    end
 end
 
@@ -210,7 +210,7 @@ local Entity = {
          -- 03) entity[{CompType1, CompType2, ...}] = nil
          -- 04) entity[{CompType1, CompType2, ...}] = {value1, value2, ...}
          -- 05) entity[{CompType1, CompType2, ...}] = {nil, value2, ...}
-         if (key.IsCType or key.IsComponent) then
+         if (key.IsCType or key.isComponent) then
             setComponent(e, key, value)
          elseif #key > 0 then
             local first = key[1]
@@ -251,11 +251,11 @@ function Entity.New(onChange, components)
    SEQ = SEQ + 1
 
    return setmetatable({
-      _Data = data,
-      _OnChange = onChange,
-      Id = SEQ,
-      IsAlive = false,
-      Archetype = archetype,
+      _data = data,
+      _onChange = onChange,
+      id = SEQ,
+      isAlive = false,
+      archetype = archetype,
       Get = getComponent,
       Set = setComponent,
       Unset = unsetComponent,

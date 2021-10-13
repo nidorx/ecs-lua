@@ -40,7 +40,7 @@
 
    @see QueryResult.lua
 
-   Ex. ECS.Query.All({ Movement.In("Standing", "Walking") })
+   Ex. ECS.Query.All(Movement.In("Standing", "Walking"))
 ]]
 local function queryFilterCTypeStateIn(entity, config)
    local states = config.States
@@ -111,7 +111,7 @@ function ComponentFSM.AddCapability(superClass, states)
 
    ComponentFSM.AddMethods(superClass, superClass)
 
-   table.insert(superClass.__Initializers, function(component)
+   table.insert(superClass._Initializers, function(component)
       component:SetState(superClass.StateInitial)
    end)
 end
@@ -131,7 +131,7 @@ function ComponentFSM.AddMethods(superClass, componentClass)
       @param ... {string[]} 
       @return Clause
 
-      Ex. ECS.Query.All({ Movement.In("Walking", "Running") })
+      Ex. ECS.Query.All(Movement.In("Walking", "Running"))
    ]]
    function componentClass.In(...)
       

@@ -35,8 +35,8 @@ function TestComponent:test_Value()
    local component1 = ComponentClass()
    local component2 = ComponentClass("bar")
 
-   lu.assertEquals(component1.Value, "foo")
-   lu.assertEquals(component2.Value, "bar")
+   lu.assertEquals(component1.value, "foo")
+   lu.assertEquals(component2.value, "bar")
 end
 
 function TestComponent:test_Should_UseTemplate_Table()
@@ -45,7 +45,7 @@ function TestComponent:test_Should_UseTemplate_Table()
       Level1 = {
          Level2 = {
             Level3 = {
-               Value = 00
+               value = 00
             }
          }
       }
@@ -54,14 +54,14 @@ function TestComponent:test_Should_UseTemplate_Table()
    local component1 = ComponentClass()
    local component2 = ComponentClass()
 
-   lu.assertEquals(component1.Level1.Level2.Level3.Value, 00)
-   lu.assertEquals(component2.Level1.Level2.Level3.Value, 00)
+   lu.assertEquals(component1.Level1.Level2.Level3.value, 00)
+   lu.assertEquals(component2.Level1.Level2.Level3.value, 00)
 
-   component1.Level1.Level2.Level3.Value = 11
-   component2.Level1.Level2.Level3.Value = 22
+   component1.Level1.Level2.Level3.value = 11
+   component2.Level1.Level2.Level3.value = 22
 
-   lu.assertEquals(component1.Level1.Level2.Level3.Value, 11)
-   lu.assertEquals(component2.Level1.Level2.Level3.Value, 22)
+   lu.assertEquals(component1.Level1.Level2.Level3.value, 11)
+   lu.assertEquals(component2.Level1.Level2.Level3.value, 22)
 
 
    lu.assertEquals(component1:GetType(), ComponentClass)
@@ -74,7 +74,7 @@ function TestComponent:test_Should_UseTemplate_Function()
          Level1 = {
             Level2 = {
                Level3 = {
-                  Value = 00
+                  value = 00
                }
             }
          }
@@ -84,46 +84,14 @@ function TestComponent:test_Should_UseTemplate_Function()
    local component1 = ComponentClass()
    local component2 = ComponentClass()
 
-   lu.assertEquals(component1.Level1.Level2.Level3.Value, 00)
-   lu.assertEquals(component2.Level1.Level2.Level3.Value, 00)
+   lu.assertEquals(component1.Level1.Level2.Level3.value, 00)
+   lu.assertEquals(component2.Level1.Level2.Level3.value, 00)
 
-   component1.Level1.Level2.Level3.Value = 11
-   component2.Level1.Level2.Level3.Value = 22
+   component1.Level1.Level2.Level3.value = 11
+   component2.Level1.Level2.Level3.value = 22
 
-   lu.assertEquals(component1.Level1.Level2.Level3.Value, 11)
-   lu.assertEquals(component2.Level1.Level2.Level3.Value, 22)
-end
-
-function TestComponent:test_Should_CreateTagComponent()
-
-   local ComponentClass = Component.Create(true)
-
-   lu.assertIsTrue(ComponentClass.IsTag)
-
-   local component1 = ComponentClass()
-
-   lu.assertNotNil(component1)
-end
-
-function TestComponent:test_Should_IgnoreTemplate_When_IsTag()
-
-   local ComponentClass = Component.Create({
-      Level1 = {
-         Level2 = {
-            Level3 = {
-               Value = 00
-            }
-         }
-      }
-   }, true)
-
-   lu.assertIsTrue(ComponentClass.IsTag)
-
-   local component1 = ComponentClass()
-   local component2 = ComponentClass()
-
-   lu.assertEquals(component1.Level1, nil)
-   lu.assertEquals(component2.Level1, nil)
+   lu.assertEquals(component1.Level1.Level2.Level3.value, 11)
+   lu.assertEquals(component2.Level1.Level2.Level3.value, 22)
 end
 
 function TestComponent:test_Should_CreateQualifier()
@@ -172,7 +140,7 @@ function TestComponent:test_Should_CreateQualifier()
       mergeFn(buff, buffLevel, buffMission)
       
       -- tem de ignorar esse merge
-      local OtherComponent = Component.Create({ Value = 0 })
+      local OtherComponent = Component.Create({ value = 0 })
       local other = OtherComponent()
       buff:Merge(other)
 
@@ -292,7 +260,7 @@ function TestComponent:test_Should_CreateFSM()
       sleep(0.1)
    end
 
-   -- ECS.Query.All({ Movement.In("Standing") })
+   -- ECS.Query.All(Movement.In("Standing"))
 
    local movement = Movement()
 
@@ -493,7 +461,7 @@ end
 --    end
 -- }
 
--- ECS.Query.All({ Movement.In("Standing") })
+-- ECS.Query.All(Movement.In("Standing"))
 
 -- local movement = entity[Movement]
 -- movement:GetState() -> "Running"

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8" />
+   <title>ECS-lua - Entity Component System in Lua</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+   <meta name="description" content="Entity Component System in Lua" />
+   <meta name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+   <!-- <link rel="stylesheet" href="//unpkg.com/docsify/lib/themes/vue.css" /> -->
+   <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4.12.1/themes/vue.css">
+
+
+   <link rel="stylesheet" href="style.css" />
+
+   <link rel="apple-touch-icon" sizes="57x57" href="./favicon/apple-icon-57x57.png">
+   <link rel="apple-touch-icon" sizes="60x60" href="./favicon/apple-icon-60x60.png">
+   <link rel="apple-touch-icon" sizes="72x72" href="./favicon/apple-icon-72x72.png">
+   <link rel="apple-touch-icon" sizes="76x76" href="./favicon/apple-icon-76x76.png">
+   <link rel="apple-touch-icon" sizes="114x114" href="./favicon/apple-icon-114x114.png">
+   <link rel="apple-touch-icon" sizes="120x120" href="./favicon/apple-icon-120x120.png">
+   <link rel="apple-touch-icon" sizes="144x144" href="./favicon/apple-icon-144x144.png">
+   <link rel="apple-touch-icon" sizes="152x152" href="./favicon/apple-icon-152x152.png">
+   <link rel="apple-touch-icon" sizes="180x180" href="./favicon/apple-icon-180x180.png">
+   <link rel="icon" type="image/png" sizes="192x192" href="./favicon/android-icon-192x192.png">
+   <link rel="icon" type="image/png" sizes="32x32" href="./favicon/favicon-32x32.png">
+   <link rel="icon" type="image/png" sizes="96x96" href="./favicon/favicon-96x96.png">
+   <link rel="icon" type="image/png" sizes="16x16" href="./favicon/favicon-16x16.png">
+   <link rel="manifest" href="./favicon/manifest.json">
+   <meta name="msapplication-TileColor" content="#ffffff">
+   <meta name="msapplication-TileImage" content="./favicon/ms-icon-144x144.png">
+   <meta name="theme-color" content="#ffffff">
+</head>
+
+<body>
+   <div id="app"></div>
+   <script>
+      window.$docsify = {
+         repo: 'nidorx/roblox-ecs',
+         name: "ECS-lua",
+         loadSidebar: true,
+         auto2top: true,
+         coverpage: ['/', '/pt-br/'],
+         executeScript: true,
+         loadNavbar: true,
+         search: {
+            paths: 'auto',
+            placeholder: {
+               '/': 'Type to search...',
+               '/pt-br/': 'Digite para buscar...',
+            },
+            noData: {
+               '/pt-br/': 'Nenhum resultado',
+               '/': 'No Results'
+            },
+         },
+         copyCode: {
+            buttonText: {
+               '/pt-br/': 'Clique para copiar',
+               '/': 'Copy to clipboard'
+            },
+            errorText: {
+               '/pt-br/': 'Erro',
+               '/': 'Error'
+            },
+            successText: {
+               '/pt-br/': 'Copiado',
+               '/': 'Copied'
+            }
+         },
+         relativePath: true,
+         logo: './logo.png',
+         themeColor: 'rgb(250, 136, 11)',
+         fallbackLanguages: ['pt-br'],
+         // coverpage: {
+         //    '/': 'cover.md',
+         //    '/zh-cn/': 'cover.md',
+         // },
+         plugins: [
+            function (hook) {
+               hook.doneEach(function () {
+                  const isApiPage = location.hash.split("?")[0].includes("/api/");
+                  let backLink = document.querySelector(".back-link");
+
+                  if (!isApiPage) {
+                     if (backLink) backLink.remove();
+                     return;
+                  }
+
+                  if (!backLink) {
+                     backLink = document.createElement("a");
+                     backLink.className = "back-link";
+                     backLink.innerHTML = "&larr;";
+                     const appName = document.querySelector(".app-name");
+                     appName.after(backLink);
+                  }
+
+                  backLink.href = "#/";
+               });
+            },
+            function (hook, vm) {
+               hook.beforeEach(function (markdown) {
+                  var url = 'https://github.com/nidorx/roblox-ecs/edit/master/docs' + vm.router.getFile()
+                  var editButton =
+                     '<a class="edit-button" href="' +
+                     url +
+                     '" target="_blank"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>edit this file</a>\n'
+                  var metaContainer =
+                     '<div class="meta-container">' + editButton + '</div>\n\n'
+                  return metaContainer + markdown
+               })
+            },
+            // function (hook, vm) {
+            //    hook.doneEach(function () {
+            //       codecopy('pre')
+            //    })
+            // }
+         ]
+      }
+
+      // remove sidebar's title and add my logo
+      let interval = setInterval(function () {
+         if (document.getElementsByTagName('aside')[0]) {
+            let parent = document.getElementsByTagName('aside')[0]
+            parent.removeChild(parent.getElementsByTagName('h1')[0])
+            let div = document.createElement('div')
+            div.setAttribute('class', 'logo')
+            let a = document.createElement('a')
+            a.setAttribute('href', '/')
+            let img = document.createElement('img')
+            img.setAttribute('src', './logo.svg')
+
+            a.appendChild(img)
+            div.appendChild(a)
+            parent.prepend(div)
+            clearInterval(interval)
+         }
+      }, 0)
+   </script>
+   <script src="//cdn.jsdelivr.net/npm/docsify@4.12.1"></script>
+   <script src="//unpkg.com/docsify-pagination/dist/docsify-pagination.min.js"></script>
+   <script src="//cdn.jsdelivr.net/npm/docsify@4.12.1/lib/plugins/search.js"></script>
+   <script src="//unpkg.com/prismjs/components/prism-lua.min.js"></script>
+
+</body>
+
+</html>

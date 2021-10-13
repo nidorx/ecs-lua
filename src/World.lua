@@ -15,23 +15,22 @@ World.__index = World
 ]]
 function World.New(systemClasses, frequency, disableAutoUpdate)   
    local world = setmetatable({
-      Version = 0,
-      MaxScheduleExecTimePercent = 0.7,
-      _Dirty = false, -- True when create/remove entity, add/remove entity component (change archetype)
-      _Timer = Timer.New(frequency),
-      _Systems = {}, -- systems in this world
-      _Repository = EntityRepository.New(),
-      _EntitiesCreated = {}, -- created during the execution of the Update
-      _EntitiesRemoved = {}, -- removed during execution (only removed after the last execution step)
-      _EntitiesUpdated = {}, -- changed during execution (received or lost components, therefore, changed the archetype)
-      _LastKnownArchetypeInstant = 0,
-      _OnChangeArchetypeEvent = Event.New(),
+      version = 0,
+      maxScheduleExecTimePercent = 0.7,
+      _dirty = false, -- True when create/remove entity, add/remove entity component (change archetype)
+      _timer = Timer.New(frequency),
+      _systems = {}, -- systems in this world
+      _repository = EntityRepository.New(),
+      _entitiesCreated = {}, -- created during the execution of the Update
+      _entitiesRemoved = {}, -- removed during execution (only removed after the last execution step)
+      _entitiesUpdated = {}, -- changed during execution (received or lost components, therefore, changed the archetype)
+      _onChangeArchetypeEvent = Event.New(),
    }, World)
 
    -- System execution plan
-   world._Executor = SystemExecutor.New(world, {})
+   world._executor = SystemExecutor.New(world, {})
 
-   world._OnChangeArchetypeEvent:Connect(function(entity, archetypeOld, archetypeNew)      
+   world._onChangeArchetypeEvent:Connect(function(entity, archetypeOld, archetypeNew)      
       world:_OnChangeArchetype(entity, archetypeOld, archetypeNew)
    end)
 
@@ -43,7 +42,7 @@ function World.New(systemClasses, frequency, disableAutoUpdate)
    end
 
    if (not disableAutoUpdate and World.LoopManager) then
-      world._LoopCancel = World.LoopManager.Register(world)
+      world._loopCancel = World.LoopManager.Register(world)
    end
 
    return world
@@ -55,11 +54,7 @@ end
    @param frequency {number}
 ]]
 function World:SetFrequency(frequency) 
-   frequency = self._Timer:SetFrequency(frequency) 
-
-   -- 60FPS = ((1000/60/1000)*0.7)/3 = 0.0038888888888888883
-   -- 30FPS = ((1000/30/1000)*0.7)/3 = 0.007777777777777777
-   self.MaxScheduleExecTime = (self._Timer.Time.DeltaFixed * (self.MaxScheduleExecTimePercent or 0.7))/3
+   frequency = self._timer:SetFrequency(frequency) 
 end
 
 --[[
@@ -68,7 +63,7 @@ end
    @return number
 ]]
 function World:GetFrequency(frequency) 
-   return self._Timer.Frequency
+   return self._timer.Frequency
 end
 
 --[[
@@ -84,9 +79,9 @@ function World:AddSystem(systemClass, config)
          config = {}
       end
      
-      if self._Systems[systemClass] == nil then
-         self._Systems[systemClass] = systemClass.New(self, config)
-         self._Executor = SystemExecutor.New(self, self._Systems)
+      if self._systems[systemClass] == nil then
+         self._systems[systemClass] = systemClass.New(self, config)
+         self._executor = SystemExecutor.New(self, self._systems)
       end
    end
 end
@@ -97,13 +92,13 @@ end
    @param args {Component[]}
 ]]
 function World:Entity(...)
-   local entity = Entity.New(self._OnChangeArchetypeEvent, {...})
+   local entity = Entity.New(self._onChangeArchetypeEvent, {...})
 
-   self._Dirty = true
-   self._EntitiesCreated[entity] = true
+   self._dirty = true
+   self._entitiesCreated[entity] = true
    
-   entity.Version = self.Version -- update entity version using current Global System Version (GSV)
-   entity._IsAlive = false
+   entity.version = self.version -- update entity version using current Global System Version (GSV)
+   entity.isAlive = false
 
    return entity
 end
@@ -115,23 +110,23 @@ end
 ]]
 function World:Remove(entity)
 
-   if self._EntitiesRemoved[entity] == true then
+   if self._entitiesRemoved[entity] == true then
       return
    end
 
-   if self._EntitiesCreated[entity] == true then
-      self._EntitiesCreated[entity] = nil
+   if self._entitiesCreated[entity] == true then
+      self._entitiesCreated[entity] = nil
    else
-      self._Repository:Remove(entity)
-      self._EntitiesRemoved[entity] = true
+      self._repository:Remove(entity)
+      self._entitiesRemoved[entity] = true
 
-      if self._EntitiesUpdated[entity] == nil then
-         self._EntitiesUpdated[entity] = entity.Archetype
+      if self._entitiesUpdated[entity] == nil then
+         self._entitiesUpdated[entity] = entity.archetype
       end
    end
 
-   self._Dirty = true
-   entity._IsAlive = false
+   self._dirty = true
+   entity.isAlive = false
 end
 
 --[[
@@ -141,11 +136,11 @@ end
    @return QueryResult
 ]]
 function World:Exec(query)
-   if (query.IsQueryBuilder) then
+   if (query.isQueryBuilder) then
       query = query.Build()
    end
 
-   return self._Repository:Query(query)
+   return self._repository:Query(query)
 end
 
 --[[
@@ -169,57 +164,61 @@ function World:Update(step, now)
       '-------------------------------------'
    ]]
    
-   self._Timer:Update(now, step, function(Time)
+   self._timer:Update(now, step, function(Time)
       if step == 'process' then
-         self._Executor:ScheduleTasks(Time)
-         self._Executor:ExecProcess(Time)
+         self._executor:ScheduleTasks(Time)
+         self._executor:ExecProcess(Time)
       elseif step == 'transform' then
-         self._Executor:ExecTransform(Time)
+         self._executor:ExecTransform(Time)
       else
-         self._Executor:ExecRender(Time)
+         self._executor:ExecRender(Time)
       end
 
+      -- 60FPS = ((1000/60/1000)*0.7)/3 = 0.0038888888888888883
+      -- 30FPS = ((1000/30/1000)*0.7)/3 = 0.007777777777777777
+      local maxScheduleExecTime = (Time.DeltaFixed * (self.maxScheduleExecTimePercent or 0.7))/3
+
       -- run suspended Tasks
-      self._Executor:ExecTasks(self.MaxScheduleExecTime)
+      self._executor:ExecTasks(maxScheduleExecTime)
 
       -- cleans up after running scripts
-      while self._Dirty do
-         self._Dirty = false
+      while self._dirty do
+         self._dirty = false
       
          -- 1: remove entities
          local entitiesRemoved = {}
-         for entity,_ in pairs(self._EntitiesRemoved) do
-            entitiesRemoved[entity] = self._EntitiesUpdated[entity]
-            self._EntitiesUpdated[entity] = nil
+         for entity,_ in pairs(self._entitiesRemoved) do
+            entitiesRemoved[entity] = self._entitiesUpdated[entity]
+            self._entitiesUpdated[entity] = nil
          end
-         self._EntitiesRemoved = {}
-         self._Executor:ExecOnRemove(Time, entitiesRemoved)
+         self._entitiesRemoved = {}
+         self._executor:ExecOnRemove(Time, entitiesRemoved)
          entitiesRemoved = nil
       
          local changed = {}
          local hasChange = false
       
          -- 2: Update entities in memory
-         for entity, archetypeOld in pairs(self._EntitiesUpdated) do
-            if (archetypeOld ~= entity.Archetype) then
+         for entity, archetypeOld in pairs(self._entitiesUpdated) do
+            if (archetypeOld ~= entity.archetype) then
                hasChange = true
                changed[entity] = archetypeOld
             end
          end
-         self._EntitiesUpdated = {}
+         self._entitiesUpdated = {}
       
          -- 3: Add new entities
-         for entity, _ in pairs(self._EntitiesCreated) do
+         for entity, _ in pairs(self._entitiesCreated) do
             hasChange = true
             changed[entity] = Archetype.EMPTY
       
-            entity._IsAlive = true
-            self._Repository:Insert(entity) 
+            entity.isAlive = true
+            self._repository:Insert(entity) 
          end
-         self._EntitiesCreated = {}
+         self._entitiesCreated = {}
       
          if hasChange then
-            self._Executor:ExecOnExitEnter(Time, changed)
+            self._executor:ExecOnExitEnter(Time, changed)
             changed = nil
          end
       end
@@ -231,46 +230,46 @@ end
 ]]
 function World:Destroy()
 
-   if self._LoopCancel then
-      self._LoopCancel()
-      self._LoopCancel = nil
+   if self._loopCancel then
+      self._loopCancel()
+      self._loopCancel = nil
    end
 
-   if self._OnChangeArchetypeEvent then
-      self._OnChangeArchetypeEvent:Destroy()
-      self._OnChangeArchetypeEvent = nil
+   if self._onChangeArchetypeEvent then
+      self._onChangeArchetypeEvent:Destroy()
+      self._onChangeArchetypeEvent = nil
    end
 
-   self._Repository = nil
+   self._repository = nil
 
-   if self._Systems then
-      for _,system in pairs(self._Systems) do
+   if self._systems then
+      for _,system in pairs(self._systems) do
          system:Destroy()
       end
-      self._Systems = nil
+      self._systems = nil
    end
    
-   self._Timer = nil
+   self._timer = nil
    self._ExecPlan = nil
-   self._EntitiesCreated = nil
-   self._EntitiesUpdated = nil
-   self._EntitiesRemoved = nil
+   self._entitiesCreated = nil
+   self._entitiesUpdated = nil
+   self._entitiesRemoved = nil
 
    setmetatable(self, nil)
 end
 
 function World:_OnChangeArchetype(entity, archetypeOld, archetypeNew)
-   if entity._IsAlive then
+   if entity.isAlive then
 
-      if self._EntitiesUpdated[entity] == nil then
-         self._Dirty = true
-         self._EntitiesUpdated[entity] = archetypeOld
+      if self._entitiesUpdated[entity] == nil then
+         self._dirty = true
+         self._entitiesUpdated[entity] = archetypeOld
       end
    
-      self._Repository:Update(entity)
+      self._repository:Update(entity)
 
       -- update entity version using current Global System Version (GSV)
-      entity.Version = self.Version
+      entity.version = self.version
    end
 end
 

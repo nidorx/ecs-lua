@@ -1,4 +1,4 @@
-# IMPORTANT! REFACTORING FOR NEW ARCHITECTURE
+[![Build Status](https://app.travis-ci.com/nidorx/roblox-ecs.svg?branch=master)](https://app.travis-ci.com/nidorx/roblox-ecs)
 
 ![](repository-open-graph.png)
 

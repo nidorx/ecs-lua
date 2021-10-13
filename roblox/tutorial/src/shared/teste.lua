@@ -10,7 +10,7 @@ local Transform = Component({
 
 local IsActive = Component(nil, true)
 
-local MovementSystem = System('proccess', 100, Query.All({Transform, IsActive}))
+local MovementSystem = System('proccess', 100, Query.All(Transform, IsActive))
 
 MovementSystem.After = {OtherSystem}
 MovementSystem.Before = {TransformSystem}
@@ -39,7 +39,7 @@ end
 
 function MovementSystem:OnEnter(time)
    local world = self.world
-   local query = Query.All({IsActive})
+   local query = Query.All(IsActive)
    
    world:Exec(query):ForEach(function(entity)
       local transform = Transform()

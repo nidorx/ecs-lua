@@ -7,17 +7,15 @@ local mergeDeep = Utility.mergeDeep
 local CLASS_SEQ = 0
 
 --[[
-   @param isTag {bool}
    @param initializer {function(table) => table}
    @param superClass {ComponentClass}
    @return ComponentClass
 ]]
-local function createComponentClass(isTag, initializer, superClass)
+local function createComponentClass(initializer, superClass)
    CLASS_SEQ = CLASS_SEQ + 1
 
    local ComponentClass = {
       Id = CLASS_SEQ,
-      IsTag = isTag,
       IsCType = true,
       -- Primary component
       SuperClass = superClass
@@ -26,13 +24,13 @@ local function createComponentClass(isTag, initializer, superClass)
 
    if superClass == nil then
       superClass = ComponentClass
-      superClass.__Qualifiers = { ["Primary"] = ComponentClass }
-      superClass.__Initializers = {}
+      superClass._Qualifiers = { ["Primary"] = ComponentClass }
+      superClass._Initializers = {}
    else
       ComponentClass.IsQualifier = true
    end
 
-   local Qualifiers = superClass.__Qualifiers
+   local Qualifiers = superClass._Qualifiers
 
    setmetatable(ComponentClass, {
       __call = function(t, value)
@@ -92,7 +90,7 @@ local function createComponentClass(isTag, initializer, superClass)
 
       local qualifiedClass = Qualifiers[qualifier]
       if qualifiedClass == nil then
-         qualifiedClass = createComponentClass(isTag, initializer, superClass)
+         qualifiedClass = createComponentClass(initializer, superClass)
          Qualifiers[qualifier] = qualifiedClass
       end
       return qualifiedClass
@@ -130,21 +128,21 @@ local function createComponentClass(isTag, initializer, superClass)
    --[[
       Constructor
 
-      @param value {any} If the value is not a table, it will be converted to the format "{ Value = value}"
+      @param value {any} If the value is not a table, it will be converted to the format "{ value = value}"
       @return Component
    ]]
    function ComponentClass.New(value)
       if (value ~= nil and type(value) ~= 'table') then
-         -- local MyComponent = Component({ Value = Vector3.new(0, 0, 0) })
+         -- local MyComponent = Component({ value = Vector3.new(0, 0, 0) })
          -- local component = MyComponent(Vector3.new(10, 10, 10))
-         value = { Value = value }
+         value = { value = value }
       end
       local component = setmetatable(initializer(value) or {}, ComponentClass)
-      for _, fn in ipairs(superClass.__Initializers) do
+      for _, fn in ipairs(superClass._Initializers) do
          fn(component)
       end
-      component.IsComponent = true
-      component._Qualifiers = { [ComponentClass] = component }
+      component.isComponent = true
+      component._qualifiers = { [ComponentClass] = component }
       return component
    end
 
@@ -172,7 +170,7 @@ local function createComponentClass(isTag, initializer, superClass)
       @return Component|nil
    ]]
    function ComponentClass:Primary()
-      return self._Qualifiers[superClass]
+      return self._qualifiers[superClass]
    end
 
    --[[
@@ -182,7 +180,7 @@ local function createComponentClass(isTag, initializer, superClass)
       @return Component|nil
    ]]
    function ComponentClass:Qualified(qualifier)
-      return self._Qualifiers[ComponentClass.Qualifier(qualifier)]
+      return self._qualifiers[ComponentClass.Qualifier(qualifier)]
    end
 
    --[[
@@ -193,7 +191,7 @@ local function createComponentClass(isTag, initializer, superClass)
    function ComponentClass:QualifiedAll()
       local qualifiedAll = {}
       for name, qualifiedClass in pairs(Qualifiers) do
-         qualifiedAll[name] = self._Qualifiers[qualifiedClass]
+         qualifiedAll[name] = self._qualifiers[qualifiedClass]
       end
       return qualifiedAll
    end
@@ -209,7 +207,7 @@ local function createComponentClass(isTag, initializer, superClass)
          return
       end
 
-      if self._Qualifiers == other._Qualifiers then
+      if self._qualifiers == other._qualifiers then
          return
       end
 
@@ -223,39 +221,39 @@ local function createComponentClass(isTag, initializer, superClass)
       -- does anyone know the reference to the primary entity?
       local primaryQualifiers
       if selfClass == superClass then
-         primaryQualifiers = self._Qualifiers
+         primaryQualifiers = self._qualifiers
       elseif otherClass == superClass then
-         primaryQualifiers = other._Qualifiers
-      elseif self._Qualifiers[superClass] ~= nil then
-         primaryQualifiers = self._Qualifiers[superClass]._Qualifiers
-      elseif other._Qualifiers[superClass] ~= nil then
-         primaryQualifiers = other._Qualifiers[superClass]._Qualifiers
+         primaryQualifiers = other._qualifiers
+      elseif self._qualifiers[superClass] ~= nil then
+         primaryQualifiers = self._qualifiers[superClass]._qualifiers
+      elseif other._qualifiers[superClass] ~= nil then
+         primaryQualifiers = other._qualifiers[superClass]._qualifiers
       end
 
       if primaryQualifiers ~= nil then
-         if self._Qualifiers ~= primaryQualifiers then
-            for qualifiedClass, component in pairs(self._Qualifiers) do
+         if self._qualifiers ~= primaryQualifiers then
+            for qualifiedClass, component in pairs(self._qualifiers) do
                if superClass ~= qualifiedClass then
                   primaryQualifiers[qualifiedClass] = component
-                  component._Qualifiers = primaryQualifiers
+                  component._qualifiers = primaryQualifiers
                end
             end
          end
 
-         if other._Qualifiers ~= primaryQualifiers then
-            for qualifiedClass, component in pairs(other._Qualifiers) do
+         if other._qualifiers ~= primaryQualifiers then
+            for qualifiedClass, component in pairs(other._qualifiers) do
                if superClass ~= qualifiedClass then
                   primaryQualifiers[qualifiedClass] = component
-                  component._Qualifiers = primaryQualifiers
+                  component._qualifiers = primaryQualifiers
                end
             end
          end
       else
          -- none of the instances know the Primary, use the current object reference
-         for qualifiedClass, component in pairs(other._Qualifiers) do
+         for qualifiedClass, component in pairs(other._qualifiers) do
             if selfClass ~= qualifiedClass then
-               self._Qualifiers[qualifiedClass] = component
-               component._Qualifiers = self._Qualifiers
+               self._qualifiers[qualifiedClass] = component
+               component._qualifiers = self._qualifiers
             end
          end
       end
@@ -277,21 +275,9 @@ local Component = {}
    Register a new component
 
    @param template {table|function(table?) -> table}
-   @param isTag {bool}
    @return ComponentClass  
 ]]
-function Component.Create(template, isTag)
-
-   if template == true then
-      isTag = true
-      template = nil
-   end
-
-   if isTag == nil then
-      isTag = false
-   elseif isTag then
-      template = nil
-   end
+function Component.Create(template)
 
    local initializer = defaultInitializer
 
@@ -301,7 +287,7 @@ function Component.Create(template, isTag)
          initializer = template
       else
          if (ttype ~= 'table') then
-            template = { Value = template }
+            template = { value = template }
          end
 
          initializer = function(value)
@@ -314,7 +300,7 @@ function Component.Create(template, isTag)
       end
    end
    
-   return createComponentClass(isTag, initializer, nil)
+   return createComponentClass(initializer, nil)
 end
 
 return Component

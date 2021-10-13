@@ -15,4 +15,4 @@ before_install:
   - source lua_install/bin/activate
 
 script:
-  - lua run-tests.lua -v
+  - lua test.lua -v && tail -22 ./luacov.report.out && lua build.lua

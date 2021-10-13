@@ -31,7 +31,7 @@ function TestWorld:test_SystemWhitoutQuery()
    local calledOnRemove = 0
    local calledOnDestroy = 0
    
-   local systemConfig = { Value = 1 }
+   local systemConfig = { value = 1 }
 
 
    lu.assertError(function()
@@ -50,7 +50,7 @@ function TestWorld:test_SystemWhitoutQuery()
 
    function System_A:Initialize()
       calledInitialize = calledInitialize + 1
-      lu.assertEquals(self.Config, systemConfig)
+      lu.assertEquals(self._config, systemConfig)
       lu.assertEquals(self.GetType(), System_A)
    end
 
@@ -76,7 +76,7 @@ function TestWorld:test_SystemWhitoutQuery()
    end
 
 
-   local System_B = System.Create('transform', -100, Query.All({Comp_B}))
+   local System_B = System.Create('transform', -100, Query.All(Comp_B))
 
    function System_B:OnEnter(Time, entity)
       calledOnEnter = calledOnEnter + 1
@@ -101,7 +101,7 @@ function TestWorld:test_SystemWhitoutQuery()
 
    local entityC = world:Entity(Comp_C(1))
 
-   local System_C = System.Create('transform', 20, Query.All({Comp_C}))
+   local System_C = System.Create('transform', 20, Query.All(Comp_C))
 
    function System_C:Update(Time)
       calledUpdate = calledUpdate + 1
@@ -144,8 +144,8 @@ function TestWorld:test_SystemWhitoutQuery()
    lu.assertEquals(calledOnEnter, 0)
    lu.assertEquals(calledOnExit, 0)
    lu.assertEquals(calledOnRemove, 0)
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_A })):ToArray(), {entityA})
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_B })):ToArray(), {})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_A)):ToArray(), {entityA})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_B)):ToArray(), {})
 
 
    local entityB = world:Entity(Comp_B(1))
@@ -159,10 +159,10 @@ function TestWorld:test_SystemWhitoutQuery()
    lu.assertEquals(calledOnEnter, 1)
    lu.assertEquals(calledOnExit, 0)
    lu.assertEquals(calledOnRemove, 0)
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_A })):ToArray(), {entityA})
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_B })):ToArray(), {entityB})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_A)):ToArray(), {entityA})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_B)):ToArray(), {entityB})
   
-   entityA[Comp_B] = {Value = 2}
+   entityA[Comp_B] = {value = 2}
    world:Update('process', 0.0334 * 4)
    world:Update('transform', 0.0335 * 4 + 0.001)
    world:Update('render', 0.0336 * 4 + 0.002)
@@ -172,8 +172,8 @@ function TestWorld:test_SystemWhitoutQuery()
    lu.assertEquals(calledOnEnter, 2)
    lu.assertEquals(calledOnExit, 0)
    lu.assertEquals(calledOnRemove, 0)
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_A })):ToArray(), {entityA})
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_B })):ToArray(), {entityA, entityB})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_A)):ToArray(), {entityA})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_B)):ToArray(), {entityA, entityB})
 
    entityA[Comp_B] = nil
    world:Update('process', 0.0334 * 5)
@@ -185,8 +185,8 @@ function TestWorld:test_SystemWhitoutQuery()
    lu.assertEquals(calledOnEnter, 2)
    lu.assertEquals(calledOnExit, 1)
    lu.assertEquals(calledOnRemove, 0)
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_A })):ToArray(), {entityA})
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_B })):ToArray(), {entityB})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_A)):ToArray(), {entityA})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_B)):ToArray(), {entityB})
 
    world:Remove(entityA)
    world:Remove(entityA) -- no result
@@ -199,8 +199,8 @@ function TestWorld:test_SystemWhitoutQuery()
    lu.assertEquals(calledOnEnter, 2)
    lu.assertEquals(calledOnExit, 1)
    lu.assertEquals(calledOnRemove, 0)
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_A })):ToArray(), {})
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_B })):ToArray(), {entityB})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_A)):ToArray(), {})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_B)):ToArray(), {entityB})
 
    world:Remove(entityB)
    world:Update('process', 0.0334 * 7)
@@ -212,8 +212,8 @@ function TestWorld:test_SystemWhitoutQuery()
    lu.assertEquals(calledOnEnter, 2)
    lu.assertEquals(calledOnExit, 1)
    lu.assertEquals(calledOnRemove, 1)
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_A })):ToArray(), {})
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_B })):ToArray(), {})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_A)):ToArray(), {})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_B)):ToArray(), {})
 
    -- add and remove before update
    local entityB = world:Entity(Comp_B(1))
@@ -228,8 +228,8 @@ function TestWorld:test_SystemWhitoutQuery()
    lu.assertEquals(calledOnExit, 1)
    lu.assertEquals(calledOnRemove, 1)
    lu.assertEquals(calledOnDestroy, 0)
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_A })):ToArray(), {})
-   lu.assertItemsEquals(world:Exec(Query.All({ Comp_B })):ToArray(), {})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_A)):ToArray(), {})
+   lu.assertItemsEquals(world:Exec(Query.All(Comp_B)):ToArray(), {})
    
    
    world:Destroy()

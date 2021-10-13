@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="60mm"
+   height="60mm"
+   viewBox="0 0 60 60"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
+   sodipodi:docname="logo.svg"
+   inkscape:export-filename="D:\dev\projetos\roblox-ecs\docs\logo.png"
+   inkscape:export-xdpi="105.68159"
+   inkscape:export-ydpi="105.68159">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="59.477397"
+     inkscape:cy="83.154941"
+     inkscape:document-units="mm"
+     inkscape:current-layer="svg8"
+     showgrid="false"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:window-width="1920"
+     inkscape:window-height="1027"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0">
+    <sodipodi:guide
+       position="39.378745,41.306318"
+       orientation="0,1"
+       id="guide825"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="39.779649,42.976753"
+       orientation="1,0"
+       id="guide827"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="1.0263792e-06,14.579772"
+       orientation="1,0"
+       id="guide851"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <path
+     style="opacity:1;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.79374999;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+     d="m 14.803883,12.225659 31.997123,0.03341 -0.02341,3.223018 2.965004,-0.05165 0.02504,13.797788 H 14.803883 Z"
+     id="rect822"
+     inkscape:connector-curvature="0"
+     sodipodi:nodetypes="ccscccc"
+     inkscape:label="eye_bg" />
+  <path
+     style="fill:#fb860c;fill-opacity:1;stroke-width:1"
+     d="m 9.891632,45.067407 -2e-6,-2.91042 H 6.981215 l -1e-6,-20.90209 H 9.89163 v -8.995829 h 3.175 V 9.0598892 h 3.439585 V 6.1736577 l 6.879165,-9.1e-6 V 3.263239 h 13.229165 v 2.9104097 h 6.482361 v 2.8862405 h 3.7041 v 3.1991788 h -6.746878 v 3.199049 l -3.439581,0.001 -2e-6,8.4414 h 3.439583 l 2e-6,2.91043 6.746876,-1.7e-4 v -5.55588 l 6.21778,2.3e-4 v 20.90161 h -3.175 v 2.92646 l -6.74688,-0.016 v -2.91042 h -3.042778 v -3.17487 h -3.439583 v 3.17487 l -3.439582,0.0256 v 2.88478 H 26.56038 v -2.91042 h -3.175 v -3.17487 h -3.174998 v 3.17487 h -3.704167 c 0.0062,0.97335 0,1.93706 0,2.91042 -2.204861,-2e-4 -4.409728,0 -6.614589,0 z m 16.66875,-18.25625 -2e-6,-2.91039 h 3.439677 v -8.44265 H 26.56038 v -3.199049 h -6.349998 v 3.199049 h -3.704167 l 2e-6,8.4425 3.704165,1.5e-4 v 2.91026 z"
+     id="path848"
+     inkscape:connector-curvature="0"
+     inkscape:label="body"
+     sodipodi:nodetypes="ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" />
+  <path
+     sodipodi:nodetypes="ccccc"
+     inkscape:label="eye_r"
+     inkscape:connector-curvature="0"
+     id="path906"
+     d="m 23.38538,23.900767 v -5.55629 h 6.614677 v 5.55629 z"
+     style="display:inline;fill:#020202;stroke-width:1" />
+  <path
+     style="display:inline;fill:#020202;stroke-width:1"
+     d="m 43.493616,23.900737 v -5.55629 h 6.61468 v 5.55629 z"
+     id="path910"
+     inkscape:connector-curvature="0"
+     inkscape:label="eye_l"
+     sodipodi:nodetypes="ccccc" />
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:11.7728157px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+     x="6.1246958"
+     y="56.453667"
+     id="text831"><tspan
+       sodipodi:role="line"
+       id="tspan829"
+       x="6.1246958"
+       y="56.453667"
+       style="font-style:normal;font-variant:normal;font-weight:900;font-stretch:normal;font-family:Arial;-inkscape-font-specification:'Arial Heavy';stroke-width:0.26458332">ECS</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:10.30337143px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#fb860c;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+     x="32.734024"
+     y="56.61602"
+     id="text831-0"><tspan
+       sodipodi:role="line"
+       id="tspan829-3"
+       x="32.734024"
+       y="56.61602"
+       style="font-style:normal;font-variant:normal;font-weight:900;font-stretch:normal;font-family:Arial;-inkscape-font-specification:'Arial Heavy';fill:#fb860c;fill-opacity:1;stroke-width:0.26458332">Lua</tspan></text>
+</svg>
