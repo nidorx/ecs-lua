@@ -57,7 +57,7 @@ Some common terms in ECS engines are:
 
 <div align=center>
 
-![Architecture](../assets/diagram-1.svg)
+![Architecture](assets/diagram-1.svg)
 
 </div>
 
@@ -314,7 +314,7 @@ entity6:Set(Acceleration())
 
 Result of the above code in Roblox Studio
 
-![Result of the above code in Roblox Studio](../assets/get-started-output.gif)
+![Result of the above code in Roblox Studio](assets/get-started-output.gif)
 
 ## Proximos passos
 This was a quick overview of how things are structured using **ECS Lua**,
