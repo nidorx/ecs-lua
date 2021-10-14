@@ -58,7 +58,7 @@ function Archetype.Of(componentClasses)
    end
 
    table.sort(ids)
-   local id = '_' .. table.concat(ids, '_')
+   local id = "_" .. table.concat(ids, "_")
 
    if archetypes[id] == nil then
       archetypes[id] = setmetatable({

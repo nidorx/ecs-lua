@@ -8,12 +8,11 @@ O **ECS Lua** nao possui dependencias externas e é compativel e testada com [Lu
     
 ## Características
 
-- Agnóstico de engine de jogo
+- Agnóstico de engine de jogo. Pode ser usado em qualquer motor que tenha a linguagem de script Lua
 - Focado em fornecer uma API simples, mas eficiente
-- Sistemas, entidades e componentes têm escopo em uma instância do `World`
 - Múltiplas consultas por sistema
-- Reativo: Os sistemas podem ser informado quando uma entidade sofre alteracao
-- `JobSystem` para a execucao de sistemas em paralelo
+- Possui um `JobSystem` para a execucao de sistemas em paralelo (por meio de [coroutines](http://www.lua.org/pil/9.1.html))
+- Reativo: Os sistemas podem ser informado quando uma entidade sofrer alteracao
 - Previsível:
    - Os sistemas funcionarão na ordem em que foram registrados ou com base na prioridade definida ao registrá-los
    - Os eventos reativos não geram um retorno de chamada aleatório quando emitidos, sao executados em um passo pre-definido
@@ -72,8 +71,8 @@ Você pode navegar ou buscar assuntos específicos no menu lateral. A seguir, al
    </div></div></div>
 </div>
 
-[Lua 5.1]:https://app.travis-ci.com/github/nidorx/roblox-ecs
-[Lua 5.2]:https://app.travis-ci.com/github/nidorx/roblox-ecs
-[Lua 5.3]:https://app.travis-ci.com/github/nidorx/roblox-ecs
-[Lua 5.4]:https://app.travis-ci.com/github/nidorx/roblox-ecs
-[LuaJit]:https://app.travis-ci.com/github/nidorx/roblox-ecs
+[Lua 5.1]:https://app.travis-ci.com/github/nidorx/ecs-lua
+[Lua 5.2]:https://app.travis-ci.com/github/nidorx/ecs-lua
+[Lua 5.3]:https://app.travis-ci.com/github/nidorx/ecs-lua
+[Lua 5.4]:https://app.travis-ci.com/github/nidorx/ecs-lua
+[LuaJit]:https://app.travis-ci.com/github/nidorx/ecs-lua

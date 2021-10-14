@@ -1,7 +1,7 @@
 
 local SYSTEM_ID_SEQ = 0
 
-local STEPS = { 'task', 'render', 'process', 'transform' }
+local STEPS = { "task", "render", "process", "transform" }
 
 local System = {}
 
@@ -16,7 +16,7 @@ local System = {}
 function System.Create(step, order, query, updateFn)
 
    if (step == nil or not table.find(STEPS, step)) then
-      error('The "step" parameter must one of ', table.concat(STEPS, ', '))
+      error("The step parameter must one of ", table.concat(STEPS, ", "))
    end
 
    if type(order) == "function" then

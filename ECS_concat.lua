@@ -5,7 +5,7 @@
 	game development
 
 	This is a minified version of ECS-Lua, to see the full source code visit
-	https://github.com/nidorx/roblox-ecs
+	https://github.com/nidorx/ecs-lua
 
 	------------------------------------------------------------------------------
 
@@ -801,7 +801,7 @@ __F__["ECS"] = function()
       Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
       game development on the Roblox platform
    
-      https://github.com/nidorx/roblox-ecs
+      https://github.com/nidorx/ecs-lua
    
       Discussions about this script are at https://devforum.roblox.com/t/841175
    
@@ -898,188 +898,149 @@ __F__["Entity"] = function()
    
    --[[
       [GET]
-   
       01) comp1 = entity[CompType1]
       02) comp1 = entity:Get(CompType1)
-      03) comps = entity[{CompType1, CompType2, ...}]
-      04) comps = entity:Get({CompType1, CompType2, ...})
+      03) comp1, comp2, comp3 = entity:Get(CompType1, CompType2, CompType3)
    ]]
-   local function getComponent(entity, componentClass)
+   local function getComponent(entity, ...)
    
-      if (componentClass.IsCType) then
-         -- 01) comp1 = entity[CompType1]
-         -- 02) comp1 = entity:Get(CompType1)
-         return entity._data[componentClass]
-      end
-      
-      -- 03) comps = entity[{CompType1, CompType2, ...}]
-      -- 04) comps = entity:Get({CompType1, CompType2, ...})
-      local cTypes = componentClass
-      local components = {}
+      local values = {...}
       local data = entity._data
       
-      for i,cType in ipairs(cTypes) do
-         local component = data[cType]
-         if component then
-            table.insert(components, component)
+      if (#values == 1) then
+         local cType = values[1]
+         if (cType.IsCType and not cType.isComponent) then
+            -- 01) comp1 = entity[CompType1]
+            -- 02) comp1 = entity:Get(CompType1)
+            return data[cType]
+         else
+            return nil
          end
       end
-   
-      return components
+      
+      -- 03) comp1, comp2, comp3 = entity:Get(CompType1, CompType2, CompType3)
+      local components = {}   
+      for i,cType in ipairs(values) do
+         if (cType.IsCType and not cType.isComponent) then         
+            table.insert(components, data[cType])
+         end
+      end
+      return table.unpack(components)
    end
    
    --[[
       [SET]
-   
-      01) entity:Set(comp1)
-      02) entity[CompType1] = nil
+      01) entity[CompType1] = nil
+      02) entity[CompType1] = value
       03) entity:Set(CompType1, nil)   
-      04) entity[CompType1] = value
-      05) entity:Set(CompType1, value)
-      06) entity:Set({comp1, comp2, ...})
-      07) entity[{CompType1, CompType2, ...}] = nil
-      08) entity:Set({CompType1, CompType2, ...}, nil)
-      09) entity[{CompType1, CompType2, ...}] = {value1, value2, ...}
-      10) entity:Set({CompType1, CompType2, ...}, {value1, value2, ...})
-      11) entity[{CompType1, CompType2, ...}] = {nil, value2, ...}
-      12) entity:Set({CompType1, CompType2, ...}, {nil, value2, ...})
+      04) entity:Set(CompType1, value)
+      05) entity:Set(comp1)
+      06) entity:Set(comp1, comp2, ...)
    ]]
-   local function setComponent(self, cType, value)
+   local function setComponent(entity, ...)
    
-      local data = self._data
-      local archetypeOld = self.archetype
+      local values = {...}
+      local data = entity._data
+      local archetypeOld = entity.archetype
       local archetypeNew = archetypeOld
    
-      if cType.isComponent then
-         -- 01) entity:Set(comp1)
-         local component = cType
-         cType = component:GetType()
-         data[cType] = component
-         archetypeNew = archetypeNew:With(cType)
-   
-      elseif cType.IsCType then
-         if (value == nil) then
-            -- 02) entity[CompType1] = nil
-            -- 03) entity:Set(CompType1, nil)  
+      local cType = values[1]   
+      if (cType and cType.IsCType and not cType.isComponent) then 
+         local value = values[2]
+         -- 01) entity[CompType1] = nil
+         -- 02) entity[CompType1] = value
+         -- 03) entity:Set(CompType1, nil)   
+         -- 04) entity:Set(CompType1, value)
+         if value == nil then
             data[cType] = nil
             archetypeNew = archetypeNew:Without(cType)
    
-         else
-            -- 04) entity[CompType1] = value
-            -- 05) entity:Set(CompType1, value)
-            if (type(value) == 'table' and value.isComponent) then
-               cType = value:GetType()
-               data[cType] = value
-            else
-               data[cType] = cType(value)
-            end
+         elseif value.isComponent then
+            cType = value:GetType()                     
+            data[cType] = value
             archetypeNew = archetypeNew:With(cType)
    
-         end
-      elseif #cType > 0 then
-         local first = cType[1]
-         if first.isComponent then
-            -- 06) entity:Set({comp1, comp2, ...})
-            for _,component in ipairs(cType) do
-               if (component.isComponent) then
-                  cType = component:GetType()
-                  data[cType] = component
-                  archetypeNew = archetypeNew:With(cType)
-               end
-            end
          else
-            local cTypes = cType
-            local values = value
-            if (values == nil) then
-               -- 07) entity[{CompType1, CompType2, ...}] = nil
-               -- 08) entity:Set({CompType1, CompType2, ...}, nil)
-               values = {}
-            end
-   
-            -- 09) entity[{CompType1, CompType2, ...}] = {value1, value2, ...}
-            -- 10) entity:Set({CompType1, CompType2, ...}, {value1, value2, ...})
-            for i,cType in ipairs(cTypes) do
-               if (cType.IsCType) then
-                  local component = values[i]
-                  if component == nil then
-                     -- 11) entity[{CompType1, CompType2, ...}] = {nil, value2, ...}
-                     -- 12) entity:Set({CompType1, CompType2, ...}, {nil, value2, ...})
-                     data[cType] = nil
-                     archetypeNew = archetypeNew:Without(cType)
-   
-                  elseif (component.isComponent) then
-                     cType = component:GetType()                     
-                     data[cType] = component
-                     archetypeNew = archetypeNew:With(cType)
-   
-                  else
-                     data[cType] = cType(component)
-                     archetypeNew = archetypeNew:With(cType)
-   
-                  end
-               end
+            data[cType] = cType(value)
+            archetypeNew = archetypeNew:With(cType)
+         end
+      else
+         -- 05) entity:Set(comp1)
+         -- 06) entity:Set(comp1, comp2, ...)
+         for i,component in ipairs(values) do
+            if (component.isComponent) then
+               local ctype = component:GetType()                     
+               data[ctype] = component
+               archetypeNew = archetypeNew:With(ctype)
             end
          end
       end
    
       if (archetypeOld ~= archetypeNew) then
-         self.archetype = archetypeNew
-         self._onChange:Fire(self, archetypeOld)
+         entity.archetype = archetypeNew
+         entity._onChange:Fire(entity, archetypeOld)
       end
    end
    
    --[[
       [UNSET]
-   
       01) enity:Unset(comp1)
       02) entity[CompType1] = nil
       03) enity:Unset(CompType1)
-      04) enity:Unset({comp1, comp1, ...})
-      05) enity:Unset({CompType1, CompType2, ...})
-      06) entity[{CompType1, CompType2}] = nil
+      04) enity:Unset(comp1, comp1, ...)
+      05) enity:Unset(CompType1, CompType2, ...)
    ]]
-   local function unsetComponent(self, cType)
+   local function unsetComponent(entity, ...)
    
-      local data = self._data
-      local archetypeOld = self.archetype
+      local data = entity._data
+      local archetypeOld = entity.archetype
       local archetypeNew = archetypeOld
-      
-      if cType.isComponent then
-         -- 01) enity:Unset(comp1)
-         local component = cType
-         cType = component:GetType()                     
-         data[cType] = nil
-         archetypeNew = archetypeNew:Without(cType)
    
-      elseif cType.IsCType then
-         -- 02) entity[CompType1] = nil
-         -- 03) enity:Unset(CompType1)
-         data[cType] = nil
-         archetypeNew = archetypeNew:Without(cType)
-   
-      else
-         local values = cType
-         for _,value in ipairs(values) do
-            if value.isComponent then
-               -- 04) enity:Unset({comp1, comp1, ...})
-               cType = value:GetType()  
-               data[cType] = nil
-               archetypeNew = archetypeNew:Without(cType)
-   
-            elseif value.IsCType then
-               -- 05) enity:Unset({CompType1, CompType2, ...})
-               -- 06) entity[{CompType1, CompType2}] = nil
-               cType = value
-               data[cType] = nil
-               archetypeNew = archetypeNew:Without(cType)
-            end
+      for _,value in ipairs({...}) do
+         if value.isComponent then
+            -- 01) enity:Unset(comp1)
+            -- 04) enity:Unset(comp1, comp1, ...)
+            local cType = value:GetType()  
+            data[cType] = nil
+            archetypeNew = archetypeNew:Without(cType)
+            
+         elseif value.IsCType then
+            -- 02) entity[CompType1] = nil
+            -- 03) enity:Unset(CompType1)
+            -- 05) enity:Unset(CompType1, CompType2, ...)
+            data[value] = nil
+            archetypeNew = archetypeNew:Without(value)
          end
       end
    
-      if self.archetype ~= archetypeNew then
-         self.archetype = archetypeNew
-         self._onChange:Fire(self, archetypeOld)
+      if entity.archetype ~= archetypeNew then
+         entity.archetype = archetypeNew
+         entity._onChange:Fire(entity, archetypeOld)
       end
+   end
+   
+   --[[
+      01) comps = entity:GetAll()
+      01) qualifiers = entity:GetAll(PrimaryClass)
+   ]]
+   local function getAll(entity, qualifier)
+      local data = entity._data
+      local components = {}
+      if (qualifier ~= nil and qualifier.IsCType and not qualifier.isComponent) then
+         local ctypes = qualifier.Qualifiers()
+         for _,cType in ipairs(ctypes) do
+            local component = data[cType]
+            if component then
+               table.insert(components, component)
+            end
+         end
+      else
+         for _, component in pairs(data) do
+            table.insert(components, component)
+         end
+      end
+   
+      return components
    end
    
    local Entity = {
@@ -1092,24 +1053,10 @@ __F__["Entity"] = function()
       end,
       __newindex = function(e, key, value)
          local isComponentSet = true
-         if (type(key) == "table") then
+         if (type(key) == "table" and (key.IsCType and not key.isComponent)) then
             -- 01) entity[CompType1] = nil
             -- 02) entity[CompType1] = value
-            -- 03) entity[{CompType1, CompType2, ...}] = nil
-            -- 04) entity[{CompType1, CompType2, ...}] = {value1, value2, ...}
-            -- 05) entity[{CompType1, CompType2, ...}] = {nil, value2, ...}
-            if (key.IsCType or key.isComponent) then
-               setComponent(e, key, value)
-            elseif #key > 0 then
-               local first = key[1]
-               if (type(first) == "table" and (first.IsCType)) then
-                  setComponent(e, key, value)
-               else
-                  rawset(e, key, value)
-               end
-            else
-               rawset(e, key, value)
-            end
+            setComponent(e, key, value)
          else
             rawset(e, key, value)
          end
@@ -1147,6 +1094,7 @@ __F__["Entity"] = function()
          Get = getComponent,
          Set = setComponent,
          Unset = unsetComponent,
+         GetAll = getAll,
       }, Entity)
    end
    

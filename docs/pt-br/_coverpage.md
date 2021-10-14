@@ -54,11 +54,10 @@
 </div>
 
 # ECS Lua
+[![Build Status](https://app.travis-ci.com/nidorx/ecs-lua.svg?branch=master)](https://app.travis-ci.com/nidorx/ecs-lua)
 
-[![Build Status](https://app.travis-ci.com/nidorx/roblox-ecs.svg?branch=master)](https://app.travis-ci.com/nidorx/roblox-ecs)
-
-[GitHub](https://github.com/nidorx/roblox-ecs)
-[Começar](#get-started)
+[GitHub](https://github.com/nidorx/ecs-lua)
+[Começar](/pt-br/?id=introdução)
 
 <!-- background color -->
 ![color](#ffffff)

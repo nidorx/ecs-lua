@@ -1,145 +1,144 @@
-# Primeiros Passos
+# Getting Started
 
-O **ECS Lua** é um motor de Entity Component System (ECS) feito em [Lua](https://www.lua.org/) usado para 
-desenvolvimento de jogos.
-A ideia básica desse padrão é deixar de fazer a definição de entidades usando uma [hierarquia](https://pt.wikipedia.org/wiki/Heran%C3%A7a_(programa%C3%A7%C3%A3o_orientada_a_objetos)) de classes e passar a fazer 
-uso de [composição](https://pt.wikipedia.org/wiki/Composi%C3%A7%C3%A3o_de_objetos) em um paradigma de Programação Orientada a Dados.
-([Mais informações na Wikipedia](https://en.wikipedia.org/wiki/Entity_component_system)).
-A programação com um ECS pode resultar em um código mais eficiente e fácil de estender no longo do tempo.
+**ECS Lua** is an Entity Component System (ECS) engine made in [Lua](https://www.lua.org/) used for game development.
+The basic idea of this pattern is to stop defining entities using a 
+[hierarchy](https://en.wikipedia.org/wiki/Inheritance_(object-oriented_programming)) of classes and start doing use of 
+[composition](https://en.wikipedia.org/wiki/Object_composition) in a Data Oriented Programming paradigm.
+([More information on Wikipedia](https://en.wikipedia.org/wiki/Entity_component_system)).
+Programming with an ECS can result in code that is more efficient and easier to extend over time.
 
 
-## Instalação
+## Installation
 
-O **ECS Lua** nao possui dependencias externas, portanto, basta fazer o download da ultima versao disponível na 
-[página de releases](https://github.com/nidorx/roblox-ecs/releases) do projeto.
+**ECS Lua** has no external dependencies, so just download the latest version available on 
+[releases page](https://github.com/nidorx/ecs-lua/releases) of the project.
 
-Existem 3 opcoes de uso do **ECS Lua** 
+There are 3 options to use **ECS Lua**
 
-1. **ECS.lua** Versao minificada em um único arquivo 
-1. **ECS_concat.lua** Versao concatenada com os comentarios originais, que pode ser usada para depuracao durante o 
-desenvolvimento 
-1. **ECS.zip** Versao com os arquivos do diretorio `src`. 
-   > Importante! Todos os arquivos fazem o `require` para as dependencias que estão no mesmo diretorio, caso esteja 
-   usando em um projeto Lua, registrar no `package.path`.
+1. **ECS.lua** Minified version in a single file
+1. **ECS_concat.lua** Version concatenated with the original comments, which can be used for debugging during the
+development
+1. **ECS.zip** Version with files from the `src` directory.
+   > Important! All files do the `require` for dependencies that are in the same directory, if it is
+   using in a Lua project, register in `package.path`.
 
-   > Estes `require` nao funcionam no Roblox Luau, devido ao formato de importacao que o Roblox usa. 
+   > These `require` do not work in Roblox Luau, due to the import format that Roblox uses.
 
-Após importar o **ECS Lua**, ele está pronto para ser usado. O **ECS Lua** registra a variavel global `_G.ECS` para 
-facilitar o uso, portanto, voce pode usar o motor nas duas formas `local ECS = require("ECS")` 
-(no Roblox `local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))`) ou simplesmente `_G.ECS`.
-
+After importing **ECS Lua**, it is ready to be used. **ECS Lua** registers the global variable `_G.ECS` to
+make it easy to use, so you can use the engine in both ways `local ECS = require("ECS")`
+(in Roblox `local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))`) or simply `_G.ECS`.
 
 ### LoopManager
 
-Para que os sistemas do mundo recebam atualizacao, é necessário que o método `World:Update(step, now)` seja invocado em 
-cada frame. Para automatizar este processo, o **ECS** disponibiliza uma funcionalidade para que, no momento da 
-instanciacao de um novo mundo, este possa registrar-se para receber o update de forma automatica. 
+In order for the world's systems to receive an update, the `World:Update(step, now)` method must be invoked on each 
+frame. To automate this process, **ECS Lua** provides a functionality so that, at the time of instantiation of a 
+new world, it registers to receive the update automatically.
 
-A implementacao desse método é muito simples e mais detalhes pode ser visto na seção 
-[Arquitetura - Ciclo De Vida](/pt-br/architecture?id=entities-and-components-life-cycle).
+The implementation of this method is very simple and more details can be seen in the section
+[Architecture - World](/architecture?id=world).
 
-> Se você utiliza Roblox nao precisa preocupar-se, o **ECS Lua** já tem uma implementacao padrão quando é executado no 
-Roblox, mais detalhes abaixo.
-
+> If you use Roblox you don't need to worry, **ECS Lua** already has a default implementation when it runs on
+Roblox, more details below.
 
 ### Roblox
 
-Você pode fazer a instalação diretamente do Roblox Studio, através da busca na caixa de ferramentas por `ECS-lua`, esta 
-é a versão [minificada do motor](https://www.roblox.com/library/5887881675/Roblox-ECS). Ao usar o **ECS Lua** no Roblox, 
-a engine já identifica e registra automaticamente um `LoopManager`, nao sendo portanto necessario nenhum passo adicional.
+You can install directly from Roblox Studio by searching the toolbox for `ECS-lua`, this is the 
+[minified engine version](https://www.roblox.com/library/5887881675). When using **ECS Lua** in Roblox, the engine 
+already automatically identifies and registers a `LoopManager`, so no additional steps are needed.
 
-## Conceitos Gerais
+## General Concepts
 
-Alguns termos comuns nos motores ECS são:
-- [Entidades](/pt-br/architecture?id=entidades): Um objeto com um ID exclusivo que pode ter vários componentes anexados a ele.
-- [Componentes](/pt-br/architecture?id=componentes): Diferentes caracteristicas de uma entidade. ex: geometria, física, pontos de vida. Os dados são armazenados apenas em componentes.
-- [Sistemas](/pt-br/architecture?id=sistemas): Faz o trabalho real, aplica as regras do jogo, processando entidades e modificando seus componentes.
-- [Consultas](/pt-br/architecture?id=consultas): Usado pelos sistemas para determinar em quais entidades eles estão interessados, com base nos componentes que as entidades possuem.
-- [Mundo](/pt-br/architecture?id=mundo): Um contêiner para entidades, componentes, sistemas e consultas.
+Some common terms in ECS engines are:
+- [Entities](/architecture?id=entity): An object with a unique ID that can have multiple components attached to it.
+- [Components](/architecture?id=component): Different characteristics of an entity. eg geometry, physics, hit points. Data is only stored in components.
+- [Systems](/architecture?id=system): It does the real work, applying the rules of the game, processing entities and modifying their components.
+- [Queries](/architecture?id=query): Used by systems to determine which entities they are interested in, based on the components the entities have.
+- [World](/architecture?id=world): A container for entities, components, systems and queries.
 
 <div align=center>
 
-![Arquitetura](../assets/diagram-1-pt-br.png ":no-zoom")
+![Architecture](../assets/diagram-1.svg)
 
 </div>
 
-O fluxo de trabalho normal ao construir um programa baseado em ECS:
-- Crie os `Componentes` que moldam os dados que você precisa usar em seu jogo/aplicativo.
-- Crie os `Sistemas` que usarão esses `Componentes` para ler e transformar os dados das entidades.
-- Crie `Entidades` e anexe `Componentes` a elas.
-- Execute todos os sistemas a cada frame, realize `Consultas` no `Mundo` para decidir quais entidades serão modificadas.
+The normal workflow when building an ECS-based program:
+- Create the `Components` that shape the data you need to use in your game/application.
+- Create the `Systems` that will use these `Components` to read and transform the entity data.
+- Create `Entities` and attach `Components` to them.
+- Run all systems at each frame, perform `Query` in `World` to decide which entities will be modified.
 
-## Componentes
+## Component
 
-Os componentes são objetos que contêm dados. No **ECS Lua**, basta invocar o método `ECS.Component(template)` para 
-definir uma `Classe` de um componente. 
+Components are objects that contain data. In **ECS Lua**, just call the `ECS.Component(template)` method to define a 
+`Class` of a component.
 
-O parametro `template` pode ser de qualquer tipo, onde: 
-- Quando `table`, este template sera usado para a criacao de instancias de componentes;
-- Quando for uma `function`, essa sera invocada na instanciacao. 
-- Caso o tipo do template seja diferente, o **ECS Lua** ira gerar um template no formato `{ value = template }`, este é o 
-formato usado no componente `Acceleration` abaixo.
+The `template` parameter can be of any type, where:
+- When `table`, this template will be used for creating component instances;
+- When it's a `function`, it will be invoked on instantiation.
+- If the template type is different, **ECS Lua** will generate a template in the format `{ value = template }`, this is 
+the format used in the `Acceleration` component below.
 
 ```lua
-local Position = ECS.Component({ x = 0, y = 0, z = 0 })
+local Position = ECS.Component({ 
+   x = 0, y = 0, z = 0 
+})
 
--- o mesmo que ECS.Component({ value = 0.1 })
+-- the same as:
+-- ECS.Component({ value = 0.1 })
 local Acceleration = ECS.Component(0.1) 
 ```
-[Mais informações sobre como criar componentes](/pt-br/architecture?id=componentes).
+[More information on creating components](/architecture?id=component).
 
-## Sistemas e Consultas
+## Systems and Queries
 
-Agora vamos definir um [sistema](/pt-br/architecture?id=systems) para processar os componentes que acabamos de criar. Um 
-sistema pode implementar diversos métodos, neste exercício vamos usar apenas o método `Update(Time)`. Este método será
-invocado em todo frame, no passo `process` do mundo.
+Now let's define a [system](/architecture?id=system) to process the components we just created. One system can implement
+several methods, in this exercise we will just use the `Update(Time)` method. This method will be invoked on every 
+frame, in the world's `process` step.
 
-Para criar um sistema, usamos o método `ECS.System(step, order, query, updateFn)`. Este método recebe os seguintes 
-parametros:
-- **`step`** String, aceita os valores `process`, `transform`, `render` ou `task`
-- **`order`** Number (Opcional, padrão 50), permite definir uma ordem de execucao para sistemas que não são do tipo `task`
-- **`query`** Query (Opcional), filtra as entidades que serão processadas por este sistema
-- **`updateFn`** Function (Opcional), um atalho para criacao de sistemas que so possuam o método Update
+To create a system, we use the `ECS.System(step, order, query, updateFn)` method. This method receives the following
+parameters:
+- **`step`** String, accepts the values `process`, `transform`, `render` or `task`
+- **`order`** Number (Optional, default 50), allows you to set an execution order (for systems that are not `task`)
+- **`query`** Query (Optional), filters the entities that will be processed by this system
+- **`updateFn`** Function (Optional), a shortcut for creating systems that only have the Update method
 
-Nós também vamos definir uma `Query`, que é a consulta que usaremos para obter apenas as entidades que estamos 
-interessados.
+We're also going to define a `Query`, which is the query we'll use to get just the entities we're interested.
 
-Pra criar a query, nós podems usar os métodos `Query.All(Component)`, `Query.Any(Component)` e 
-`Query.None(Component)`. Ao invocar qualquer um destes métodos um `QueryBuilder` é retornado, desse modo voce pode 
-invocar os outros métodos na sequencia Ex. `Query.All(ComponentA).Any(ComponentB).None(ComponentC).Build()`.
+To create the query, we can use the `Query.All(Component)`, `Query.Any(Component)` or `Query.None(Component)`. When 
+invoking any of these methods a `QueryBuilder` is returned, so you can invoke the other methods in sequence 
+Ex. `Query.All(ComponentA).Any(ComponentB).None(ComponentC).Build()`.
 
-Vamos começar criando um sistema que fará um loop por todas as entidades que possuem um componente `Position` e 
-registrar suas posições.
+Let's start by creating a system that will loop through all entities that have a `Position` component and record their 
+positions.
 
 ```lua
--- um atalho para os metodos
+-- a shortcut to methods
 local System, Query = ECS.System, ECS.Query 
 
 local PositionLogSystem = System("process", 2, Query.All(Position), function(self, Time)
 
-   -- Iterar por todas as entidades na consulta
+   -- Iterate through all entities in the query
    self:Result():ForEach(function(entity)
-      -- Acessa o componente `Position` na entidade atual
+      -- Access the `Position` component in the current entity
       local pos = entity[Position]
 
-      local msg = "Entidade com ID: %d tem o componente Position = {x: %0.2f, y: %0.2f, z: %0.2f}"
+      local msg = "Entity with ID: %d has Position = {x: %0.2f, y: %0.2f, z: %0.2f}"
 		print(msg:format(entity.id, pos.x, pos.y, pos.z))
    end)
-
 end)
 ```
 
-O próximo sistema move cada entidade que tem uma posição e uma aceleração.
+The next system moves each entity that has a position and an acceleration.
 
 ```lua
 local MovableSystem = System("process", 1, Query.All(Acceleration, Position)) 
 
--- Este método será chamado em todos os quadros por padrão
+-- This method will be called on all frames by default.
 function MovableSystem:Update(Time)
 
    local delta = Time.DeltaFixed
 
-   -- Iterar por todas as entidades na consulta
+   -- Iterate through all entities in the query
    for i, entity in self:Result():Iterator() do
       local acceleration = entity:Get(Acceleration).value
 
@@ -148,16 +147,14 @@ function MovableSystem:Update(Time)
       position.y = position.y + acceleration * delta
       position.z = position.z + acceleration * delta
    end
-
 end
 ```
 
-> Observe que estamos acessando componentes em uma entidade de duas formas diferentes: `entity:Get(Acceleration)` tem o 
-mesmo resultado que `entity[Acceleration]`
+> Note that we are accessing components in an entity in two different ways: `entity:Get(Acceleration)` has the
+same result as `entity[Acceleration]`
 
-
-A consulta do sistema sistema `MovableSystem` filtra as entidades que possuem os componentes ` Acceleration` e 
-`Position`. Observe que, se necessário, podemos criar quantas consultas desejarmos e processá-las no método `Update`, ex:
+The system query `MovableSystem` filters the entities that have the components `Acceleration` and
+`Position`. Note that, if necessary, we can create as many queries as we like and process them in the `Update` method, eg:
 
 ```lua
 local SystemDemo =  System("process", 1)  
@@ -177,47 +174,58 @@ function SystemDemo:Update(Time)
 end
 ```
 
-Para obter mais informações, verifique a documentação de arquitetura: [Acessando e modificando componentes](/manual/Architecture?id=accessing-components-and-modify-components) e [Queries](/manual/Architecture?id=reactive-queries)
+For more information, check the architecture documentation: [Components](/architecture?id=component), 
+[Entities](/architecture?id=entity) and [Queries](/architecture?id=query)
 
 
-## Mundo
+## World
 
-Um mundo é um contêiner para `entidades`,` componentes` e `sistemas`. A maioria dos jogos tem apenas um `mundo`,
-entretanto, você pode ter vários mundos funcionando ao mesmo tempo e habilitá-los ou desabilitá-los conforme necessário.
+A world is a container for `entities`, `components` and `systems`. Most games have only one `world`, however, you can 
+have multiple worlds running at the same time and enable or disable them as needed.
 
-A criacao de um mundo é feita pelo método `ECS.World(systemClasses, frequency, disableAutoUpdate)`, onde:
+Creating a world is done by the `ECS.World(systemClasses, frequency, disableAutoUpdate)` method, where:
 
-- **systemClasses** Array de classes de sistemas, opcional
-- **frequency** Number (Opcional, padrao 30), permite definir a frequencia que o passo `process` será executado no mundo.
-- **disableAutoUpdate** Bool (Opcional, padrao false), quando diferente de `false`, o mundo registra-se automaticamente 
-no `LoopManager`, recebendo deste a invocacao do método `World:Update()`
+- **systemClasses** Array of system classes (Optional)
+- **frequency** Number (Optional, default 30), allows you to define the frequency that the `process` step will be 
+executed in the world.
+- **disableAutoUpdate** Bool (Optional, default false), when `~= false`, the world automatically registers in the 
+`LoopManager`, receiving the `World:Update()` method from it.
 
-Vamos começar a criar nosso primeiro mundo:
+Let's start creating our world:
 
 ```lua
 local world = ECS.World();
 ```
 
-Agora vamos registrar nossos sistemas no mundo para que sejam inicializados e executados em cada quadro.
+Now let's register our systems in the world so that they start up and run on every frame.
 
 ```lua
 world:AddSystem(PositionLogSystem)
 world:AddSystem(MovableSystem)
 ```
 
-## Entidades
+## Entity
 
-Tendo nosso mundo, alguns componentes e sistemas já definidos, vamos criar [entidades](/pt-br/architecture?id=entidades) 
-e anexar estes componentes a eles:
+Having our world, some components and systems already defined, let's create [entities](/architecture?id=entity) and 
+attach these components to them:
 
 ```lua
 local entity1 = world:Entity(Position())
 
-local entity2 = world:Entity(Position({x = 5}), Acceleration(1))
+local entity2 = world:Entity(
+   Position({x = 5}), 
+   Acceleration(1)
+)
 
-local entity3 = world:Entity(Position.New({x = 5}), Acceleration.New(1))
+local entity3 = world:Entity(
+   Position.New({x = 5}), 
+   Acceleration.New(1)
+)
 
-local entity4 = world:Entity(Position({x = 5}), Acceleration({value = 1}))
+local entity4 = world:Entity(
+   Position({x = 5}), 
+   Acceleration({value = 1})
+)
 
 local entity5 = world:Entity()
 entity5[Position] = { y = 5 }
@@ -228,53 +236,52 @@ entity6[Position] = Position()
 entity6:Set(Acceleration())
 ```
 
-Com isso, acabamos de criar 6 entidades. 5 com os componentes `Acceleration` e` Position`, e um apenas com o componente `Position`.
+With that, we have just created 6 entities. 5 with the `Acceleration` and `Position` components, and one with just 
+the `Position` component.
 
-Observe que existem varias formas de instanciar e atribuir os componentes para a entidade, escolha a que mais combina 
-com o seu estilo de programção, o resultado final é o mesmo. Perceba também que as classes dos componentes podem ser 
-usadas [como funcoes](http://lua-users.org/wiki/FuncTables), por exemplo `Position()`. Este formato tem o mesmo efeito 
-que `Position.New()`.
+Note that there are several ways to instantiate and assign components to the entity, choose the one that best matches
+with your programming style, the end result is the same. Also note that component classes can be used 
+[as functions](http://lua-users.org/wiki/FuncTables), for example `Position()`. This format has the same effect 
+than `Position.New()`.
 
+## Putting everything together
 
-## Juntando tudo
-
-Agora o mundo só precisa ser atualizado (`world.Update(step, now)`) para que tudo funcione. Se voce usa roblox, basta 
-criar um Local Script que o mundo já sera atualizado automaticamente.
+Now the world just needs to be updated (`world.Update(step, now)`) for everything to work. If you use roblox, just
+create a Local Script that the world will automatically update.
 
 
 ```lua
--- No Roblox:
+-- Roblox:
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
--- um atalho para os metodos
+-- a shortcut to methods
 local Component, System, Query = ECS.Component, ECS.System, ECS.Query 
 
---[[ Componentes ]]
+-- Components
 local Position = Component({ x = 0, y = 0, z = 0 })
 local Acceleration = Component(0.1)
 
-
---[[ Sistemas ]]
+-- Sistems
 local PositionLogSystem = System("process", 2, Query.All(Position), function(self, Time)
 
-   -- Iterar por todas as entidades na consulta
+   -- Iterate through all entities in the query
    self:Result():ForEach(function(entity)
-      -- Acessa o componente `Position` na entidade atual
+      -- Access the `Position` component in the current entity
       local pos = entity[Position]
 
-      local msg = "Entidade com ID: %d tem o componente Position = {x: %0.2f, y: %0.2f, z: %0.2f}"
+      local msg = "Entity with ID: %d has Position = {x: %0.2f, y: %0.2f, z: %0.2f}"
 		print(msg:format(entity.id, pos.x, pos.y, pos.z))
    end)
 end)
 
 local MovableSystem = System("process", 1, Query.All(Acceleration, Position)) 
 
--- Este método será chamado em todos os quadros por padrão
+-- This method will be called on all frames by default.
 function MovableSystem:Update(Time)
 
    local delta = Time.DeltaFixed
 
-   -- Iterar por todas as entidades na consulta
+   -- Iterate through all entities in the query
    for i, entity in self:Result():Iterator() do
       local acceleration = entity:Get(Acceleration).value
 
@@ -285,12 +292,12 @@ function MovableSystem:Update(Time)
    end
 end
 
---[[ Mundo ]]
+-- World
 local world = ECS.World();
 world:AddSystem(PositionLogSystem)
 world:AddSystem(MovableSystem)
 
---[[ Entidades ]]
+-- Entities
 local entity1 = world:Entity(Position())
 local entity2 = world:Entity(Position({x = 5}), Acceleration(1))
 local entity3 = world:Entity(Position.New({x = 5}), Acceleration.New(1))
@@ -305,10 +312,10 @@ entity6[Position] = Position()
 entity6:Set(Acceleration())
 ```
 
-Resultado do código acima no Roblox Studio
+Result of the above code in Roblox Studio
 
-![Resultado do código acima no Roblox Studio](../assets/pt-br-output-get-started.gif ":no-zoom")
+![Result of the above code in Roblox Studio](../assets/get-started-output.gif)
 
 ## Proximos passos
-Esta foi uma visão geral rápida sobre como as coisas são estruturadas usando **ECS Lua**, 
-[leia a documentação da arquitetura](/manual/Architecture) para informações mais detalhadas.
+This was a quick overview of how things are structured using **ECS Lua**,
+[read the architecture documentation](/architecture) for more detailed information.

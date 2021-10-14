@@ -165,10 +165,10 @@ function World:Update(step, now)
    ]]
    
    self._timer:Update(now, step, function(Time)
-      if step == 'process' then
+      if step == "process" then
          self._executor:ScheduleTasks(Time)
          self._executor:ExecProcess(Time)
-      elseif step == 'transform' then
+      elseif step == "transform" then
          self._executor:ExecTransform(Time)
       else
          self._executor:ExecRender(Time)

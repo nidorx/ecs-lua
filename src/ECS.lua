@@ -4,7 +4,7 @@
    Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
    game development on the Roblox platform
 
-   https://github.com/nidorx/roblox-ecs
+   https://github.com/nidorx/ecs-lua
 
    Discussions about this script are at https://devforum.roblox.com/t/841175
 
@@ -44,7 +44,7 @@ local function setLoopManager(manager)
 end
 
 pcall(function()
-   if (game and game.ClassName == 'DataModel') then
+   if (game and game.ClassName == "DataModel") then
       -- is roblox
       setLoopManager(require("RobloxLoopManager")())
    end

@@ -36,9 +36,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.98994949"
-     inkscape:cx="479.02442"
-     inkscape:cy="360.22207"
+     inkscape:zoom="0.7"
+     inkscape:cx="513.99314"
+     inkscape:cy="341.19599"
      inkscape:document-units="mm"
      inkscape:current-layer="svg8"
      showgrid="false"
@@ -91,7 +91,7 @@
          y="21.589291"
          x="81.916061"
          id="tspan889"
-         sodipodi:role="line">World</tspan></text>
+         sodipodi:role="line">Mundo</tspan></text>
   </g>
   <g
      id="g843"
@@ -125,7 +125,7 @@
          y="112.86183"
          x="167.96744"
          id="tspan897"
-         sodipodi:role="line">Systems</tspan></text>
+         sodipodi:role="line">Sistemas</tspan></text>
     <text
        inkscape:label="name"
        id="text838"
@@ -133,11 +133,12 @@
        x="144.41098"
        style="font-style:normal;font-weight:normal;font-size:8.46666622px;line-height:1.25;font-family:sans-serif;text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#777777;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
+         dx="0"
          style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold';text-align:start;letter-spacing:-0.51064581px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke-width:0.26458332"
          y="76.430679"
          x="144.41098"
          id="tspan836"
-         sodipodi:role="line">CollisionSystem</tspan></text>
+         sodipodi:role="line">SistemaDeColisao</tspan></text>
     <g
        id="g886"
        inkscape:label="code"
@@ -225,7 +226,7 @@
            x="162.58987"
            style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;line-height:0px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#1f30af;fill-opacity:1"
            id="tspan865"
-           sodipodi:role="line">components</tspan></text>
+           sodipodi:role="line">componentes</tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-weight:normal;font-size:8.46666622px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:inline;fill:#000000;fill-opacity:0;stroke:none;stroke-width:0.26458332"
@@ -237,7 +238,7 @@
            id="tspan892"
            style="font-style:italic;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;line-height:0px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;fill-opacity:1"
            x="144.63602"
-           y="83.948288">Update(                     )</tspan></text>
+           y="83.948288">Update(                      )</tspan></text>
     </g>
   </g>
   <g
@@ -317,7 +318,7 @@
          id="tspan893"
          x="36.861294"
          y="105.6092"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:7.76111126px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold';text-align:center;text-anchor:middle;fill:#777777;fill-opacity:1;stroke-width:0.26458332">Entities</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:7.76111126px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold';text-align:center;text-anchor:middle;fill:#777777;fill-opacity:1;stroke-width:0.26458332">Entidades</tspan></text>
   </g>
   <g
      id="g961"
@@ -326,7 +327,8 @@
     <g
        transform="translate(26.314585,36.614098)"
        inkscape:label="appearance"
-       id="g1010">
+       id="g1010"
+       sodipodi:insensitive="true">
       <rect
          inkscape:label="background"
          y="87.844734"
@@ -346,7 +348,7 @@
            x="66.32605"
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52777767px;line-height:0px;font-family:Quicksand;-inkscape-font-specification:Quicksand;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;fill-opacity:1"
            id="tspan1002"
-           sodipodi:role="line">- string color</tspan></text>
+           sodipodi:role="line">- string cor</tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-weight:normal;font-size:8.46666622px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:inline;fill:#000000;fill-opacity:0;stroke:none;stroke-width:0.26458332"
@@ -358,12 +360,13 @@
            id="tspan1006"
            style="font-style:italic;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;line-height:0px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;fill-opacity:1"
            x="66.32605"
-           y="92.689903">Appearance</tspan></text>
+           y="92.689903">Aparencia</tspan></text>
     </g>
     <g
        id="g966"
        inkscape:label="seeing"
-       transform="translate(26.515037,22.381996)">
+       transform="translate(26.515037,22.381996)"
+       sodipodi:insensitive="true">
       <rect
          style="opacity:1;fill:#e6e6e6;fill-opacity:1;stroke:#8e8e8e;stroke-width:0.52916664;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
          id="rect948"
@@ -383,7 +386,7 @@
            id="tspan968"
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52777767px;line-height:0px;font-family:Quicksand;-inkscape-font-specification:Quicksand;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;fill-opacity:1"
            x="66.32605"
-           y="97.705956">- int radio</tspan></text>
+           y="97.705956">- int raio</tspan></text>
       <text
          inkscape:label="name"
          id="text952"
@@ -395,9 +398,10 @@
            x="66.32605"
            style="font-style:italic;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;line-height:0px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;fill-opacity:1"
            id="tspan950"
-           sodipodi:role="line">Vision</tspan></text>
+           sodipodi:role="line">Visão</tspan></text>
     </g>
     <g
+       sodipodi:insensitive="true"
        transform="translate(1.2580662,22.448813)"
        inkscape:label="position"
        id="g998">
@@ -456,7 +460,7 @@
            id="tspan994"
            style="font-style:italic;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;line-height:0px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;fill-opacity:1"
            x="66.32605"
-           y="92.689903">Position</tspan></text>
+           y="92.689903">Posição</tspan></text>
     </g>
     <text
        xml:space="preserve"
@@ -469,6 +473,6 @@
          id="tspan901"
          x="94.251358"
          y="145.50507"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:7.76111126px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold';text-align:center;text-anchor:middle;fill:#777777;fill-opacity:1;stroke-width:0.26458332">Components</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:7.76111126px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold';text-align:center;text-anchor:middle;fill:#777777;fill-opacity:1;stroke-width:0.26458332">Componentes</tspan></text>
   </g>
 </svg>

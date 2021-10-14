@@ -9,7 +9,7 @@ ser alterado durante o tempo de execução simplesmente adicionando ou removendo
 ambiguidade com que sofrem as hierarquias de herança profunda e vasta, que são difíceis de entender, manter e estender.
 
 Para mais detalhes:
-- [Perguntas Frequentes sobre ECS](https://github.com/SanderMertens/ecs-faq)
+- [Perguntas Freqüentes sobre ECS](https://github.com/SanderMertens/ecs-faq)
 - [Entity Systems Wiki](http://entity-systems.wikidot.com/)
 - [Evolua sua hierarquia](http://cowboyprogramming.com/2007/01/05/evolve-your-heirachy/)
 - [ECS na Wikipedia](https://en.wikipedia.org/wiki/Entity_component_system)
@@ -17,7 +17,7 @@ Para mais detalhes:
 - [2017 GDC - Overwatch Gameplay Architecture e Netcode](https://www.youtube.com/watch?v=W3aieHjyNvw&ab_channel=GDC)
 
 
-## Componentes
+## Componente
 
 Representam as diferentes características de uma entidade, como posição, velocidade, geometria, física e pontos de vida. 
 Os componentes armazenam apenas dados brutos para um aspecto do objeto e como ele interage com o mundo. Em outras 
@@ -121,7 +121,7 @@ precisa obter o total de vida do jogador em certo momento.
 
 ```lua
 -- components
-local Player = ECS.Component({ health = 100, Region = "easy", healthTotal = 100 })
+local Player = ECS.Component({ health = 100, region = "easy", healthTotal = 100 })
 local HealthBuff = ECS.Component({ value = 10 })
 
 -- systems
@@ -131,7 +131,7 @@ function MapRegionSystem:Update(Time)
    for i, entity in self:Result():Iterator() do
       local player = entity[Player]      
       
-      if player.Region == "easy" then
+      if player.region == "easy" then
          entity[HealthBuff] = nil -- remove o buff
       else
          local buff = entity[HealthBuff]
@@ -140,9 +140,9 @@ function MapRegionSystem:Update(Time)
             entity:Set(buff)
          end
 
-         if player.Region == "hard" then
+         if player.region == "hard" then
             buff.value = 15
-         elseif player.Region == "hell" then
+         elseif player.region == "hell" then
             buff.value = 40
          end  
       end    
@@ -193,7 +193,7 @@ Vamos alterar o nosso exemplo fazendo uso de qualificadores.
 
 ```lua
 -- components
-local Player = ECS.Component({ health = 100, Region = "easy", healthTotal = 100 })
+local Player = ECS.Component({ health = 100, region = "easy", healthTotal = 100 })
 local HealthBuff = ECS.Component({ value = 10 })
 local HealthBuffItem = HealthBuff.Qualifier("Item")
 local HealthBuffMapRegion = HealthBuff.Qualifier("Region")
@@ -221,7 +221,7 @@ function MapRegionSystem:Update(Time)
    for i, entity in self:Result():Iterator() do
       local player = entity[Player]
       
-      if player.Region == "easy" then
+      if player.region == "easy" then
          entity[HealthBuffMapRegion] = nil
       else
          local buff = entity[HealthBuffMapRegion]
@@ -230,7 +230,7 @@ function MapRegionSystem:Update(Time)
             entity:Set(buff)
          end
 
-         if player.Region == "hard" then
+         if player.region == "hard" then
             buff.value = 15
          elseif player.Region == "hell" then
             buff.value = 40
@@ -247,7 +247,7 @@ function HealthSystem:Update(Time)
 
       local healthTotal = player.health
 
-      local buffers = entity:GetQualifiers(HealthBuff)
+      local buffers = entity:GetAll(HealthBuff)
       for i,buff in ipairs(buffers) do
          healthTotal = healthTotal + buff.value
       end
@@ -264,43 +264,124 @@ processa todas as entidades que possuam qualquer qualificador do componente `Hea
 
 [Verifique na API](/pt-br/api?id=component) outros métodos que podem ser úteis ao trabalhar com qualificadores.
 
-### FSM - Maquinas de Estado Finito
+### FSM - Máquinas de Estado Finito
 
-As máquinas de estado são outra coisa muito comum em jogos, mas não são fáceis de implementar no ECS básico. A maneira mais direta de atribuir estado a uma entidade é definir uma marca para cada estado e adicionar e remover marcas à medida que a entidade se move de um estado para outro.
-
-Esta é a abordagem de um homem pobre por alguns motivos. Em primeiro lugar, não existe uma relação inerente entre as tags associadas a um estado, o que torna a máquina de estado implícita e sujeita a erros. Em segundo lugar, não há como evitar que dois estados sejam adicionados a uma entidade, ou que a entidade não esteja em nenhum estado. Isso tudo é um retrocesso de uma máquina de estado que não depende do ECS, onde podemos agrupar estados como constantes em uma enumeração. No entanto, seria bom ter a máquina de estado representada no ECS, pois isso provavelmente afeta os tipos de sistemas que queremos executar em nossas entidades.
-
-
+__UNDER_CONSTRUCTION__
 
 
 ```lua
--- No Roblox:
-local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
+local Movement = Component.Create({ Speed = 0 })
 
--- um atalho para os metodos
-local Component, System, Query = ECS.Component, ECS.System, ECS.Query 
+--  [Standing] <--> [Walking] <--> [Running]
+Movement.States = {
+   Standing = {"Walking"},
+   Walking  = "*",
+   Running  = {"Walking"}
+}
 
---[[ Componentes ]]
-local Position = Component({ x = 0, y = 0, z = 0 })
-local Acceleration = Component(0.1)
+Movement.StateInitial = "Standing"
+
+Movement.Case = {
+   Standing = function(self, previous)
+      print("Transition from "..previous.." to Standing")
+   end,
+   Walking = function(self, previous)
+      print("Transition from "..previous.." to Walking")
+   end,
+   Running = function(self, previous)
+      print("Transition from "..previous.." to Running")
+   end
+}
+
+
+local movement = Movement()
+
+movement:SetState("Walking")
+movement:SetState("Running")
+
+print(movement:GetState()) -- Running
+print(movement:GetPrevState()) -- Walking
+
+movement:SetState("Standing") -- invalid, Running -> Walking|Running
+print(movement:GetState()) -- Running
+print(movement:GetPrevState()) -- Walking
+
+movement:SetState(nil)
+print(movement:GetState()) -- Running
+print(movement:GetPrevState()) -- Walking
+
+movement:SetState("INVALID_STATE")
+print(movement:GetState()) -- Running
+print(movement:GetPrevState()) -- Walking
+
+
+-- query
+local queryStanding = Query.All(Movement.In("Standing"))
+local queryInMovement = Query.Any(Movement.In("Walking", "Running"))
+
+
+-- qualifier
+local MovementB = Movement.Qualifier("Sub")
+ -- ignored, "States", "StateInitial" and "Case" only work in primary class
+MovementB.States = { Standing = {"Walking"} }
+
 ```
 
+## Entidade
 
+__UNDER_CONSTRUCTION__
 
-## Entidades
-## Sistemas
+```lua
+--[[
+   [GET]
+   01) comp1 = entity[CompType1]
+   02) comp1 = entity:Get(CompType1)
+   03) comp1, comp2, comp3 = entity:Get(CompType1, CompType2, CompType3)
+]]
 
-O **ECS Lua** permite que você configure seus sistemas para executar as etapas definidas abaixo.
+--[[
+   [SET]
+   01) entity[CompType1] = nil
+   02) entity[CompType1] = value
+   03) entity:Set(CompType1, nil)   
+   04) entity:Set(CompType1, value)
+   05) entity:Set(comp1)
+   06) entity:Set(comp1, comp2, ...)
+]]
 
-Além de definir a etapa de execução, você também pode definir a ordem de execução nessa etapa. Por padrão, a ordem de 
-execução de um sistema é 50. Quando dois ou mais sistemas têm a mesma ordem de execução, eles serão executados 
-seguindo a ordem de inserção no mundo
+--[[
+   [UNSET]
+   01) enity:Unset(comp1)
+   02) entity[CompType1] = nil
+   03) enity:Unset(CompType1)
+   04) enity:Unset(comp1, comp1, ...)
+   05) enity:Unset(CompType1, CompType2, ...)
+]]
+
+--[[
+   [Utils]
+   01) comps = entity:GetAll()
+   01) qualifiers = entity:GetAll(PrimaryClass)
+]]
+```
+
+## Consulta
+
+__UNDER_CONSTRUCTION__
+
+## Sistema
+
+__UNDER_CONSTRUCTION__
 
 ## Tarefas
 
+__UNDER_CONSTRUCTION__
+
 ## Mundo
 
-## Consultas
+__UNDER_CONSTRUCTION__
+
+
 
 
 

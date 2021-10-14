@@ -1,6 +1,6 @@
 # Roblox-ECS
 
-LINK: https://github.com/nidorx/roblox-ecs/blob/master/src/shared/ECSUtil.lua
+LINK: https://github.com/nidorx/ecs-lua/blob/master/src/shared/ECSUtil.lua
 
 ## Utility Systems and Components
 

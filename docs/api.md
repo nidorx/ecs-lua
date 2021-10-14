@@ -7,14 +7,10 @@ __UNDER_CONSTRUCTION__
 # Component
 
 - `ECS.Component(template)`
-   - Cria um novo componente
+   - Register a new component
    - _@return_ `ComponentClass`
 - `ComponentClass.Qualifier(qualifier)`
-   - Obtém um qualificador para este tipo de componente. Se o qualificador não existir, uma nova classe será criada, caso contrário traz a referência do qualificador de classe já registrada com o mesmo nome.
-   - _@param_ `qualifier` `string|ComponentClass`
-   - _@return_ `ComponentClass`
-- `ComponentClass.Qualifier(qualifier)`
-   - Obtém um qualificador para este tipo de componente. Se o qualificador não existir, uma nova classe será criada, caso contrário traz a referência do qualificador de classe já registrada com o mesmo nome.
+   - Gets a qualifier for this type of component. If the qualifier does not exist, a new class will be created, otherwise it brings the already registered class qualifier reference with the same name.
    - _@param_ `qualifier` `string|ComponentClass`
    - _@return_ `ComponentClass`
 

@@ -63,35 +63,20 @@ function TestEntity:test_Get()
    lu.assertEquals(entity:Get(Comp_B), comp_b)
    lu.assertEquals(entity:Get(Comp_C), comp_c)
 
-   -- 03) comps = entity[{CompType1, CompType2, ...}]
-   lu.assertEquals(entity[{}], {})
-   lu.assertEquals(entity[{Object, "XPTO"}], {})
-   lu.assertEquals(entity[{Comp_A}], {comp_a})
-   lu.assertEquals(entity[{Comp_B}], {comp_b})
-   lu.assertEquals(entity[{Comp_C}], {comp_c})
-   lu.assertEquals(entity[{Comp_A, Comp_B}], {comp_a, comp_b})
-   lu.assertEquals(entity[{Comp_A, Comp_C}], {comp_a, comp_c})
-   lu.assertEquals(entity[{Comp_B, Comp_C}], {comp_b, comp_c})
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
-   lu.assertEquals(entity[{Comp_A, Comp_C, Comp_B}], {comp_a, comp_c, comp_b})
-   lu.assertEquals(entity[{Comp_A, Comp_C, Comp_B}], {comp_a, comp_c, comp_b})
-   lu.assertEquals(entity[{Comp_A, Comp_C, Comp_B, Object}], {comp_a, comp_c, comp_b})
-   lu.assertEquals(entity[{Comp_A, Comp_C, Comp_B, "XPTO"}], {comp_a, comp_c, comp_b})
-
-   -- 04) comps = entity:Get({CompType1, CompType2, ...})
-   lu.assertEquals(entity:Get({}), {})
-   lu.assertEquals(entity:Get({Object, "XPTO"}), {})
-   lu.assertEquals(entity:Get({Comp_A}), {comp_a})
-   lu.assertEquals(entity:Get({Comp_B}), {comp_b})
-   lu.assertEquals(entity:Get({Comp_C}), {comp_c})
-   lu.assertEquals(entity:Get({Comp_A, Comp_B}), {comp_a, comp_b})
-   lu.assertEquals(entity:Get({Comp_A, Comp_C}), {comp_a, comp_c})
-   lu.assertEquals(entity:Get({Comp_B, Comp_C}), {comp_b, comp_c})
-   lu.assertEquals(entity:Get({Comp_A, Comp_B, Comp_C}), {comp_a, comp_b, comp_c})
-   lu.assertEquals(entity:Get({Comp_A, Comp_C, Comp_B}), {comp_a, comp_c, comp_b})
-   lu.assertEquals(entity:Get({Comp_A, Comp_C, Comp_B}), {comp_a, comp_c, comp_b})
-   lu.assertEquals(entity:Get({Comp_A, Comp_C, Comp_B, Object}), {comp_a, comp_c, comp_b})
-   lu.assertEquals(entity:Get({Comp_A, Comp_C, Comp_B, "XPTO"}), {comp_a, comp_c, comp_b})
+   -- 03) comp1, comp2, comp3 = entity:Get(CompType1, CompType2, CompType3)
+   lu.assertEquals(entity:Get({}), nil)
+   lu.assertEquals(entity:Get(Object, "XPTO"), nil)
+   lu.assertEquals({entity:Get(Comp_A)}, {comp_a})
+   lu.assertEquals({entity:Get(Comp_B)}, {comp_b})
+   lu.assertEquals({entity:Get(Comp_C)}, {comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B)}, {comp_a, comp_b})
+   lu.assertEquals({entity:Get(Comp_A, Comp_C)}, {comp_a, comp_c})
+   lu.assertEquals({entity:Get(Comp_B, Comp_C)}, {comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_C, Comp_B)}, {comp_a, comp_c, comp_b})
+   lu.assertEquals({entity:Get(Comp_A, Comp_C, Comp_B)}, {comp_a, comp_c, comp_b})
+   lu.assertEquals({entity:Get(Comp_A, Comp_C, Comp_B, Object)}, {comp_a, comp_c, comp_b})
+   lu.assertEquals({entity:Get(Comp_A, Comp_C, Comp_B, "XPTO")}, {comp_a, comp_c, comp_b})
 end
 
 --[[
@@ -99,9 +84,8 @@ end
    01) enity:Unset(comp1)
    02) entity[CompType1] = nil
    03) enity:Unset(CompType1)
-   04) enity:Unset({comp1, comp1, ...})
-   05) enity:Unset({CompType1, CompType2, ...})
-   06) entity[{CompType1, CompType2}] = nil
+   04) enity:Unset(comp1, comp1, ...)
+   05) enity:Unset(CompType1, CompType2, ...)
 ]]
 function TestEntity:test_Unset()
 
@@ -121,155 +105,125 @@ function TestEntity:test_Unset()
    lu.assertEquals(eventEntity, nil)
    lu.assertEquals(eventArchetypeOld, nil)
    lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
 
    entity:Unset(comp_a)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B_C)
    lu.assertEquals(entity.archetype, archetype_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_b, comp_c})
 
    entity:Unset(comp_b)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_B_C)
    lu.assertEquals(entity.archetype, archetype_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_c})
 
    entity:Unset(comp_c)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_C)
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 
    -- 02) entity[CompType1] = nil
    entity = Entity.New(event, {comp_a, comp_b, comp_c})
    entity[Object] = nil
    lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
 
    entity[Comp_A] = nil
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B_C)
    lu.assertEquals(entity.archetype, archetype_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_b, comp_c})
 
    entity[Comp_B] = nil
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_B_C)
    lu.assertEquals(entity.archetype, archetype_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_c})
 
    entity[Comp_C] = nil
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_C)
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 
    -- 03) enity:Unset(CompType1)
    entity = Entity.New(event, {comp_a, comp_b, comp_c})
    entity:Unset(Object)
    lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
 
    entity:Unset(Comp_A)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B_C)
    lu.assertEquals(entity.archetype, archetype_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_b, comp_c})
 
    entity:Unset(Comp_B)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_B_C)
    lu.assertEquals(entity.archetype, archetype_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_c})
 
    entity:Unset(Comp_C)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_C)
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 
-   -- 04) enity:Unset({comp1, comp1, ...})
+   -- 04) enity:Unset(comp1, comp1, ...)
    entity = Entity.New(event, {comp_a, comp_b, comp_c})
-   entity:Unset({Object})
+   entity:Unset(Object)
    lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
 
-   entity:Unset({comp_a})
+   entity:Unset(comp_a)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B_C)
    lu.assertEquals(entity.archetype, archetype_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_b, comp_c})
 
-   entity:Unset({comp_b})
+   entity:Unset(comp_b)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_B_C)
    lu.assertEquals(entity.archetype, archetype_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_c})
 
-   entity:Unset({comp_c})
+   entity:Unset(comp_c)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_C)
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 
-   -- 05) enity:Unset({CompType1, CompType2, ...})
+   -- 05) enity:Unset(CompType1, CompType2, ...)
    entity = Entity.New(event, {comp_a, comp_b, comp_c})
-   entity:Unset({Comp_A})
+   entity:Unset(Comp_A)
    lu.assertEquals(entity.archetype, archetype_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_b, comp_c})
 
-   entity:Unset({Comp_B})
+   entity:Unset(Comp_B)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_B_C)
    lu.assertEquals(entity.archetype, archetype_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_c})
 
-   entity:Unset({Comp_C})
+   entity[Comp_C] = nil
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_C)
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
-
-   -- 06) entity[{CompType1, CompType2}] = nil
-   entity = Entity.New(event, {comp_a, comp_b, comp_c})
-   entity[{Object}] = nil
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
-   lu.assertEquals(entity.archetype, archetype_A_B_C)
-
-   entity[{Comp_A}] = nil
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_A_B_C)
-   lu.assertEquals(entity.archetype, archetype_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b, comp_c})
-
-   entity[{Comp_B}] = nil
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_B_C)
-   lu.assertEquals(entity.archetype, archetype_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_c})
-
-   entity[{Comp_C}] = nil
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_C)
-   lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 end
 
 --[[
    [SET]
-   01) entity:Set(comp1)
-   02) entity[CompType1] = nil
+   01) entity[CompType1] = nil
+   02) entity[CompType1] = value
    03) entity:Set(CompType1, nil)   
-   04) entity[CompType1] = value
-   05) entity:Set(CompType1, value)
-   06) entity:Set({comp1, comp2, ...})
-   07) entity[{CompType1, CompType2, ...}] = nil
-   08) entity:Set({CompType1, CompType2, ...}, nil)
-   09) entity[{CompType1, CompType2, ...}] = {value1, value2, ...}
-   10) entity:Set({CompType1, CompType2, ...}, {value1, value2, ...})
-   11) entity[{CompType1, CompType2, ...}] = {nil, value2, ...}
-   12) entity:Set({CompType1, CompType2, ...}, {nil, value2, ...})
+   04) entity:Set(CompType1, value)
+   05) entity:Set(comp1)
+   06) entity:Set(comp1, comp2, ...)
 ]]
 function TestEntity:test_Set()
 
@@ -284,255 +238,142 @@ function TestEntity:test_Set()
       eventArchetypeOld = old
    end)
    
-   --  01) entity:Set(comp1)
+   --  05) entity:Set(comp1)
    local entity = Entity.New(event)
    entity:Set(Object)
    lu.assertEquals(eventEntity, nil)
    lu.assertEquals(eventArchetypeOld, nil)
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 
    entity:Set(comp_a)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, Archetype.EMPTY)
    lu.assertEquals(entity.archetype, archetype_A)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a})
 
    entity:Set(comp_b)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A)
    lu.assertEquals(entity.archetype, archetype_A_B)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b})
 
    entity:Set(comp_c)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B)
    lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
 
-   -- 02) entity[CompType1] = nil
+   -- 01) entity[CompType1] = nil
    -- @see TestEntity:test_Unset()
 
    -- 03) entity:Set(CompType1, nil)   
    entity = Entity.New(event, {comp_a, comp_b, comp_c})
    entity:Set(Object, nil)
    lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
 
    entity:Set(Comp_A, nil)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B_C)
    lu.assertEquals(entity.archetype, archetype_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_b, comp_c})
 
    entity:Set(Comp_B, nil)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_B_C)
    lu.assertEquals(entity.archetype, archetype_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_c})
 
    entity:Set(Comp_C, nil)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_C)
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 
-   -- 04) entity[CompType1] = value
+   -- 02) entity[CompType1] = value
    entity = Entity.New(event)
    entity[Object] = "XPTO"
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 
    entity[Comp_A] = comp_a
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, Archetype.EMPTY)
    lu.assertEquals(entity.archetype, archetype_A)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a})
 
    entity[Comp_B] = comp_b
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A)
    lu.assertEquals(entity.archetype, archetype_A_B)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b})
 
    entity[Comp_C] = comp_c
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B)
    lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
 
    entity[Comp_C] = { Name = 'NEW C' }
-   lu.assertEquals(entity[{Comp_A, Comp_B}], {comp_a, comp_b})
-   lu.assertEquals(entity[{Comp_C}][1]:GetType(), Comp_C)
-   lu.assertEquals(entity[{Comp_C}][1].Name, 'NEW C')
-   lu.assertNotEquals(entity[{Comp_C}], {comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B)}, {comp_a, comp_b})
+   lu.assertEquals(entity[Comp_C]:GetType(), Comp_C)
+   lu.assertEquals(entity[Comp_C].Name, 'NEW C')
    lu.assertEquals(entity.archetype, archetype_A_B_C)
    -- NO EVENT CALL (SAME ARCHETYPE archetype_A_B_C)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B)
 
-   -- 05) entity:Set(CompType1, value)
+   -- 04) entity:Set(CompType1, value)
    entity = Entity.New(event)
    entity:Set(Object, "XPTO")
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 
    entity:Set(Comp_A, comp_a)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, Archetype.EMPTY)
    lu.assertEquals(entity.archetype, archetype_A)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a})
 
    entity:Set(Comp_B, comp_b)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A)
    lu.assertEquals(entity.archetype, archetype_A_B)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b})
 
    entity:Set(Comp_C, comp_c)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B)
    lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
 
    entity:Set(Comp_C, { Name = 'NEW C' })
-   lu.assertEquals(entity[{Comp_A, Comp_B}], {comp_a, comp_b})
-   lu.assertEquals(entity[{Comp_C}][1]:GetType(), Comp_C)
-   lu.assertEquals(entity[{Comp_C}][1].Name, 'NEW C')
-   lu.assertNotEquals(entity[{Comp_C}], {comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B)}, {comp_a, comp_b})
+   lu.assertEquals(entity[Comp_C]:GetType(), Comp_C)
+   lu.assertEquals(entity[Comp_C].Name, 'NEW C')
    lu.assertEquals(entity.archetype, archetype_A_B_C)
    -- NO EVENT CALL (SAME ARCHETYPE archetype_A_B_C)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A_B)
 
-   -- 06) entity:Set({comp1, comp2, ...})
+   -- 06) entity:Set(comp1, comp2, ...)
    entity = Entity.New(event)
-   entity:Set({Object})
+   entity:Set(Object)
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {})
 
-   entity:Set({comp_a})
+   entity:Set(comp_a)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, Archetype.EMPTY)
    lu.assertEquals(entity.archetype, archetype_A)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a})
 
-   entity:Set({comp_b, comp_c})
+   entity:Set(comp_b, comp_c)
    lu.assertEquals(eventEntity, entity)
    lu.assertEquals(eventArchetypeOld, archetype_A)
    lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
-
-   -- 07) entity[{CompType1, CompType2, ...}] = nil
-   -- @see TestEntity:test_Unset()
-
-   -- 08) entity:Set({CompType1, CompType2, ...}, nil)
-   entity = Entity.New(event, {comp_a, comp_b, comp_c})
-   entity:Set({Object}, nil)
-   lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
-
-   entity:Set({Comp_A}, nil)
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_A_B_C)
-   lu.assertEquals(entity.archetype, archetype_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b, comp_c})
-
-   entity:Set({Comp_B}, nil)
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_B_C)
-   lu.assertEquals(entity.archetype, archetype_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_c})
-
-   entity:Set({Comp_C}, nil)
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_C)
-   lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
-
-   -- 09) entity[{CompType1, CompType2, ...}] = {value1, value2, ...}
-   entity = Entity.New(event)
-   entity[{Object}] = {"XPTO"}
-   lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
-
-   entity[{Comp_A}] = {comp_a}
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, Archetype.EMPTY)
-   lu.assertEquals(entity.archetype, archetype_A)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a})
-
-   entity[{Comp_B, Comp_C}] = {comp_b, comp_c}
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_A)
-   lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
-
-   entity[{Comp_C}] = {{ Name = 'NEW C' }}
-   lu.assertEquals(entity[{Comp_A, Comp_B}], {comp_a, comp_b})
-   lu.assertEquals(entity[{Comp_C}][1]:GetType(), Comp_C)
-   lu.assertEquals(entity[{Comp_C}][1].Name, 'NEW C')
-   lu.assertNotEquals(entity[{Comp_C}], {comp_c})
-   lu.assertEquals(entity.archetype, archetype_A_B_C)
-   -- NO EVENT CALL (SAME ARCHETYPE archetype_A_B_C)
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_A)
-
-   -- 10) entity:Set({CompType1, CompType2, ...}, {value1, value2, ...})
-   entity = Entity.New(event)
-   entity:Set({Object}, {"XPTO"})
-   lu.assertEquals(entity.archetype, Archetype.EMPTY)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {})
-
-   entity:Set({Comp_A}, {comp_a})
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, Archetype.EMPTY)
-   lu.assertEquals(entity.archetype, archetype_A)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a})
-
-   entity:Set({Comp_B, Comp_C}, {comp_b, comp_c})
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_A)
-   lu.assertEquals(entity.archetype, archetype_A_B_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_b, comp_c})
-
-   entity:Set({Comp_C}, {{ Name = 'NEW C' }})
-   lu.assertEquals(entity[{Comp_A, Comp_B}], {comp_a, comp_b})
-   lu.assertEquals(entity[{Comp_C}][1]:GetType(), Comp_C)
-   lu.assertEquals(entity[{Comp_C}][1].Name, 'NEW C')
-   lu.assertNotEquals(entity[{Comp_C}], {comp_c})
-   lu.assertEquals(entity.archetype, archetype_A_B_C)
-   -- NO EVENT CALL (SAME ARCHETYPE archetype_A_B_C)
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_A)
-
-   -- 11) entity[{CompType1, CompType2, ...}] = {nil, value2, ...}
-   entity = Entity.New(event, {comp_a})
-   lu.assertEquals(entity.archetype, archetype_A)
-
-   entity[{Comp_A, Comp_B}] = {nil, comp_b}
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_A)
-   lu.assertEquals(entity.archetype, archetype_B)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b})
-
-   entity[{Comp_A, Comp_B, Comp_C}] = {comp_a, nil, comp_c}
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_B)
-   lu.assertEquals(entity.archetype, archetype_A_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_c})
-
-   -- 12) entity:Set({CompType1, CompType2, ...}, {nil, value2, ...})
-   entity = Entity.New(event, {comp_a})
-   entity:Set({Comp_A, Comp_B}, {nil, comp_b})
-   lu.assertEquals(entity.archetype, archetype_B)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_b})
-
-   entity:Set({Comp_A, Comp_B, Comp_C}, {comp_a, nil, comp_c})
-   lu.assertEquals(eventEntity, entity)
-   lu.assertEquals(eventArchetypeOld, archetype_B)
-   lu.assertEquals(entity.archetype, archetype_A_C)
-   lu.assertEquals(entity[{Comp_A, Comp_B, Comp_C}], {comp_a, comp_c})
+   lu.assertEquals({entity:Get(Comp_A, Comp_B, Comp_C)}, {comp_a, comp_b, comp_c})
 end
 
 function TestEntity:test_RawSet()
@@ -540,7 +381,7 @@ function TestEntity:test_RawSet()
 
    local event = Event.New()
    
-   --  01) entity:Set(comp1)
+   --  05) entity:Set(comp1)
    local entity = Entity.New(event)
    entity.Name = "Player"
    entity["NetworkId"] = 33

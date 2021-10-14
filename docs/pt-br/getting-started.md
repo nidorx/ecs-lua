@@ -11,7 +11,7 @@ A programação com um ECS pode resultar em um código mais eficiente e fácil d
 ## Instalação
 
 O **ECS Lua** nao possui dependencias externas, portanto, basta fazer o download da ultima versao disponível na 
-[página de releases](https://github.com/nidorx/roblox-ecs/releases) do projeto.
+[página de releases](https://github.com/nidorx/ecs-lua/releases) do projeto.
 
 Existem 3 opcoes de uso do **ECS Lua** 
 
@@ -36,7 +36,7 @@ cada frame. Para automatizar este processo, o **ECS** disponibiliza uma funciona
 instanciacao de um novo mundo, este possa registrar-se para receber o update de forma automatica. 
 
 A implementacao desse método é muito simples e mais detalhes pode ser visto na seção 
-[Arquitetura - Ciclo De Vida](/pt-br/architecture?id=entities-and-components-life-cycle).
+[Arquitetura - Ciclo De Vida](/pt-br/architecture?id=world).
 
 > Se você utiliza Roblox nao precisa preocupar-se, o **ECS Lua** já tem uma implementacao padrão quando é executado no 
 Roblox, mais detalhes abaixo.
@@ -45,21 +45,21 @@ Roblox, mais detalhes abaixo.
 ### Roblox
 
 Você pode fazer a instalação diretamente do Roblox Studio, através da busca na caixa de ferramentas por `ECS-lua`, esta 
-é a versão [minificada do motor](https://www.roblox.com/library/5887881675/Roblox-ECS). Ao usar o **ECS Lua** no Roblox, 
+é a versão [minificada do motor](https://www.roblox.com/library/5887881675/ecs-lua). Ao usar o **ECS Lua** no Roblox, 
 a engine já identifica e registra automaticamente um `LoopManager`, nao sendo portanto necessario nenhum passo adicional.
 
 ## Conceitos Gerais
 
 Alguns termos comuns nos motores ECS são:
-- [Entidades](/pt-br/architecture?id=entidades): Um objeto com um ID exclusivo que pode ter vários componentes anexados a ele.
-- [Componentes](/pt-br/architecture?id=componentes): Diferentes caracteristicas de uma entidade. ex: geometria, física, pontos de vida. Os dados são armazenados apenas em componentes.
-- [Sistemas](/pt-br/architecture?id=sistemas): Faz o trabalho real, aplica as regras do jogo, processando entidades e modificando seus componentes.
-- [Consultas](/pt-br/architecture?id=consultas): Usado pelos sistemas para determinar em quais entidades eles estão interessados, com base nos componentes que as entidades possuem.
+- [Entidades](/pt-br/architecture?id=entidade): Um objeto com um ID exclusivo que pode ter vários componentes anexados a ele.
+- [Componentes](/pt-br/architecture?id=componente): Diferentes caracteristicas de uma entidade. ex: geometria, física, pontos de vida. Os dados são armazenados apenas em componentes.
+- [Sistemas](/pt-br/architecture?id=sistema): Faz o trabalho real, aplica as regras do jogo, processando entidades e modificando seus componentes.
+- [Consultas](/pt-br/architecture?id=consulta): Usado pelos sistemas para determinar em quais entidades eles estão interessados, com base nos componentes que as entidades possuem.
 - [Mundo](/pt-br/architecture?id=mundo): Um contêiner para entidades, componentes, sistemas e consultas.
 
 <div align=center>
 
-![Arquitetura](../assets/diagram-1-pt-br.png)
+![Arquitetura](../assets/diagram-1-pt-br.svg)
 
 </div>
 
@@ -69,7 +69,7 @@ O fluxo de trabalho normal ao construir um programa baseado em ECS:
 - Crie `Entidades` e anexe `Componentes` a elas.
 - Execute todos os sistemas a cada frame, realize `Consultas` no `Mundo` para decidir quais entidades serão modificadas.
 
-## Componentes
+## Componente
 
 Os componentes são objetos que contêm dados. No **ECS Lua**, basta invocar o método `ECS.Component(template)` para 
 definir uma `Classe` de um componente. 
@@ -115,7 +115,7 @@ Vamos começar criando um sistema que fará um loop por todas as entidades que p
 registrar suas posições.
 
 ```lua
--- um atalho para os metodos
+-- um atalho para os métodos
 local System, Query = ECS.System, ECS.Query 
 
 local PositionLogSystem = System("process", 2, Query.All(Position), function(self, Time)
@@ -128,7 +128,6 @@ local PositionLogSystem = System("process", 2, Query.All(Position), function(sel
       local msg = "Entidade com ID: %d tem o componente Position = {x: %0.2f, y: %0.2f, z: %0.2f}"
 		print(msg:format(entity.id, pos.x, pos.y, pos.z))
    end)
-
 end)
 ```
 
@@ -151,7 +150,6 @@ function MovableSystem:Update(Time)
       position.y = position.y + acceleration * delta
       position.z = position.z + acceleration * delta
    end
-
 end
 ```
 
@@ -208,7 +206,7 @@ world:AddSystem(PositionLogSystem)
 world:AddSystem(MovableSystem)
 ```
 
-## Entidades
+## Entidade
 
 Tendo nosso mundo, alguns componentes e sistemas já definidos, vamos criar [entidades](/pt-br/architecture?id=entidades) 
 e anexar estes componentes a eles:
@@ -258,7 +256,7 @@ criar um Local Script que o mundo já sera atualizado automaticamente.
 -- No Roblox:
 local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))
 
--- um atalho para os metodos
+-- um atalho para os métodos
 local Component, System, Query = ECS.Component, ECS.System, ECS.Query 
 
 --[[ Componentes ]]
@@ -319,8 +317,8 @@ entity6:Set(Acceleration())
 
 Resultado do código acima no Roblox Studio
 
-![Resultado do código acima no Roblox Studio](../assets/pt-br-output-get-started.gif)
+![Resultado do código acima no Roblox Studio](../assets/get-started-output-pt-br.gif)
 
-## Proximos passos
+## Próximos passos
 Esta foi uma visão geral rápida sobre como as coisas são estruturadas usando **ECS Lua**, 
-[leia a documentação da arquitetura](/manual/Architecture) para informações mais detalhadas.
+[leia a documentação da arquitetura](/pt-br/architecture) para informações mais detalhadas.

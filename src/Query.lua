@@ -65,7 +65,7 @@ local function parseFilters(list, clauseGroup, clauses)
 
    if #cTypes > 0 then
       table.sort(cTypeIds)
-      local cTypesKey = '_' .. table.concat(cTypeIds, '_')   
+      local cTypesKey = "_" .. table.concat(cTypeIds, "_")   
       return cTypes, cTypesKey
    end
 end

@@ -37,18 +37,18 @@ local function createComponentClass(initializer, superClass)
          return ComponentClass.New(value)
       end,
       __index = function(t, key)
-         if (key == 'States') then
+         if (key == "States") then
             return superClass.__States       
          end
-         if (key == 'Case' or key == 'StateInitial') then
+         if (key == "Case" or key == "StateInitial") then
             return rawget(superClass, key)       
          end
       end,
       __newindex = function(t, key, value)
-         if (key == 'Case' or key == 'States' or key == 'StateInitial') then
+         if (key == "Case" or key == "States" or key == "StateInitial") then
             -- (FMS) Finite State Machine
             if ComponentClass == superClass then
-               if (key == 'States') then
+               if (key == "States") then
                   if not superClass.IsFSM then
                      ComponentFSM.AddCapability(superClass, value)
                      for _, qualifiedClass in pairs(Qualifiers) do
@@ -132,7 +132,7 @@ local function createComponentClass(initializer, superClass)
       @return Component
    ]]
    function ComponentClass.New(value)
-      if (value ~= nil and type(value) ~= 'table') then
+      if (value ~= nil and type(value) ~= "table") then
          -- local MyComponent = Component({ value = Vector3.new(0, 0, 0) })
          -- local component = MyComponent(Vector3.new(10, 10, 10))
          value = { value = value }
@@ -283,10 +283,10 @@ function Component.Create(template)
 
    if template ~= nil then
       local ttype = type(template)
-      if (ttype == 'function') then
+      if (ttype == "function") then
          initializer = template
       else
-         if (ttype ~= 'table') then
+         if (ttype ~= "table") then
             template = { value = template }
          end
 

@@ -55,7 +55,6 @@ function Timer:SetFrequency(frequency)
 
    if frequency ~= safeFrequency then
       frequency = safeFrequency
-      print(string.format(">>> ATTENTION! The execution frequency of world has been changed to %d <<<", safeFrequency))
    end
 
    self.Frequency = frequency
@@ -76,7 +75,7 @@ function Timer:Update(now, step, callback)
    Time.Now = now
    Time.NowReal = nowReal
 
-   if step == 'process' then
+   if step == "process" then
       local processOldTmp = Time.Process
 
       -- first step, initialize current frame time
@@ -114,8 +113,6 @@ function Timer:Update(now, step, callback)
       -- Fixed time is updated in regular intervals (equal to DeltaFixed) until time property is reached.
       while (Time.Process <= Time.Frame and nLoops < MAX_SKIP_FRAMES) do
 
-         -- debugF('Update')
-
          updated = true
 
          callback(Time)
@@ -138,7 +135,7 @@ function Timer:Update(now, step, callback)
 
       callback(Time)
 
-      if step == 'render' then
+      if step == "render" then
          -- last step, save last frame time
          self.LastFrame = Time.Frame
       end      

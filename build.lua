@@ -29,7 +29,7 @@ local HEADER = [[
 	game development
 
 	This is a minified version of ECS-Lua, to see the full source code visit
-	https://github.com/nidorx/roblox-ecs
+	https://github.com/nidorx/ecs-lua
 
 	------------------------------------------------------------------------------
 

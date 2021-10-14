@@ -1,7 +1,7 @@
 
 package.path = package.path .. ";modules/?.lua"
 package.path = package.path .. ";src/?.lua"
-local lu = require('luaunit')
+local lu = require("luaunit")
 local luacov = require("luacov")
 
 -- tests

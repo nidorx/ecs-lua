@@ -86,21 +86,21 @@ function ComponentFSM.AddCapability(superClass, states)
             value = {value}
          end
 
-         if table.find(value, '*') then
-            rawset(states, newState, '*')
+         if table.find(value, "*") then
+            rawset(states, newState, "*")
          else
             local idxSelf = table.find(value, newState)
             if idxSelf ~= nil then
                table.remove(value, idxSelf)
                if #value == 0 then
-                  value = '*'
+                  value = "*"
                end
             end
             rawset(states, newState, value)
          end
       end
    })
-   rawset(superClass, '__States', cTypeStates)
+   rawset(superClass, "__States", cTypeStates)
 
    for state,value in pairs(states) do
       if superClass.StateInitial == nil then
@@ -179,7 +179,7 @@ function ComponentFSM.AddMethods(superClass, componentClass)
 
       if (actual ~= nil ) then
          local transtions = cTypeStates[actual]
-         if (transtions ~= '*' and table.find(transtions, newState) == nil) then
+         if (transtions ~= "*" and table.find(transtions, newState) == nil) then
             -- not allowed
             return
          end

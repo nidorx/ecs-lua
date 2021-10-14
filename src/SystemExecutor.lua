@@ -78,22 +78,22 @@ function SystemExecutor.New(world, systems)
    for _, system in pairs(systems) do      
       local step = system.Step
       if system.Update then
-         if step == 'task' then
+         if step == "task" then
             table.insert(updateTask, system)
             
-         elseif step == 'process' then
+         elseif step == "process" then
             table.insert(updateProcess, system) 
 
-         elseif step == 'transform' then
+         elseif step == "transform" then
             table.insert(updateTransform, system)
 
-         elseif step == 'render' then
+         elseif step == "render" then
             table.insert(updateRender, system)
 
          end
       end
 
-      if (system.Query and system.Query.isQuery and step ~= 'task') then
+      if (system.Query and system.Query.isQuery and step ~= "task") then
          if system.OnExit then
             table.insert(onExit, system)
          end
