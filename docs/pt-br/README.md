@@ -1,3 +1,4 @@
+# Introdução
 
 **ECS Lua** é uma biblioteca de [ECS _(Entity Component System)_](https://en.wikipedia.org/wiki/Entity_component_system) 
 em lua usada para desewnvolvimentos de jogos.
@@ -32,27 +33,27 @@ Você pode navegar ou buscar assuntos específicos no menu lateral. A seguir, al
 <div class="home-row clearfix" style="text-align:center">
    <div class="home-col"><div class="panel home-panel"><div class="panel-body">
 
-   [![Primeiros Passos](../assets/icon-basic.png ":no-zoom")](/pt-br/getting-started)
+   [![Primeiros Passos](../assets/icon-basic.png ":no-zoom")](/pt-br/getting-started?id=primeiros-passos)
 
    </div><div class="panel-heading">
 
-   [Primeiros Passos](/pt-br/getting-started)
+   [Primeiros Passos](/pt-br/getting-started?id=primeiros-passos)
 
    </div></div></div>
 
    <div class="home-col"><div class="panel home-panel"><div class="panel-body">
 
-   [![Conceitos Gerais](../assets/icon-parts.png ":no-zoom")](/pt-br/general-concepts)
+   [![Conceitos Gerais](../assets/icon-parts.png ":no-zoom")](/pt-br/getting-started?id=conceitos-gerais)
 
    </div><div class="panel-heading">
 
-   [Conceitos Gerais](/pt-br/general-concepts)
+   [Conceitos Gerais](/pt-br/getting-started?id=conceitos-gerais)
 
    </div></div></div>
 
    <div class="home-col"><div class="panel home-panel"><div class="panel-body">
 
-   [![Arquitetura](../assets/icon-advanced.png ":no-zoom")](/dev/)
+   [![Arquitetura](../assets/icon-advanced.png ":no-zoom")](/pt-br/architecture)
 
    </div><div class="panel-heading">
 
@@ -62,11 +63,11 @@ Você pode navegar ou buscar assuntos específicos no menu lateral. A seguir, al
 
    <div class="home-col"><div class="panel home-panel"><div class="panel-body">
 
-   [![Tutoriais](../assets/icon-tutorial.png ":no-zoom")](/pt-br/instalacao)
+   [![Tutoriais](../assets/icon-tutorial.png ":no-zoom")](/pt-br/tutorial)
 
    </div><div class="panel-heading">
 
-   [Tutoriais](/pt-br/instalacao)
+   [Tutoriais](/pt-br/tutorial)
 
    </div></div></div>
 </div>

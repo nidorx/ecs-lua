@@ -54,10 +54,8 @@
 </div>
 
 # ECS Lua
+
 [![Build Status](https://app.travis-ci.com/nidorx/roblox-ecs.svg?branch=master)](https://app.travis-ci.com/nidorx/roblox-ecs)
-
-> Entity Component System em Lua
-
 
 [GitHub](https://github.com/nidorx/roblox-ecs)
 [Começar](#get-started)

@@ -59,7 +59,7 @@ Alguns termos comuns nos motores ECS são:
 
 <div align=center>
 
-![Arquitetura](../assets/diagram-1-pt-br.png ":no-zoom")
+![Arquitetura](../assets/diagram-1-pt-br.png)
 
 </div>
 
@@ -81,9 +81,12 @@ O parametro `template` pode ser de qualquer tipo, onde:
 formato usado no componente `Acceleration` abaixo.
 
 ```lua
-local Position = ECS.Component({ x = 0, y = 0, z = 0 })
+local Position = ECS.Component({ 
+   x = 0, y = 0, z = 0 
+})
 
--- o mesmo que ECS.Component({ value = 0.1 })
+-- o mesmo que:
+-- ECS.Component({ value = 0.1 })
 local Acceleration = ECS.Component(0.1) 
 ```
 [Mais informações sobre como criar componentes](/pt-br/architecture?id=componentes).
@@ -156,7 +159,7 @@ end
 mesmo resultado que `entity[Acceleration]`
 
 
-A consulta do sistema sistema `MovableSystem` filtra as entidades que possuem os componentes ` Acceleration` e 
+A consulta do sistema sistema `MovableSystem` filtra as entidades que possuem os componentes `Acceleration` e 
 `Position`. Observe que, se necessário, podemos criar quantas consultas desejarmos e processá-las no método `Update`, ex:
 
 ```lua
@@ -182,7 +185,7 @@ Para obter mais informações, verifique a documentação de arquitetura: [Acess
 
 ## Mundo
 
-Um mundo é um contêiner para `entidades`,` componentes` e `sistemas`. A maioria dos jogos tem apenas um `mundo`,
+Um mundo é um contêiner para `entidades`, `componentes` e `sistemas`. A maioria dos jogos tem apenas um `mundo`,
 entretanto, você pode ter vários mundos funcionando ao mesmo tempo e habilitá-los ou desabilitá-los conforme necessário.
 
 A criacao de um mundo é feita pelo método `ECS.World(systemClasses, frequency, disableAutoUpdate)`, onde:
@@ -213,11 +216,20 @@ e anexar estes componentes a eles:
 ```lua
 local entity1 = world:Entity(Position())
 
-local entity2 = world:Entity(Position({x = 5}), Acceleration(1))
+local entity2 = world:Entity(
+   Position({x = 5}), 
+   Acceleration(1)
+)
 
-local entity3 = world:Entity(Position.New({x = 5}), Acceleration.New(1))
+local entity3 = world:Entity(
+   Position.New({x = 5}), 
+   Acceleration.New(1)
+)
 
-local entity4 = world:Entity(Position({x = 5}), Acceleration({value = 1}))
+local entity4 = world:Entity(
+   Position({x = 5}), 
+   Acceleration({value = 1})
+)
 
 local entity5 = world:Entity()
 entity5[Position] = { y = 5 }
@@ -228,7 +240,7 @@ entity6[Position] = Position()
 entity6:Set(Acceleration())
 ```
 
-Com isso, acabamos de criar 6 entidades. 5 com os componentes `Acceleration` e` Position`, e um apenas com o componente `Position`.
+Com isso, acabamos de criar 6 entidades. 5 com os componentes `Acceleration` e `Position`, e um apenas com o componente `Position`.
 
 Observe que existem varias formas de instanciar e atribuir os componentes para a entidade, escolha a que mais combina 
 com o seu estilo de programção, o resultado final é o mesmo. Perceba também que as classes dos componentes podem ser 
@@ -307,7 +319,7 @@ entity6:Set(Acceleration())
 
 Resultado do código acima no Roblox Studio
 
-![Resultado do código acima no Roblox Studio](../assets/pt-br-output-get-started.gif ":no-zoom")
+![Resultado do código acima no Roblox Studio](../assets/pt-br-output-get-started.gif)
 
 ## Proximos passos
 Esta foi uma visão geral rápida sobre como as coisas são estruturadas usando **ECS Lua**, 

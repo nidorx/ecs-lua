@@ -1,35 +1,31 @@
-/* .sidebar-nav ul li,
-.sidebar-nav ul li a {
-   font-weight: bold;
-}
-
-.sidebar-nav ul li a {
-   text-decoration: underline;
-}
-
-.sidebar-nav ul ul li a {
-   font-weight    : normal;
-   text-decoration: underline;
-}
-
-.back-link {
-   color       : grey;
-   padding-left: 1em;
+.meta-container {
+   text-align: right;
 }
 
 .meta-container>.edit-button {
    text-decoration: none;
    font-size      : 12px;
 }
- */
 
 .meta-container>.edit-button svg {
+   top         : 2px;
    width       : 14px;
    margin-right: .5rem;
-   top         : 2px;
    position    : relative;
 }
 
+.api-docs > ul > li  {
+   list-style: circle;
+   margin-bottom: 1.2em;
+}
+
+.api-docs > ul > li p {
+   margin: 0;
+}
+
+.api-docs > ul > li > ul > li {
+   list-style: none;
+}
 
 /* Interactive Logo  */
 /* Source: http://codepen.io/elrumordelaluz/pen/aWavEG */
@@ -215,9 +211,14 @@
    }
 }
 
+
 section.cover.show {
    /* background: radial-gradient(circle farthest-side, #fff 20%, #9cb1ffcc 60%, #f69d3c 130%) !important; */
    background: radial-gradient(circle farthest-side, #fff 20%, rgb(156, 177, 255, 0.4) 60%, #f69d3c 130%) !important;
+}
+
+section.cover .cover-main {
+   margin: 0px 16px 0;
 }
 
 aside.sidebar {
@@ -256,43 +257,28 @@ aside.sidebar .sidebar-nav {
 }
 
 aside.sidebar ul {
-   /* margin: 0; */
+   margin: 0;
 }
 
 aside.sidebar ul li {
-   /* margin  : 0; */
+   margin  : 0;
    position: relative;
 }
 
-aside.sidebar ul li ul {
-   /* margin: 8px 0; */
-}
-
-aside.sidebar ul li p {
-   /* padding-left: 87px; */
-   font-size  : 18px;
-   font-weight: normal;
-   color      : #35495e;
-}
-
 aside.sidebar ul li a {
-   height        : 42px;
-   line-height   : 36px;
-   font-size     : 14px;
-   color         : #7285a1;
-   /* padding    : 3px 0 3px 87px; */
+   height     : 42px;
+   line-height: 36px;
+   font-size  : 14px;
+   color      : #7285a1;
+   padding    : 3px 0 3px 40px;
 }
 
-aside.sidebar ul:first-child>li:first-child>a {
-   background: url(./_media/sidebar1.svg) no-repeat 48px;
+aside.sidebar ul li ul li a {
+   padding-left: 60px;
 }
 
-aside.sidebar ul:first-child>li:nth-child(2)>a {
-   background: url(./_media/sidebar2.svg) no-repeat 48px;
-}
-
-aside.sidebar ul:first-child>li:nth-child(3)>a {
-   background: url(./_media/sidebar3.svg) no-repeat 48px;
+aside.sidebar ul li ul li ul li a {
+   padding-left: 80px;
 }
 
 aside.sidebar ul li.active>a {
@@ -307,7 +293,7 @@ aside.sidebar ul li.active>a:before {
    width           : 10px;
    height          : 10px;
    top             : 15px;
-   left            : 56px;
+   left            : 20px;
    border-radius   : 50%;
    background-color: #9cb1ff;
    box-shadow      : 0 0 0 3px rgb(156, 177, 255, 0.4);
@@ -321,10 +307,6 @@ aside.sidebar ul li.active>a:after {
    height          : 36px;
    border-radius   : 4px;
    background-color: #9cb1ff;
-}
-
-section.content {
-   padding-top: 40px;
 }
 
 section.content .vuep {
@@ -355,9 +337,9 @@ section.content .vuep-preview {
 } */
 
 section.content .markdown-section {
-   max-width: 1200px;
-   min-width: 960px;
-   padding  : 0 60px 30px 0;
+   max-width   : 1200px;
+   /* min-width: 960px; */
+   /* padding  : 0 60px 30px 0; */
 }
 
 .markdown-section h1 {
@@ -379,14 +361,23 @@ section.content .markdown-section {
    border-radius: 4px;
 }
 
+.markdown-section code {
+   padding: 3px 3px;
+}
+
+.markdown-section pre>code {
+   padding: 10px 5px;
+}
+
+@media screen and (max-width: 768px) {
+   .markdown-section pre {
+      padding: 0;
+   }
+}
+
 .markdown-section p.tip,
 .markdown-section tr:nth-child(2n) {
    background-color: #fafcff;
-}
-
-.CodeMirror {
-   font-family: Menlo, Monaco, Consolas, Courier, monospace;
-   font-size  : 12px;
 }
 
 .markdown-section iframe {
@@ -399,7 +390,6 @@ section.content .markdown-section {
    border    : 1px solid #ebebeb;
    box-shadow: 0 0 10px 0 rgba(232, 237, 250, .6), 0 2px 4px 0 rgba(232, 237, 250, .6);
 }
-
 
 /* HOME PANEL */
 @keyframes box-enter {
