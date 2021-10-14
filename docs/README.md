@@ -32,7 +32,7 @@ You can browse or search for specific subjects in the side menu. Here are some r
 <div class="home-row clearfix" style="text-align:center">
    <div class="home-col"><div class="panel home-panel"><div class="panel-body">
 
-   [![Getting Started](../assets/icon-basic.png ":no-zoom")](/getting-started?id=getting-started)
+   [![Getting Started](assets/icon-basic.png ":no-zoom")](/getting-started?id=getting-started)
 
    </div><div class="panel-heading">
 
@@ -42,7 +42,7 @@ You can browse or search for specific subjects in the side menu. Here are some r
 
    <div class="home-col"><div class="panel home-panel"><div class="panel-body">
 
-   [![General Concepts](../assets/icon-parts.png ":no-zoom")](/getting-started?id=general-concepts)
+   [![General Concepts](assets/icon-parts.png ":no-zoom")](/getting-started?id=general-concepts)
 
    </div><div class="panel-heading">
 
@@ -52,7 +52,7 @@ You can browse or search for specific subjects in the side menu. Here are some r
 
    <div class="home-col"><div class="panel home-panel"><div class="panel-body">
 
-   [![Architecture](../assets/icon-advanced.png ":no-zoom")](/architecture)
+   [![Architecture](assets/icon-advanced.png ":no-zoom")](/architecture)
 
    </div><div class="panel-heading">
 
@@ -62,7 +62,7 @@ You can browse or search for specific subjects in the side menu. Here are some r
 
    <div class="home-col"><div class="panel home-panel"><div class="panel-body">
 
-   [![Tutorials](../assets/icon-tutorial.png ":no-zoom")](/tutorial)
+   [![Tutorials](assets/icon-tutorial.png ":no-zoom")](/tutorial)
 
    </div><div class="panel-heading">
 
