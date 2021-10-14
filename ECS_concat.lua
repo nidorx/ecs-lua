@@ -1,10 +1,9 @@
 --[[
-	ECS-Lua v2.0.0 [2021-10-02 17:25]
+	ECS Lua v2.0.0 [2021-10-14 18:00]
 
-	ECS-Lua is a tiny and easy to use ECS (Entity Component System) engine for
-	game development
+	ECS Lua is a lua ECS (Entity Component System) library used for game developments.
 
-	This is a minified version of ECS-Lua, to see the full source code visit
+	This is a minified version of ECS Lua, to see the full source code visit
 	https://github.com/nidorx/ecs-lua
 
 	------------------------------------------------------------------------------
@@ -102,7 +101,7 @@ __F__["Archetype"] = function()
       end
    
       table.sort(ids)
-      local id = '_' .. table.concat(ids, '_')
+      local id = "_" .. table.concat(ids, "_")
    
       if archetypes[id] == nil then
          archetypes[id] = setmetatable({
@@ -282,30 +281,33 @@ __F__["Component"] = function()
       if superClass == nil then
          superClass = ComponentClass
          superClass._Qualifiers = { ["Primary"] = ComponentClass }
+         superClass._QualifiersArr = { ComponentClass }
          superClass._Initializers = {}
       else
+         superClass.HasQualifier = true
          ComponentClass.IsQualifier = true
       end
    
       local Qualifiers = superClass._Qualifiers
+      local QualifiersArr = superClass._QualifiersArr
    
       setmetatable(ComponentClass, {
          __call = function(t, value)
             return ComponentClass.New(value)
          end,
          __index = function(t, key)
-            if (key == 'States') then
+            if (key == "States") then
                return superClass.__States       
             end
-            if (key == 'Case' or key == 'StateInitial') then
+            if (key == "Case" or key == "StateInitial") then
                return rawget(superClass, key)       
             end
          end,
          __newindex = function(t, key, value)
-            if (key == 'Case' or key == 'States' or key == 'StateInitial') then
+            if (key == "Case" or key == "States" or key == "StateInitial") then
                -- (FMS) Finite State Machine
                if ComponentClass == superClass then
-                  if (key == 'States') then
+                  if (key == "States") then
                      if not superClass.IsFSM then
                         ComponentFSM.AddCapability(superClass, value)
                         for _, qualifiedClass in pairs(Qualifiers) do
@@ -337,7 +339,7 @@ __F__["Component"] = function()
       ]]
       function ComponentClass.Qualifier(qualifier)
          if type(qualifier) ~= "string" then
-            for _, qualifiedClass in pairs(Qualifiers) do
+            for _, qualifiedClass in ipairs(QualifiersArr) do
                if qualifiedClass == qualifier then
                   return qualifier
                end
@@ -349,6 +351,7 @@ __F__["Component"] = function()
          if qualifiedClass == nil then
             qualifiedClass = createComponentClass(initializer, superClass)
             Qualifiers[qualifier] = qualifiedClass
+            table.insert(QualifiersArr, qualifiedClass)
          end
          return qualifiedClass
       end
@@ -360,15 +363,11 @@ __F__["Component"] = function()
          @return ComponentClass[]
       ]]
       function ComponentClass.Qualifiers(...)
-         
-         local qualifiers = {}
-   
          local filter = {...}
          if #filter == 0 then
-            for _, qualifiedClass in pairs(Qualifiers) do
-               table.insert(qualifiers, qualifiedClass)
-            end
+            return QualifiersArr
          else
+            local qualifiers = {}
             local cTypes = {}
             for _,qualifier in ipairs({...}) do
                local qualifiedClass = ComponentClass.Qualifier(qualifier)
@@ -377,9 +376,8 @@ __F__["Component"] = function()
                   table.insert(qualifiers, qualifiedClass)
                end
             end
+            return qualifiers      
          end
-   
-         return qualifiers      
       end
    
       --[[
@@ -389,7 +387,7 @@ __F__["Component"] = function()
          @return Component
       ]]
       function ComponentClass.New(value)
-         if (value ~= nil and type(value) ~= 'table') then
+         if (value ~= nil and type(value) ~= "table") then
             -- local MyComponent = Component({ value = Vector3.new(0, 0, 0) })
             -- local component = MyComponent(Vector3.new(10, 10, 10))
             value = { value = value }
@@ -454,66 +452,84 @@ __F__["Component"] = function()
       end
    
       --[[
+         Unlink this component with the other qualifiers
+      ]]
+      function ComponentClass:Detach()
+         if not superClass.HasQualifier then
+            return
+         end
+   
+         -- remove old unlink
+         self._qualifiers[ComponentClass] = nil
+   
+         -- new link
+         self._qualifiers = { [ComponentClass] = self }
+      end
+   
+      --[[
          Merges data from the other component into the current component. This method should not be invoked, it is used
          by the entity to ensure correct retrieval of a component's qualifiers.
    
          @param other {Component}
       ]]
       function ComponentClass:Merge(other)
-         if self == other then
-            return
-         end
-   
-         if self._qualifiers == other._qualifiers then
-            return
-         end
-   
-         if not other:Is(superClass) then
-            return
-         end
-   
-         local selfClass = ComponentClass
-         local otherClass = other:GetType()
-   
-         -- does anyone know the reference to the primary entity?
-         local primaryQualifiers
-         if selfClass == superClass then
-            primaryQualifiers = self._qualifiers
-         elseif otherClass == superClass then
-            primaryQualifiers = other._qualifiers
-         elseif self._qualifiers[superClass] ~= nil then
-            primaryQualifiers = self._qualifiers[superClass]._qualifiers
-         elseif other._qualifiers[superClass] ~= nil then
-            primaryQualifiers = other._qualifiers[superClass]._qualifiers
-         end
-   
-         if primaryQualifiers ~= nil then
-            if self._qualifiers ~= primaryQualifiers then
-               for qualifiedClass, component in pairs(self._qualifiers) do
-                  if superClass ~= qualifiedClass then
-                     primaryQualifiers[qualifiedClass] = component
-                     component._qualifiers = primaryQualifiers
+         if superClass.HasQualifier then
+            if self == other then
+               return
+            end
+      
+            if self._qualifiers == other._qualifiers then
+               return
+            end
+      
+            if not other:Is(superClass) then
+               return
+            end
+      
+            local selfClass = ComponentClass
+            local otherClass = other:GetType()
+      
+            -- does anyone know the reference to the primary entity?
+            local primaryQualifiers
+            if selfClass == superClass then
+               primaryQualifiers = self._qualifiers
+            elseif otherClass == superClass then
+               primaryQualifiers = other._qualifiers
+            elseif self._qualifiers[superClass] ~= nil then
+               primaryQualifiers = self._qualifiers[superClass]._qualifiers
+            elseif other._qualifiers[superClass] ~= nil then
+               primaryQualifiers = other._qualifiers[superClass]._qualifiers
+            end
+      
+            if primaryQualifiers ~= nil then
+               if self._qualifiers ~= primaryQualifiers then
+                  for qualifiedClass, component in pairs(self._qualifiers) do
+                     if superClass ~= qualifiedClass then
+                        primaryQualifiers[qualifiedClass] = component
+                        component._qualifiers = primaryQualifiers
+                     end
                   end
                end
-            end
-   
-            if other._qualifiers ~= primaryQualifiers then
+      
+               if other._qualifiers ~= primaryQualifiers then
+                  for qualifiedClass, component in pairs(other._qualifiers) do
+                     if superClass ~= qualifiedClass then
+                        primaryQualifiers[qualifiedClass] = component
+                        component._qualifiers = primaryQualifiers
+                     end
+                  end
+               end
+            else
+               -- none of the instances know the Primary, use the current object reference
                for qualifiedClass, component in pairs(other._qualifiers) do
-                  if superClass ~= qualifiedClass then
-                     primaryQualifiers[qualifiedClass] = component
-                     component._qualifiers = primaryQualifiers
+                  if selfClass ~= qualifiedClass then
+                     self._qualifiers[qualifiedClass] = component
+                     component._qualifiers = self._qualifiers
                   end
                end
             end
-         else
-            -- none of the instances know the Primary, use the current object reference
-            for qualifiedClass, component in pairs(other._qualifiers) do
-               if selfClass ~= qualifiedClass then
-                  self._qualifiers[qualifiedClass] = component
-                  component._qualifiers = self._qualifiers
-               end
-            end
          end
+   
       end
    
       return ComponentClass
@@ -540,10 +556,10 @@ __F__["Component"] = function()
    
       if template ~= nil then
          local ttype = type(template)
-         if (ttype == 'function') then
+         if (ttype == "function") then
             initializer = template
          else
-            if (ttype ~= 'table') then
+            if (ttype ~= "table") then
                template = { value = template }
             end
    
@@ -654,21 +670,21 @@ __F__["ComponentFSM"] = function()
                value = {value}
             end
    
-            if table.find(value, '*') then
-               rawset(states, newState, '*')
+            if table.find(value, "*") then
+               rawset(states, newState, "*")
             else
                local idxSelf = table.find(value, newState)
                if idxSelf ~= nil then
                   table.remove(value, idxSelf)
                   if #value == 0 then
-                     value = '*'
+                     value = "*"
                   end
                end
                rawset(states, newState, value)
             end
          end
       })
-      rawset(superClass, '__States', cTypeStates)
+      rawset(superClass, "__States", cTypeStates)
    
       for state,value in pairs(states) do
          if superClass.StateInitial == nil then
@@ -747,7 +763,7 @@ __F__["ComponentFSM"] = function()
    
          if (actual ~= nil ) then
             local transtions = cTypeStates[actual]
-            if (transtions ~= '*' and table.find(transtions, newState) == nil) then
+            if (transtions ~= "*" and table.find(transtions, newState) == nil) then
                -- not allowed
                return
             end
@@ -796,10 +812,9 @@ end
 __F__["ECS"] = function()
    -- src/ECS.lua
    --[[
-      ECS-Lua v2.0.0 [2021-10-02 17:25]
+      ECS Lua v2.0.0 [2021-10-14 18:00]
    
-      Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
-      game development on the Roblox platform
+      ECS Lua is a lua ECS (Entity Component System) library used for game developments.
    
       https://github.com/nidorx/ecs-lua
    
@@ -841,7 +856,7 @@ __F__["ECS"] = function()
    end
    
    pcall(function()
-      if (game and game.ClassName == 'DataModel') then
+      if (game and game.ClassName == "DataModel") then
          -- is roblox
          setLoopManager(__REQUIRE__("RobloxLoopManager")())
       end
@@ -929,6 +944,31 @@ __F__["Entity"] = function()
    end
    
    --[[
+      Merges the qualifiers of a new added component.
+   
+      @param entity {Entity}
+      @param newComponent {Component}
+      @param newComponentClass {ComponentClass}
+   ]]
+   local function mergeComponents(entity, newComponent, newComponentClass)
+      local data = entity._data
+      local otherComponent
+      -- get first instance
+      for _,oCType in ipairs(newComponentClass.Qualifiers()) do
+         if oCType ~= newComponentClass then
+            otherComponent = data[oCType]
+            if otherComponent then
+               break
+            end
+         end
+      end
+   
+      if otherComponent then
+         otherComponent:Merge(newComponent)
+      end
+   end
+   
+   --[[
       [SET]
       01) entity[CompType1] = nil
       02) entity[CompType1] = value
@@ -944,34 +984,76 @@ __F__["Entity"] = function()
       local archetypeOld = entity.archetype
       local archetypeNew = archetypeOld
    
+      local toMerge = {}
+   
       local cType = values[1]   
-      if (cType and cType.IsCType and not cType.isComponent) then 
+      if (cType and cType.IsCType and not cType.isComponent) then
          local value = values[2]
+         local component
          -- 01) entity[CompType1] = nil
          -- 02) entity[CompType1] = value
          -- 03) entity:Set(CompType1, nil)   
          -- 04) entity:Set(CompType1, value)
          if value == nil then
+            local old = data[cType]
+            if old then
+               old:Detach()
+            end
+   
             data[cType] = nil
             archetypeNew = archetypeNew:Without(cType)
    
          elseif value.isComponent then
-            cType = value:GetType()                     
-            data[cType] = value
+            local old = data[cType]         
+            if (old ~= value) then
+               if old then
+                  old:Detach()
+               end
+   
+               cType = value:GetType()
+               data[cType] = value
+               archetypeNew = archetypeNew:With(cType)
+   
+               -- merge components
+               if (cType.HasQualifier or cType.IsQualifier) then
+                  mergeComponents(entity, value, cType)
+               end
+            end
+         else
+            local old = data[cType]
+            if old then
+               old:Detach()
+            end
+   
+            local component = cType(value)
+            data[cType] = component
             archetypeNew = archetypeNew:With(cType)
    
-         else
-            data[cType] = cType(value)
-            archetypeNew = archetypeNew:With(cType)
+            -- merge components
+            if (cType.HasQualifier or cType.IsQualifier) then
+               mergeComponents(entity, component, cType)
+            end
          end
       else
          -- 05) entity:Set(comp1)
          -- 06) entity:Set(comp1, comp2, ...)
          for i,component in ipairs(values) do
             if (component.isComponent) then
-               local ctype = component:GetType()                     
-               data[ctype] = component
-               archetypeNew = archetypeNew:With(ctype)
+               local cType = component:GetType()       
+               local old = data[cType]
+               if (old ~= component) then
+                  if old then
+                     old:Detach()
+                  end
+   
+                  data[cType] = component
+                  archetypeNew = archetypeNew:With(cType)
+                  
+                  -- merge components
+                  if (cType.HasQualifier or cType.IsQualifier) then
+                     mergeComponents(entity, component, cType)
+                  end
+               end              
             end
          end
       end
@@ -1001,6 +1083,10 @@ __F__["Entity"] = function()
             -- 01) enity:Unset(comp1)
             -- 04) enity:Unset(comp1, comp1, ...)
             local cType = value:GetType()  
+            local old = data[cType]
+            if old then
+               old:Detach()
+            end
             data[cType] = nil
             archetypeNew = archetypeNew:Without(cType)
             
@@ -1008,6 +1094,10 @@ __F__["Entity"] = function()
             -- 02) entity[CompType1] = nil
             -- 03) enity:Unset(CompType1)
             -- 05) enity:Unset(CompType1, CompType2, ...)
+            local old = data[value]
+            if old then
+               old:Detach()
+            end
             data[value] = nil
             archetypeNew = archetypeNew:Without(value)
          end
@@ -1339,7 +1429,7 @@ __F__["Query"] = function()
    
       if #cTypes > 0 then
          table.sort(cTypeIds)
-         local cTypesKey = '_' .. table.concat(cTypeIds, '_')   
+         local cTypesKey = "_" .. table.concat(cTypeIds, "_")   
          return cTypes, cTypesKey
       end
    end
@@ -1896,24 +1986,24 @@ end
 __F__["RobloxLoopManager"] = function()
    -- src/RobloxLoopManager.lua
    local function InitManager()
-      local RunService = game:GetService('RunService')
+      local RunService = game:GetService("RunService")
       return {
          Register = function(world)         
             -- if not RunService:IsRunning() then
             --    return
             -- end
             local processConn = RunService.Stepped:Connect(function()
-               world:Update('process', os.clock())
+               world:Update("process", os.clock())
             end)
       
             local transformConn = RunService.Heartbeat:Connect(function()
-               world:Update('transform', os.clock())
+               world:Update("transform", os.clock())
             end)
       
             local renderConn
             if (not RunService:IsServer()) then
                renderConn = RunService.RenderStepped:Connect(function()
-                  world:Update('render', os.clock())
+                  world:Update("render", os.clock())
                end)
             end
       
@@ -1935,7 +2025,7 @@ __F__["System"] = function()
    
    local SYSTEM_ID_SEQ = 0
    
-   local STEPS = { 'task', 'render', 'process', 'transform' }
+   local STEPS = { "task", "render", "process", "transform" }
    
    local System = {}
    
@@ -1950,7 +2040,7 @@ __F__["System"] = function()
    function System.Create(step, order, query, updateFn)
    
       if (step == nil or not table.find(STEPS, step)) then
-         error('The "step" parameter must one of ', table.concat(STEPS, ', '))
+         error("The step parameter must one of ", table.concat(STEPS, ", "))
       end
    
       if type(order) == "function" then
@@ -2125,22 +2215,22 @@ __F__["SystemExecutor"] = function()
       for _, system in pairs(systems) do      
          local step = system.Step
          if system.Update then
-            if step == 'task' then
+            if step == "task" then
                table.insert(updateTask, system)
                
-            elseif step == 'process' then
+            elseif step == "process" then
                table.insert(updateProcess, system) 
    
-            elseif step == 'transform' then
+            elseif step == "transform" then
                table.insert(updateTransform, system)
    
-            elseif step == 'render' then
+            elseif step == "render" then
                table.insert(updateRender, system)
    
             end
          end
    
-         if (system.Query and system.Query.isQuery and step ~= 'task') then
+         if (system.Query and system.Query.isQuery and step ~= "task") then
             if system.OnExit then
                table.insert(onExit, system)
             end
@@ -2576,7 +2666,6 @@ __F__["Timer"] = function()
    
       if frequency ~= safeFrequency then
          frequency = safeFrequency
-         print(string.format(">>> ATTENTION! The execution frequency of world has been changed to %d <<<", safeFrequency))
       end
    
       self.Frequency = frequency
@@ -2597,7 +2686,7 @@ __F__["Timer"] = function()
       Time.Now = now
       Time.NowReal = nowReal
    
-      if step == 'process' then
+      if step == "process" then
          local processOldTmp = Time.Process
    
          -- first step, initialize current frame time
@@ -2635,8 +2724,6 @@ __F__["Timer"] = function()
          -- Fixed time is updated in regular intervals (equal to DeltaFixed) until time property is reached.
          while (Time.Process <= Time.Frame and nLoops < MAX_SKIP_FRAMES) do
    
-            -- debugF('Update')
-   
             updated = true
    
             callback(Time)
@@ -2659,7 +2746,7 @@ __F__["Timer"] = function()
    
          callback(Time)
    
-         if step == 'render' then
+         if step == "render" then
             -- last step, save last frame time
             self.LastFrame = Time.Frame
          end      
@@ -2907,10 +2994,10 @@ __F__["World"] = function()
       ]]
       
       self._timer:Update(now, step, function(Time)
-         if step == 'process' then
+         if step == "process" then
             self._executor:ScheduleTasks(Time)
             self._executor:ExecProcess(Time)
-         elseif step == 'transform' then
+         elseif step == "transform" then
             self._executor:ExecTransform(Time)
          else
             self._executor:ExecRender(Time)

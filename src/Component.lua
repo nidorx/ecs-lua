@@ -25,12 +25,15 @@ local function createComponentClass(initializer, superClass)
    if superClass == nil then
       superClass = ComponentClass
       superClass._Qualifiers = { ["Primary"] = ComponentClass }
+      superClass._QualifiersArr = { ComponentClass }
       superClass._Initializers = {}
    else
+      superClass.HasQualifier = true
       ComponentClass.IsQualifier = true
    end
 
    local Qualifiers = superClass._Qualifiers
+   local QualifiersArr = superClass._QualifiersArr
 
    setmetatable(ComponentClass, {
       __call = function(t, value)
@@ -80,7 +83,7 @@ local function createComponentClass(initializer, superClass)
    ]]
    function ComponentClass.Qualifier(qualifier)
       if type(qualifier) ~= "string" then
-         for _, qualifiedClass in pairs(Qualifiers) do
+         for _, qualifiedClass in ipairs(QualifiersArr) do
             if qualifiedClass == qualifier then
                return qualifier
             end
@@ -92,6 +95,7 @@ local function createComponentClass(initializer, superClass)
       if qualifiedClass == nil then
          qualifiedClass = createComponentClass(initializer, superClass)
          Qualifiers[qualifier] = qualifiedClass
+         table.insert(QualifiersArr, qualifiedClass)
       end
       return qualifiedClass
    end
@@ -103,15 +107,11 @@ local function createComponentClass(initializer, superClass)
       @return ComponentClass[]
    ]]
    function ComponentClass.Qualifiers(...)
-      
-      local qualifiers = {}
-
       local filter = {...}
       if #filter == 0 then
-         for _, qualifiedClass in pairs(Qualifiers) do
-            table.insert(qualifiers, qualifiedClass)
-         end
+         return QualifiersArr
       else
+         local qualifiers = {}
          local cTypes = {}
          for _,qualifier in ipairs({...}) do
             local qualifiedClass = ComponentClass.Qualifier(qualifier)
@@ -120,9 +120,8 @@ local function createComponentClass(initializer, superClass)
                table.insert(qualifiers, qualifiedClass)
             end
          end
+         return qualifiers      
       end
-
-      return qualifiers      
    end
 
    --[[
@@ -197,63 +196,80 @@ local function createComponentClass(initializer, superClass)
    end
 
    --[[
+      Unlink this component with the other qualifiers
+   ]]
+   function ComponentClass:Detach()
+      if not superClass.HasQualifier then
+         return
+      end
+
+      -- remove old unlink
+      self._qualifiers[ComponentClass] = nil
+
+      -- new link
+      self._qualifiers = { [ComponentClass] = self }
+   end
+
+   --[[
       Merges data from the other component into the current component. This method should not be invoked, it is used
       by the entity to ensure correct retrieval of a component's qualifiers.
 
       @param other {Component}
    ]]
    function ComponentClass:Merge(other)
-      if self == other then
-         return
-      end
-
-      if self._qualifiers == other._qualifiers then
-         return
-      end
-
-      if not other:Is(superClass) then
-         return
-      end
-
-      local selfClass = ComponentClass
-      local otherClass = other:GetType()
-
-      -- does anyone know the reference to the primary entity?
-      local primaryQualifiers
-      if selfClass == superClass then
-         primaryQualifiers = self._qualifiers
-      elseif otherClass == superClass then
-         primaryQualifiers = other._qualifiers
-      elseif self._qualifiers[superClass] ~= nil then
-         primaryQualifiers = self._qualifiers[superClass]._qualifiers
-      elseif other._qualifiers[superClass] ~= nil then
-         primaryQualifiers = other._qualifiers[superClass]._qualifiers
-      end
-
-      if primaryQualifiers ~= nil then
-         if self._qualifiers ~= primaryQualifiers then
-            for qualifiedClass, component in pairs(self._qualifiers) do
-               if superClass ~= qualifiedClass then
-                  primaryQualifiers[qualifiedClass] = component
-                  component._qualifiers = primaryQualifiers
+      if superClass.HasQualifier then
+         if self == other then
+            return
+         end
+   
+         if self._qualifiers == other._qualifiers then
+            return
+         end
+   
+         if not other:Is(superClass) then
+            return
+         end
+   
+         local selfClass = ComponentClass
+         local otherClass = other:GetType()
+   
+         -- does anyone know the reference to the primary entity?
+         local primaryQualifiers
+         if selfClass == superClass then
+            primaryQualifiers = self._qualifiers
+         elseif otherClass == superClass then
+            primaryQualifiers = other._qualifiers
+         elseif self._qualifiers[superClass] ~= nil then
+            primaryQualifiers = self._qualifiers[superClass]._qualifiers
+         elseif other._qualifiers[superClass] ~= nil then
+            primaryQualifiers = other._qualifiers[superClass]._qualifiers
+         end
+   
+         if primaryQualifiers ~= nil then
+            if self._qualifiers ~= primaryQualifiers then
+               for qualifiedClass, component in pairs(self._qualifiers) do
+                  if superClass ~= qualifiedClass then
+                     primaryQualifiers[qualifiedClass] = component
+                     component._qualifiers = primaryQualifiers
+                  end
                end
             end
-         end
-
-         if other._qualifiers ~= primaryQualifiers then
+   
+            if other._qualifiers ~= primaryQualifiers then
+               for qualifiedClass, component in pairs(other._qualifiers) do
+                  if superClass ~= qualifiedClass then
+                     primaryQualifiers[qualifiedClass] = component
+                     component._qualifiers = primaryQualifiers
+                  end
+               end
+            end
+         else
+            -- none of the instances know the Primary, use the current object reference
             for qualifiedClass, component in pairs(other._qualifiers) do
-               if superClass ~= qualifiedClass then
-                  primaryQualifiers[qualifiedClass] = component
-                  component._qualifiers = primaryQualifiers
+               if selfClass ~= qualifiedClass then
+                  self._qualifiers[qualifiedClass] = component
+                  component._qualifiers = self._qualifiers
                end
-            end
-         end
-      else
-         -- none of the instances know the Primary, use the current object reference
-         for qualifiedClass, component in pairs(other._qualifiers) do
-            if selfClass ~= qualifiedClass then
-               self._qualifiers[qualifiedClass] = component
-               component._qualifiers = self._qualifiers
             end
          end
       end

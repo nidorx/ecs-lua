@@ -392,3 +392,177 @@ function TestEntity:test_RawSet()
    lu.assertEquals(entity[Object], "XPTO")
    lu.assertEquals(entity.archetype, Archetype.EMPTY)
 end
+
+function TestEntity:test_Qualifiers()
+
+   local event = Event.New()
+
+   local HealthBuff = Component.Create({ percent = 0 })
+   local HealthBuffLevel = HealthBuff.Qualifier("Level")
+   local HealthBuffMission = HealthBuff.Qualifier("Mission")
+   local OtherComp = Component.Create({ value = 0 })
+
+
+   local function doTest(instanciate)
+
+      local entity = Entity.New(event)
+      
+      local buff, buffLevel, buffMission, other = instanciate(entity)
+
+      lu.assertItemsEquals(entity:GetAll(HealthBuff), {buff, buffLevel, buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffLevel), {buff, buffLevel, buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffMission), {buff, buffLevel, buffMission})
+      lu.assertItemsEquals(entity:GetAll(OtherComp), {other})
+      lu.assertItemsEquals(entity:GetAll(), {other, buff, buffLevel, buffMission})
+
+
+      -- get primary
+      lu.assertEquals(buff:Primary(), buff)
+      lu.assertEquals(buffLevel:Primary(), buff)
+      lu.assertEquals(buffMission:Primary(), buff)
+
+      -- get qualified
+      lu.assertEquals(buff:Qualified("Primary"), buff)
+      lu.assertEquals(buffLevel:Qualified("Primary"), buff)
+      lu.assertEquals(buffMission:Qualified("Primary"), buff)
+
+      lu.assertEquals(buff:Qualified("Level"), buffLevel)
+      lu.assertEquals(buffLevel:Qualified("Level"), buffLevel)
+      lu.assertEquals(buffMission:Qualified("Level"), buffLevel)
+
+      lu.assertEquals(buff:Qualified("Mission"), buffMission)
+      lu.assertEquals(buffLevel:Qualified("Mission"), buffMission)
+      lu.assertEquals(buffMission:Qualified("Mission"), buffMission)
+
+      -- all
+      lu.assertEquals(buff:QualifiedAll(), {
+         ["Primary"] = buff, ["Level"] = buffLevel, ["Mission"] = buffMission
+      })
+      lu.assertEquals(buffLevel:QualifiedAll(), {
+         ["Primary"] = buff, ["Level"] = buffLevel, ["Mission"] = buffMission
+      })
+      lu.assertEquals(buffMission:QualifiedAll(), {
+         ["Primary"] = buff, ["Level"] = buffLevel, ["Mission"] = buffMission
+      })
+      
+      -- unset
+      entity[HealthBuffLevel] = nil
+      lu.assertItemsEquals(entity:GetAll(HealthBuff), {buff, buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffLevel), {buff, buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffMission), {buff, buffMission})
+      lu.assertItemsEquals(entity:GetAll(OtherComp), {other})
+      lu.assertItemsEquals(entity:GetAll(), {other, buff, buffMission})
+      lu.assertEquals(buff:QualifiedAll(), {
+         ["Primary"] = buff, ["Mission"] = buffMission
+      })
+      lu.assertEquals(buffLevel:QualifiedAll(), {
+         ["Level"] = buffLevel
+      })
+      lu.assertEquals(buffMission:QualifiedAll(), {
+         ["Primary"] = buff, ["Mission"] = buffMission
+      })
+
+      -- unset
+      entity:Unset(HealthBuff)
+      lu.assertItemsEquals(entity:GetAll(HealthBuff), {buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffLevel), {buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffMission), {buffMission})
+      lu.assertItemsEquals(entity:GetAll(OtherComp), {other})
+      lu.assertItemsEquals(entity:GetAll(), {other, buffMission})      
+      lu.assertEquals(buff:QualifiedAll(), {
+         ["Primary"] = buff
+      })
+      lu.assertEquals(buffLevel:QualifiedAll(), {
+         ["Level"] = buffLevel
+      })
+      lu.assertEquals(buffMission:QualifiedAll(), {
+         ["Mission"] = buffMission
+      })
+
+      -- again 
+      local buff, buffLevel, buffMission, other = instanciate(entity)
+       -- all
+       lu.assertEquals(buff:QualifiedAll(), {
+         ["Primary"] = buff, ["Level"] = buffLevel, ["Mission"] = buffMission
+      })
+      lu.assertEquals(buffLevel:QualifiedAll(), {
+         ["Primary"] = buff, ["Level"] = buffLevel, ["Mission"] = buffMission
+      })
+      lu.assertEquals(buffMission:QualifiedAll(), {
+         ["Primary"] = buff, ["Level"] = buffLevel, ["Mission"] = buffMission
+      })
+      
+      -- unset
+      entity[HealthBuffLevel] = nil
+      lu.assertItemsEquals(entity:GetAll(HealthBuff), {buff, buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffLevel), {buff, buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffMission), {buff, buffMission})
+      lu.assertItemsEquals(entity:GetAll(OtherComp), {other})
+      lu.assertItemsEquals(entity:GetAll(), {other, buff, buffMission})
+      lu.assertEquals(buff:QualifiedAll(), {
+         ["Primary"] = buff, ["Mission"] = buffMission
+      })
+      lu.assertEquals(buffLevel:QualifiedAll(), {
+         ["Level"] = buffLevel
+      })
+      lu.assertEquals(buffMission:QualifiedAll(), {
+         ["Primary"] = buff, ["Mission"] = buffMission
+      })
+
+      -- unset
+      entity:Unset(HealthBuff)
+      lu.assertItemsEquals(entity:GetAll(HealthBuff), {buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffLevel), {buffMission})
+      lu.assertItemsEquals(entity:GetAll(HealthBuffMission), {buffMission})
+      lu.assertItemsEquals(entity:GetAll(OtherComp), {other})
+      lu.assertItemsEquals(entity:GetAll(), {other, buffMission})      
+      lu.assertEquals(buff:QualifiedAll(), {
+         ["Primary"] = buff
+      })
+      lu.assertEquals(buffLevel:QualifiedAll(), {
+         ["Level"] = buffLevel
+      })
+      lu.assertEquals(buffMission:QualifiedAll(), {
+         ["Mission"] = buffMission
+      })
+   end
+
+   doTest(function(entity)
+      local buff = HealthBuff()
+      local buffLevel = HealthBuffLevel()
+      local buffMission = HealthBuffMission()
+      local other = OtherComp()
+
+      entity:Set(buff)
+      entity:Set(buffLevel)
+      entity:Set(buffMission)
+      entity:Set(other)
+
+      return buff, buffLevel, buffMission, other
+   end)
+
+   doTest(function(entity)
+      local buff = HealthBuff()
+      local buffLevel = HealthBuffLevel()
+      local buffMission = HealthBuffMission()
+      local other = OtherComp()
+
+      entity[HealthBuff] = buff
+      entity[HealthBuffLevel] = buffLevel
+      entity[HealthBuffMission] = buffMission
+      entity[OtherComp] = other
+
+      return buff, buffLevel, buffMission, other
+   end)
+
+   doTest(function(entity)
+
+      entity[HealthBuff] = {}
+      entity[HealthBuffLevel] = {}
+      entity[HealthBuffMission] = {}
+      entity[OtherComp] = {}
+
+      return entity[HealthBuff], entity[HealthBuffLevel] , entity[HealthBuffMission], entity[OtherComp]
+   end)
+   
+end

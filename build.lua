@@ -23,12 +23,11 @@ local SRC_FILES = {
 }
 
 local HEADER = [[
-	ECS-Lua v2.0.0 [2021-10-02 17:25]
+	ECS Lua v2.0.0 [2021-10-14 18:00]
 
-	ECS-Lua is a tiny and easy to use ECS (Entity Component System) engine for
-	game development
+	ECS Lua is a lua ECS (Entity Component System) library used for game developments.
 
-	This is a minified version of ECS-Lua, to see the full source code visit
+	This is a minified version of ECS Lua, to see the full source code visit
 	https://github.com/nidorx/ecs-lua
 
 	------------------------------------------------------------------------------

@@ -41,6 +41,31 @@ local function getComponent(entity, ...)
 end
 
 --[[
+   Merges the qualifiers of a new added component.
+
+   @param entity {Entity}
+   @param newComponent {Component}
+   @param newComponentClass {ComponentClass}
+]]
+local function mergeComponents(entity, newComponent, newComponentClass)
+   local data = entity._data
+   local otherComponent
+   -- get first instance
+   for _,oCType in ipairs(newComponentClass.Qualifiers()) do
+      if oCType ~= newComponentClass then
+         otherComponent = data[oCType]
+         if otherComponent then
+            break
+         end
+      end
+   end
+
+   if otherComponent then
+      otherComponent:Merge(newComponent)
+   end
+end
+
+--[[
    [SET]
    01) entity[CompType1] = nil
    02) entity[CompType1] = value
@@ -56,34 +81,76 @@ local function setComponent(entity, ...)
    local archetypeOld = entity.archetype
    local archetypeNew = archetypeOld
 
+   local toMerge = {}
+
    local cType = values[1]   
-   if (cType and cType.IsCType and not cType.isComponent) then 
+   if (cType and cType.IsCType and not cType.isComponent) then
       local value = values[2]
+      local component
       -- 01) entity[CompType1] = nil
       -- 02) entity[CompType1] = value
       -- 03) entity:Set(CompType1, nil)   
       -- 04) entity:Set(CompType1, value)
       if value == nil then
+         local old = data[cType]
+         if old then
+            old:Detach()
+         end
+
          data[cType] = nil
          archetypeNew = archetypeNew:Without(cType)
 
       elseif value.isComponent then
-         cType = value:GetType()                     
-         data[cType] = value
+         local old = data[cType]         
+         if (old ~= value) then
+            if old then
+               old:Detach()
+            end
+
+            cType = value:GetType()
+            data[cType] = value
+            archetypeNew = archetypeNew:With(cType)
+
+            -- merge components
+            if (cType.HasQualifier or cType.IsQualifier) then
+               mergeComponents(entity, value, cType)
+            end
+         end
+      else
+         local old = data[cType]
+         if old then
+            old:Detach()
+         end
+
+         local component = cType(value)
+         data[cType] = component
          archetypeNew = archetypeNew:With(cType)
 
-      else
-         data[cType] = cType(value)
-         archetypeNew = archetypeNew:With(cType)
+         -- merge components
+         if (cType.HasQualifier or cType.IsQualifier) then
+            mergeComponents(entity, component, cType)
+         end
       end
    else
       -- 05) entity:Set(comp1)
       -- 06) entity:Set(comp1, comp2, ...)
       for i,component in ipairs(values) do
          if (component.isComponent) then
-            local ctype = component:GetType()                     
-            data[ctype] = component
-            archetypeNew = archetypeNew:With(ctype)
+            local cType = component:GetType()       
+            local old = data[cType]
+            if (old ~= component) then
+               if old then
+                  old:Detach()
+               end
+
+               data[cType] = component
+               archetypeNew = archetypeNew:With(cType)
+               
+               -- merge components
+               if (cType.HasQualifier or cType.IsQualifier) then
+                  mergeComponents(entity, component, cType)
+               end
+            end              
          end
       end
    end
@@ -113,6 +180,10 @@ local function unsetComponent(entity, ...)
          -- 01) enity:Unset(comp1)
          -- 04) enity:Unset(comp1, comp1, ...)
          local cType = value:GetType()  
+         local old = data[cType]
+         if old then
+            old:Detach()
+         end
          data[cType] = nil
          archetypeNew = archetypeNew:Without(cType)
          
@@ -120,6 +191,10 @@ local function unsetComponent(entity, ...)
          -- 02) entity[CompType1] = nil
          -- 03) enity:Unset(CompType1)
          -- 05) enity:Unset(CompType1, CompType2, ...)
+         local old = data[value]
+         if old then
+            old:Detach()
+         end
          data[value] = nil
          archetypeNew = archetypeNew:Without(value)
       end

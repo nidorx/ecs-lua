@@ -1,8 +1,7 @@
 --[[
-   ECS-Lua v2.0.0 [2021-10-02 17:25]
+   ECS Lua v2.0.0 [2021-10-14 18:00]
 
-   Roblox-ECS is a tiny and easy to use ECS (Entity Component System) engine for
-   game development on the Roblox platform
+   ECS Lua is a lua ECS (Entity Component System) library used for game developments.
 
    https://github.com/nidorx/ecs-lua
 

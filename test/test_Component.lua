@@ -163,13 +163,13 @@ function TestComponent:test_Should_CreateQualifier()
       lu.assertEquals(buffMission:Qualified("Mission"), buffMission)
 
       -- all
-      lu.assertEquals(buff:QualifiedAll("Mission"), {
+      lu.assertEquals(buff:QualifiedAll(), {
          ["Primary"] = buff, ["Level"] = buffLevel, ["Mission"] = buffMission
       })
-      lu.assertEquals(buffLevel:QualifiedAll("Mission"), {
+      lu.assertEquals(buffLevel:QualifiedAll(), {
          ["Primary"] = buff, ["Level"] = buffLevel, ["Mission"] = buffMission
       })
-      lu.assertEquals(buffMission:QualifiedAll("Mission"), {
+      lu.assertEquals(buffMission:QualifiedAll(), {
          ["Primary"] = buff, ["Level"] = buffLevel, ["Mission"] = buffMission
       })
    end
