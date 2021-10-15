@@ -59,7 +59,7 @@ Alguns termos comuns nos motores ECS são:
 
 <div align=center>
 
-![Arquitetura](../assets/diagram-1-pt-br.svg)
+![Arquitetura](../assets/diagram-1-pt-br.png)
 
 </div>
 

@@ -9,6 +9,8 @@ https://github.com/spacewander/luacov-console
 
 @TODO: https://github.com/moteus/luacov-coveralls
 
+SEE [../CONTRIBUTING]
+
 ```
 lua run-tests.lua -v
 ```

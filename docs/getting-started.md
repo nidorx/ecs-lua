@@ -57,7 +57,7 @@ Some common terms in ECS engines are:
 
 <div align=center>
 
-![Architecture](assets/diagram-1.svg)
+![Architecture](assets/diagram-1.png)
 
 </div>
 

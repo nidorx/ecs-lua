@@ -14,18 +14,27 @@
    position    : relative;
 }
 
-.api-docs > ul > li  {
-   list-style: circle;
+.api-docs>ul>li {
+   list-style   : circle;
    margin-bottom: 1.2em;
 }
 
-.api-docs > ul > li p {
+.api-docs>ul>li p {
    margin: 0;
 }
 
-.api-docs > ul > li > ul > li {
+.api-docs>ul>li>ul>li {
    list-style: none;
 }
+
+main {
+   z-index: 1;
+}
+
+.cover-show {
+   z-index: 0;
+}
+
 
 /* Interactive Logo  */
 /* Source: http://codepen.io/elrumordelaluz/pen/aWavEG */
