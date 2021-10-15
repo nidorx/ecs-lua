@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <strong>ECS Lua</strong> is a lua ECS (Entity Component System) library used for game developments.
+  <strong>ECS Lua</strong> is a fast and easy to use ECS (Entity Component System) engine for game development.
 </p>
 
 **ECS Lua** has no external dependencies and is compatible and tested with [Lua 5.1], [Lua 5.2], [Lua 5.3], [Lua 5.4],
