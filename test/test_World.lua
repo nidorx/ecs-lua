@@ -93,7 +93,6 @@ function TestWorld:test_SystemWhitoutQuery()
    function System_B:OnDestroy()
       calledOnDestroy = calledOnDestroy + 1
    end
-
    
    local world = World.New({System_B}, 60)
    world:AddSystem(System_A, systemConfig)

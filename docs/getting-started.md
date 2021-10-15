@@ -98,9 +98,9 @@ frame, in the world's `process` step.
 To create a system, we use the `ECS.System(step, order, query, updateFn)` method. This method receives the following
 parameters:
 - **`step`** String, accepts the values `process`, `transform`, `render` or `task`
-- **`order`** Number (Optional, default 50), allows you to set an execution order (for systems that are not `task`)
-- **`query`** Query (Optional), filters the entities that will be processed by this system
-- **`updateFn`** Function (Optional), a shortcut for creating systems that only have the Update method
+- **`order`** Number (Optional) Allows you to set an execution order (for systems that are not `task`). Default 50
+- **`query`** Query (Optional) Filters the entities that will be processed by this system
+- **`updateFn`** Function (Optional) A shortcut for creating systems that only have the Update method
 
 We're also going to define a `Query`, which is the query we'll use to get just the entities we're interested.
 
@@ -185,11 +185,10 @@ have multiple worlds running at the same time and enable or disable them as need
 
 Creating a world is done by the `ECS.World(systemClasses, frequency, disableAutoUpdate)` method, where:
 
-- **systemClasses** Array of system classes (Optional)
-- **frequency** Number (Optional, default 30), allows you to define the frequency that the `process` step will be 
-executed in the world.
-- **disableAutoUpdate** Bool (Optional, default false), when `~= false`, the world automatically registers in the 
-`LoopManager`, receiving the `World:Update()` method from it.
+- **systemClasses** (optional) Array of system classes 
+- **frequency** Number (optional) Define the frequency that the `process` step will be executed. Default 30
+- **disableAutoUpdate** Bool (optional) When `~= false`, the world automatically registers in the 
+`LoopManager`, receiving the `World:Update()` method from it. Default false
 
 Let's start creating our world:
 

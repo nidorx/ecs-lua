@@ -35,6 +35,9 @@
       end
 ]]
 
+
+local Query = require("Query")
+
 --[[
    Filter used in Query and QueryResult
 
@@ -42,7 +45,7 @@
 
    Ex. ECS.Query.All(Movement.In("Standing", "Walking"))
 ]]
-local function queryFilterCTypeStateIn(entity, config)
+local queryFilterCTypeStateIn = Query.Filter(function(entity, config)
    local states = config.States
    local isSuperClass = config.IsSuperClass
    local componentClass = config.ComponentClass
@@ -63,7 +66,7 @@ local function queryFilterCTypeStateIn(entity, config)
       end
       return states[component:GetState()] == true
    end
-end
+end)
 
 local ComponentFSM = {}
 
@@ -116,6 +119,8 @@ function ComponentFSM.AddCapability(superClass, states)
    end)
 end
 
+
+
 --[[
    Adds FSM state change methods to a ComponentClass
 
@@ -123,6 +128,8 @@ end
    @param componentClass {ComponentClass}
 ]]
 function ComponentFSM.AddMethods(superClass, componentClass)
+
+   componentClass.IsFSM = true
    local cTypeStates = superClass.States
 
    --[[
@@ -146,20 +153,14 @@ function ComponentFSM.AddMethods(superClass, componentClass)
 
       if count == 0 then
          -- In any state
-         return {
-            Components = {componentClass},
-         }
+         return {}
       end
-      
-      return {
-         Filter = queryFilterCTypeStateIn,
-         Components = { componentClass },
-         Config = {
-            States = states,
-            IsSuperClass = (componentClass == superClass),
-            ComponentClass = componentClass, 
-         }
-      }
+
+      return queryFilterCTypeStateIn({
+         States = states,
+         IsSuperClass = (componentClass == superClass),
+         ComponentClass = componentClass, 
+      })
    end   
 
    --[[

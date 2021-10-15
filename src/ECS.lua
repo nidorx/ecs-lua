@@ -1,7 +1,7 @@
 --[[
-   ECS Lua v2.0.0 [2021-10-14 18:00]
+   ECS Lua v2.1.0 [2021-10-15 11:00]
 
-   ECS Lua is a lua ECS (Entity Component System) library used for game developments.
+   ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
 
    https://github.com/nidorx/ecs-lua
 
@@ -51,20 +51,19 @@ end)
 
 --[[
   @TODO
-      - Serialize componentes
-      - Server entities
-      - Client - Server sincronization (snapshot, delta, spatial index, grid manhatham distance)
-      - Table pool (avoid GC)
-      - System readonly? Paralel execution
-      - Debugging?
-      - Benchmark (Local Script vs ECS implementation)
-      - Basic physics (managed)
-      - SharedComponent?
-      - Serializaton
-         - world:Serialize()
-         - world:Serialize(entity)
-         - entity:Serialize()
-         - component:Serialize()
+   - Server entities
+   - Client - Server sincronization (snapshot, delta, spatial index, grid manhatham distance)
+   - Table pool (avoid GC)
+   - System readonly? Paralel execution
+   - Debugging?
+   - Benchmark (Local Script vs ECS implementation)
+   - Basic physics (managed)
+   - SharedComponent?
+   - Serializaton
+      - world:Serialize()
+      - world:Serialize(entity)
+      - entity:Serialize()
+      - component:Serialize()
 ]]
 local ECS = {
    Query = Query,

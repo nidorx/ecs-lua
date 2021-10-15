@@ -1,5 +1,7 @@
 local lu = require('luaunit')
 
+local World = require('World')
+local Query = require('Query')
 local System = require('System')
 local SystemExecutor = require('SystemExecutor')
 
@@ -13,7 +15,9 @@ function TestSystemExecutor:test_ExecProcessTransformRender()
    }
 
    for step, method in pairs(steps) do      
-      local world = { version = 10 }   
+      local world = World.New()   
+      world.version = 10
+
       local log = {}
    
       local system1 = {
@@ -59,6 +63,8 @@ function TestSystemExecutor:test_ExecProcessTransformRender()
       lu.assertEquals(system1.version, 11)  
       lu.assertEquals(system2.version, 0)  
       lu.assertEquals(system3.version, 12)  
+
+      world:Destroy()
    end
 end
 
@@ -113,7 +119,8 @@ function TestSystemExecutor:test_ExecTasks()
       transform = 'ExecTransform'
    }
 
-   local world = { version = 10 }   
+   local world = World.New()   
+   world.version = 10
    local log = {}
    local logBeforeYield = {}
    local logAfterYield = {}
@@ -215,10 +222,13 @@ function TestSystemExecutor:test_ExecTasks()
    lu.assertEquals(log, {'B','D','G','A','C','E','F','H'}) 
    lu.assertEquals(logBeforeYield, {1000, 2000, 3000, 4000})  
    lu.assertEquals(logAfterYield, {1001, 2001, 3001, 4001})   
+
+   world:Destroy()
 end
 
 function TestSystemExecutor:test_ExecOnEnter()
-   local world = { version = 10 }   
+   local world = World.New()   
+   world.version = 10   
       
    local changedEntities = {
       [{id = 1, archetype='Arch_1'}] = 'Arch_0',
@@ -281,8 +291,6 @@ function TestSystemExecutor:test_ExecOnEnter()
 
    local executor = SystemExecutor.New(world, {systemArch1, systemNoQuery, systemArch3})   
 
-   
-
    executor:ExecOnExitEnter({}, changedEntities)
    lu.assertEquals(log, logExpected)  
    lu.assertEquals(systemArch1.version, 12)  
@@ -304,10 +312,13 @@ function TestSystemExecutor:test_ExecOnEnter()
    lu.assertEquals(systemNoQuery.version, 0)  
    lu.assertEquals(systemArch3.version, 18)  
    lu.assertEquals(world.version, 18)
+
+   world:Destroy()
 end
 
 function TestSystemExecutor:test_ExecOnExit()
-   local world = { version = 10 }   
+   local world = World.New()   
+   world.version = 10  
       
    local changedEntities = {
       [{id = 1, archetype='Arch_1'}] = 'Arch_0',
@@ -391,10 +402,13 @@ function TestSystemExecutor:test_ExecOnExit()
    lu.assertEquals(systemNoQuery.version, 0)  
    lu.assertEquals(systemArch3.version, 18)  
    lu.assertEquals(world.version, 18)
+
+   world:Destroy()
 end
 
 function TestSystemExecutor:test_ExecOnRemove()
-   local world = { version = 10 }   
+   local world = World.New()   
+   world.version = 10  
       
    local removedEntities = {
       [{id = 1, archetype='Arch_1'}] = 'Arch_0',
@@ -478,4 +492,6 @@ function TestSystemExecutor:test_ExecOnRemove()
    lu.assertEquals(systemNoQuery.version, 0)  
    lu.assertEquals(systemArch3.version, 18)  
    lu.assertEquals(world.version, 18)
+
+   world:Destroy()
 end

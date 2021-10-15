@@ -8,7 +8,7 @@ local CACHE_WITHOUT = {}
 local Version = 0
 
 --[[
-   An Archetype is a unique combination of component types. The EntityManager uses the archetype to group all 
+   An Archetype is a unique combination of component types. The EntityRepository uses the archetype to group all 
    entities that have the same sets of components.
 
    An entity can change archetype fluidly over its lifespan. For example, when you add or remove components, 
@@ -20,7 +20,7 @@ local Version = 0
    You can create archetypes directly using ECS.Archetype.Of(Components[]). You also implicitly create archetypes 
    whenever you add or remove a component from an entity. An Archetype object is an immutable singleton; 
    creating an archetype with the same set of components, either directly or implicitly, results in the same 
-   archetype for a given EntityManager.
+   archetype.
 
    The ECS framework uses archetypes to group entities that have the same structure together. The ECS framework stores 
    component data in blocks of memory called chunks. A given chunk stores only entities having the same archetype. 
@@ -83,20 +83,17 @@ end
 --[[
    Checks whether this archetype has the informed component
 
-   @param componentClasses {ComponentClass}
+   @param componentClass {ComponentClass}
    @return bool
 ]]
 function Archetype:Has(componentClass)
-   -- for ct,_ in pairs(self._components) do
-   --    print(ct.Id, component.Id)
-   -- end
    return (self._components[componentClass] == true)
 end
 
 --[[
    Gets the reference to an archetype that has the current components + the informed component
 
-   @param componentClasses {ComponentClass}
+   @param componentClass {ComponentClass}
    @return Archetype
 ]]
 function Archetype:With(componentClass)

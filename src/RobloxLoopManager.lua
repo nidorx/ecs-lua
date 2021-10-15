@@ -1,29 +1,32 @@
 local function InitManager()
    local RunService = game:GetService("RunService")
+   
    return {
       Register = function(world)         
          -- if not RunService:IsRunning() then
          --    return
          -- end
-         local processConn = RunService.Stepped:Connect(function()
+         local beforePhysics = RunService.Stepped:Connect(function()
             world:Update("process", os.clock())
          end)
    
-         local transformConn = RunService.Heartbeat:Connect(function()
+         local afterPhysics = RunService.Heartbeat:Connect(function()
             world:Update("transform", os.clock())
          end)
    
-         local renderConn
+         local beforeRender
          if (not RunService:IsServer()) then
-            renderConn = RunService.RenderStepped:Connect(function()
+            beforeRender = RunService.RenderStepped:Connect(function()
                world:Update("render", os.clock())
             end)
          end
    
          return function()
-            processConn:Disconnect()
-            processConn:Disconnect()
-            processConn:Disconnect()
+            beforePhysics:Disconnect()
+            afterPhysics:Disconnect()
+            if beforeRender then
+               beforeRender:Disconnect()
+            end
          end
       end
    }

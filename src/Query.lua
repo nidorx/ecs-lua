@@ -42,17 +42,6 @@ local function parseFilters(list, clauseGroup, clauses)
             table.insert(cTypes, item)
             table.insert(cTypeIds, item.Id)
          else
-            if item.Components then
-               indexed[item] = true   
-               for _,cType in ipairs(item.Components) do
-                  if (not indexed[cType] and cType.IsCType and not cType.isComponent) then
-                     indexed[cType] = true
-                     table.insert(cTypes, cType)
-                     table.insert(cTypeIds, item.Id)
-                  end
-               end
-            end   
-
             -- clauses
             if item.Filter then
                indexed[item] = true
@@ -71,14 +60,12 @@ local function parseFilters(list, clauseGroup, clauses)
 end
 
 --[[
-   Generate a function responsible for performing the filter on a list of components.
-   It makes use of local and global cache in order to decrease the validation time (avoids looping in runtime of systems)
+   Create a new Query used to filter entities in the world. It makes use of local and global cache in order to 
+   decrease the validation time (avoids looping in runtime of systems)
 
-   ECS.Query.All(Movement.In("Standing"))
-
-   @param all {Array<ComponentClass|Clause>[]} All component types in this array must exist in the archetype
-   @param any {Array<ComponentClass|Clause>[]} At least one of the component types in this array must exist in the archetype
-   @param none {Array<ComponentClass|Clause>[]} None of the component types in this array can exist in the archetype
+   @param all {Array<ComponentClass|Clause>} Optional All component types in this array must exist in the archetype
+   @param any {Array<ComponentClass|Clause>} Optional At least one of the component types in this array must exist in the archetype
+   @param none {Array<ComponentClass|Clause>} Optional None of the component types in this array can exist in the archetype
 ]]
 function Query.New(all, any, none)
 
@@ -108,7 +95,7 @@ function Query.New(all, any, none)
       _allKey = allKey,
       _noneKey = noneKey,
       _cache = {}, -- local cache (L1)
-      _clauses = #clauses > 0 and clauses or nil,
+      _clauses = #clauses > 0 and clauses or nil
    }, Query)
 end
 
@@ -119,6 +106,7 @@ end
    @return QueryResult
 ]]
 function Query:Result(chunks)
+   self._lastResultChunks = chunks
    return QueryResult.New(chunks, self._clauses)
 end
 
@@ -226,24 +214,31 @@ local function builder()
    local builder = {
       isQueryBuilder = true
    }
+   local query
 
    function builder.All(...)
+      query = nil
       builder._all = {...}
       return builder
    end
    
    function builder.Any(...)
+      query = nil
       builder._any = {...}
       return builder
    end
    
    function builder.None(...)
+      query = nil
       builder._none = {...}
       return builder
    end
 
    function builder.Build()
-      return Query.New(builder._all, builder._any, builder._none)
+      if query == nil then
+         query = Query.New(builder._all, builder._any, builder._none)
+      end
+      return query
    end
 
    return builder
@@ -259,6 +254,62 @@ end
 
 function Query.None(...)
    return builder().None(...)
+end
+
+--[[
+   Create custom filters that can be used in Queries. Its execution is delayed, invoked only in QueryResult methods
+
+   The result of executing the clause depends on how it was used in the query.
+
+   Ex. If used in Query.All() the result is the inverse of using the same clause in Query.None()
+
+      local Player = ECS.Component({ health = 100 })
+
+      local HealthPlayerFilter = ECS.Query.Filter(function(entity, config)
+         local player = entity[Player]
+         return player.health >= config.minHealth and player.health <= config.maxHealth
+      end)
+
+      local healthyClause = HealthPlayerFilter({
+         minHealth = 80,
+         maxHealth = 100,
+      })
+
+      local healthyQuery = ECS.Query.All(Player, healthyClause)
+      world:Exec(healthyQuery):ForEach(function(entity)
+         -- this player is very healthy
+      end)
+
+      local notHealthyQuery = ECS.Query.All(Player).None(healthyClause)
+      world:Exec(healthyQuery):ForEach(function(entity)
+         -- this player is NOT very healthy
+      end)
+
+      local dyingClause = HealthPlayerClause({
+         minHealth = 1,
+         maxHealth = 20,
+      })
+
+      local dyingQuery = ECS.Query.All(Player, dyingClause)
+      world:Exec(dyingQuery):ForEach(function(entity)
+         -- this player is about to die
+      end)
+
+      local notDyingQuery = ECS.Query.All(Player).None(dyingClause)
+      world:Exec(notDyingQuery):ForEach(function(entity)
+         -- this player is NOT about to die
+      end)
+
+   @param filter {function(entity, config):bool} 
+   @return function(config):Clause
+]]
+function Query.Filter(filter)
+   return function (config)
+      return {
+         Filter = filter,
+         Config = config
+      }
+   end
 end
 
 return Query

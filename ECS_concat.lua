@@ -1,10 +1,12 @@
 --[[
-	ECS Lua v2.0.0 [2021-10-14 18:00]
+	ECS Lua v2.1.0 [2021-10-15 11:00]
 
-	ECS Lua is a lua ECS (Entity Component System) library used for game developments.
+	ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
 
 	This is a minified version of ECS Lua, to see the full source code visit
 	https://github.com/nidorx/ecs-lua
+
+   Discussions about this script are at https://devforum.roblox.com/t/841175
 
 	------------------------------------------------------------------------------
 
@@ -51,7 +53,7 @@ __F__["Archetype"] = function()
    local Version = 0
    
    --[[
-      An Archetype is a unique combination of component types. The EntityManager uses the archetype to group all 
+      An Archetype is a unique combination of component types. The EntityRepository uses the archetype to group all 
       entities that have the same sets of components.
    
       An entity can change archetype fluidly over its lifespan. For example, when you add or remove components, 
@@ -63,7 +65,7 @@ __F__["Archetype"] = function()
       You can create archetypes directly using ECS.Archetype.Of(Components[]). You also implicitly create archetypes 
       whenever you add or remove a component from an entity. An Archetype object is an immutable singleton; 
       creating an archetype with the same set of components, either directly or implicitly, results in the same 
-      archetype for a given EntityManager.
+      archetype.
    
       The ECS framework uses archetypes to group entities that have the same structure together. The ECS framework stores 
       component data in blocks of memory called chunks. A given chunk stores only entities having the same archetype. 
@@ -126,20 +128,17 @@ __F__["Archetype"] = function()
    --[[
       Checks whether this archetype has the informed component
    
-      @param componentClasses {ComponentClass}
+      @param componentClass {ComponentClass}
       @return bool
    ]]
    function Archetype:Has(componentClass)
-      -- for ct,_ in pairs(self._components) do
-      --    print(ct.Id, component.Id)
-      -- end
       return (self._components[componentClass] == true)
    end
    
    --[[
       Gets the reference to an archetype that has the current components + the informed component
    
-      @param componentClasses {ComponentClass}
+      @param componentClass {ComponentClass}
       @return Archetype
    ]]
    function Archetype:With(componentClass)
@@ -286,6 +285,7 @@ __F__["Component"] = function()
       else
          superClass.HasQualifier = true
          ComponentClass.IsQualifier = true
+         ComponentClass.HasQualifier = true
       end
    
       local Qualifiers = superClass._Qualifiers
@@ -359,7 +359,7 @@ __F__["Component"] = function()
       --[[
          Get all qualified class
    
-         @param ... {string|ComponentClass} (Optional) filter 
+         @param ... {string|ComponentClass} (Optional) Allows to filter the specific qualifiers
          @return ComponentClass[]
       ]]
       function ComponentClass.Qualifiers(...)
@@ -413,10 +413,11 @@ __F__["Component"] = function()
       --[[
          Check if this component is of the type informed
    
+         @param componentClass {ComponentClass}
          @return bool
       ]]
-      function ComponentClass:Is(cType)
-         return cType == ComponentClass or cType == superClass
+      function ComponentClass:Is(componentClass)
+         return componentClass == ComponentClass or componentClass == superClass
       end
    
       --[[
@@ -449,21 +450,6 @@ __F__["Component"] = function()
             qualifiedAll[name] = self._qualifiers[qualifiedClass]
          end
          return qualifiedAll
-      end
-   
-      --[[
-         Unlink this component with the other qualifiers
-      ]]
-      function ComponentClass:Detach()
-         if not superClass.HasQualifier then
-            return
-         end
-   
-         -- remove old unlink
-         self._qualifiers[ComponentClass] = nil
-   
-         -- new link
-         self._qualifiers = { [ComponentClass] = self }
       end
    
       --[[
@@ -529,7 +515,21 @@ __F__["Component"] = function()
                end
             end
          end
+      end
    
+      --[[
+         Unlink this component with the other qualifiers
+      ]]
+      function ComponentClass:Detach()
+         if not superClass.HasQualifier then
+            return
+         end
+   
+         -- remove old unlink
+         self._qualifiers[ComponentClass] = nil
+   
+         -- new link
+         self._qualifiers = { [ComponentClass] = self }
       end
    
       return ComponentClass
@@ -545,9 +545,14 @@ __F__["Component"] = function()
    local Component = {}
    
    --[[
-      Register a new component
+      Register a new ComponentClass
    
-      @param template {table|function(table?) -> table}
+      @param template {table|function(table?) -> table} 
+         When `table`, this template will be used for creating component instances
+         When it's a `function`, it will be invoked when a new component is instantiated. The creation parameter of the 
+            component is passed to template function
+         If the template type is different from `table` and `function`, **ECS Lua** will generate a template in the format 
+            `{ value = template }`.
       @return ComponentClass  
    ]]
    function Component.Create(template)
@@ -619,6 +624,9 @@ __F__["ComponentFSM"] = function()
          end
    ]]
    
+   
+   local Query = __REQUIRE__("Query")
+   
    --[[
       Filter used in Query and QueryResult
    
@@ -626,7 +634,7 @@ __F__["ComponentFSM"] = function()
    
       Ex. ECS.Query.All(Movement.In("Standing", "Walking"))
    ]]
-   local function queryFilterCTypeStateIn(entity, config)
+   local queryFilterCTypeStateIn = Query.Filter(function(entity, config)
       local states = config.States
       local isSuperClass = config.IsSuperClass
       local componentClass = config.ComponentClass
@@ -647,7 +655,7 @@ __F__["ComponentFSM"] = function()
          end
          return states[component:GetState()] == true
       end
-   end
+   end)
    
    local ComponentFSM = {}
    
@@ -700,6 +708,8 @@ __F__["ComponentFSM"] = function()
       end)
    end
    
+   
+   
    --[[
       Adds FSM state change methods to a ComponentClass
    
@@ -707,6 +717,8 @@ __F__["ComponentFSM"] = function()
       @param componentClass {ComponentClass}
    ]]
    function ComponentFSM.AddMethods(superClass, componentClass)
+   
+      componentClass.IsFSM = true
       local cTypeStates = superClass.States
    
       --[[
@@ -730,20 +742,14 @@ __F__["ComponentFSM"] = function()
    
          if count == 0 then
             -- In any state
-            return {
-               Components = {componentClass},
-            }
+            return {}
          end
-         
-         return {
-            Filter = queryFilterCTypeStateIn,
-            Components = { componentClass },
-            Config = {
-               States = states,
-               IsSuperClass = (componentClass == superClass),
-               ComponentClass = componentClass, 
-            }
-         }
+   
+         return queryFilterCTypeStateIn({
+            States = states,
+            IsSuperClass = (componentClass == superClass),
+            ComponentClass = componentClass, 
+         })
       end   
    
       --[[
@@ -812,9 +818,9 @@ end
 __F__["ECS"] = function()
    -- src/ECS.lua
    --[[
-      ECS Lua v2.0.0 [2021-10-14 18:00]
+      ECS Lua v2.1.0 [2021-10-15 11:00]
    
-      ECS Lua is a lua ECS (Entity Component System) library used for game developments.
+      ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
    
       https://github.com/nidorx/ecs-lua
    
@@ -864,20 +870,19 @@ __F__["ECS"] = function()
    
    --[[
      @TODO
-         - Serialize componentes
-         - Server entities
-         - Client - Server sincronization (snapshot, delta, spatial index, grid manhatham distance)
-         - Table pool (avoid GC)
-         - System readonly? Paralel execution
-         - Debugging?
-         - Benchmark (Local Script vs ECS implementation)
-         - Basic physics (managed)
-         - SharedComponent?
-         - Serializaton
-            - world:Serialize()
-            - world:Serialize(entity)
-            - entity:Serialize()
-            - component:Serialize()
+      - Server entities
+      - Client - Server sincronization (snapshot, delta, spatial index, grid manhatham distance)
+      - Table pool (avoid GC)
+      - System readonly? Paralel execution
+      - Debugging?
+      - Benchmark (Local Script vs ECS implementation)
+      - Basic physics (managed)
+      - SharedComponent?
+      - Serializaton
+         - world:Serialize()
+         - world:Serialize(entity)
+         - entity:Serialize()
+         - component:Serialize()
    ]]
    local ECS = {
       Query = Query,
@@ -1194,6 +1199,7 @@ end
 
 __F__["EntityRepository"] = function()
    -- src/EntityRepository.lua
+   local Event = __REQUIRE__("Event")
    
    --[[
       The repository (database) of entities in a world.
@@ -1213,6 +1219,7 @@ __F__["EntityRepository"] = function()
       return setmetatable({
          _archetypes = {},
          _entitiesArchetype = {},
+         
       }, EntityRepository)
    end
    
@@ -1289,7 +1296,22 @@ __F__["EntityRepository"] = function()
             table.insert(chunks, storage.Entities)
          end
       end
-      return query:Result(chunks)
+      return query:Result(chunks), #chunks > 0
+   end
+   
+   --[[
+      Quick check to find out if a query is applicable.
+   
+      @param query {Query}
+      @return bool
+   ]]
+   function EntityRepository:FastCheck(query)
+      for archetype, storage in pairs(self._archetypes) do
+         if query:Match(archetype) then
+            return true
+         end
+      end
+      return false
    end
    
    return EntityRepository
@@ -1406,17 +1428,6 @@ __F__["Query"] = function()
                table.insert(cTypes, item)
                table.insert(cTypeIds, item.Id)
             else
-               if item.Components then
-                  indexed[item] = true   
-                  for _,cType in ipairs(item.Components) do
-                     if (not indexed[cType] and cType.IsCType and not cType.isComponent) then
-                        indexed[cType] = true
-                        table.insert(cTypes, cType)
-                        table.insert(cTypeIds, item.Id)
-                     end
-                  end
-               end   
-   
                -- clauses
                if item.Filter then
                   indexed[item] = true
@@ -1435,14 +1446,12 @@ __F__["Query"] = function()
    end
    
    --[[
-      Generate a function responsible for performing the filter on a list of components.
-      It makes use of local and global cache in order to decrease the validation time (avoids looping in runtime of systems)
+      Create a new Query used to filter entities in the world. It makes use of local and global cache in order to 
+      decrease the validation time (avoids looping in runtime of systems)
    
-      ECS.Query.All(Movement.In("Standing"))
-   
-      @param all {Array<ComponentClass|Clause>[]} All component types in this array must exist in the archetype
-      @param any {Array<ComponentClass|Clause>[]} At least one of the component types in this array must exist in the archetype
-      @param none {Array<ComponentClass|Clause>[]} None of the component types in this array can exist in the archetype
+      @param all {Array<ComponentClass|Clause>} Optional All component types in this array must exist in the archetype
+      @param any {Array<ComponentClass|Clause>} Optional At least one of the component types in this array must exist in the archetype
+      @param none {Array<ComponentClass|Clause>} Optional None of the component types in this array can exist in the archetype
    ]]
    function Query.New(all, any, none)
    
@@ -1472,7 +1481,7 @@ __F__["Query"] = function()
          _allKey = allKey,
          _noneKey = noneKey,
          _cache = {}, -- local cache (L1)
-         _clauses = #clauses > 0 and clauses or nil,
+         _clauses = #clauses > 0 and clauses or nil
       }, Query)
    end
    
@@ -1483,6 +1492,7 @@ __F__["Query"] = function()
       @return QueryResult
    ]]
    function Query:Result(chunks)
+      self._lastResultChunks = chunks
       return QueryResult.New(chunks, self._clauses)
    end
    
@@ -1590,24 +1600,31 @@ __F__["Query"] = function()
       local builder = {
          isQueryBuilder = true
       }
+      local query
    
       function builder.All(...)
+         query = nil
          builder._all = {...}
          return builder
       end
       
       function builder.Any(...)
+         query = nil
          builder._any = {...}
          return builder
       end
       
       function builder.None(...)
+         query = nil
          builder._none = {...}
          return builder
       end
    
       function builder.Build()
-         return Query.New(builder._all, builder._any, builder._none)
+         if query == nil then
+            query = Query.New(builder._all, builder._any, builder._none)
+         end
+         return query
       end
    
       return builder
@@ -1623,6 +1640,62 @@ __F__["Query"] = function()
    
    function Query.None(...)
       return builder().None(...)
+   end
+   
+   --[[
+      Create custom filters that can be used in Queries. Its execution is delayed, invoked only in QueryResult methods
+   
+      The result of executing the clause depends on how it was used in the query.
+   
+      Ex. If used in Query.All() the result is the inverse of using the same clause in Query.None()
+   
+         local Player = ECS.Component({ health = 100 })
+   
+         local HealthPlayerFilter = ECS.Query.Filter(function(entity, config)
+            local player = entity[Player]
+            return player.health >= config.minHealth and player.health <= config.maxHealth
+         end)
+   
+         local healthyClause = HealthPlayerFilter({
+            minHealth = 80,
+            maxHealth = 100,
+         })
+   
+         local healthyQuery = ECS.Query.All(Player, healthyClause)
+         world:Exec(healthyQuery):ForEach(function(entity)
+            -- this player is very healthy
+         end)
+   
+         local notHealthyQuery = ECS.Query.All(Player).None(healthyClause)
+         world:Exec(healthyQuery):ForEach(function(entity)
+            -- this player is NOT very healthy
+         end)
+   
+         local dyingClause = HealthPlayerClause({
+            minHealth = 1,
+            maxHealth = 20,
+         })
+   
+         local dyingQuery = ECS.Query.All(Player, dyingClause)
+         world:Exec(dyingQuery):ForEach(function(entity)
+            -- this player is about to die
+         end)
+   
+         local notDyingQuery = ECS.Query.All(Player).None(dyingClause)
+         world:Exec(notDyingQuery):ForEach(function(entity)
+            -- this player is NOT about to die
+         end)
+   
+      @param filter {function(entity, config):bool} 
+      @return function(config):Clause
+   ]]
+   function Query.Filter(filter)
+      return function (config)
+         return {
+            Filter = filter,
+            Config = config
+         }
+      end
    end
    
    return Query
@@ -1755,7 +1828,7 @@ __F__["QueryResult"] = function()
    --[[
       Returns a QueryResult consisting of the elements of this QueryResult with a new pipeline operation
    
-      @param operation {function(param, value, count) => newValue, accept, continues}
+      @param operation {function(param, value, count) -> newValue, accept, continues}
       @param param {any}
       @return the new QueryResult
    ]]
@@ -1775,7 +1848,7 @@ __F__["QueryResult"] = function()
    --[[
       Returns a QueryResult consisting of the elements of this QueryResult that match the given predicate.
    
-      @param predicate {function(value) => bool} a predicate to apply to each element to determine if it should be included
+      @param predicate {function(value) -> bool} a predicate to apply to each element to determine if it should be included
       @return the new QueryResult
    ]]
    function QueryResult:Filter(predicate)
@@ -1785,7 +1858,7 @@ __F__["QueryResult"] = function()
    --[[
       Returns a QueryResult consisting of the results of applying the given function to the elements of this QueryResult.
    
-      @param mapper {function(value) => newValue} a function to apply to each element
+      @param mapper {function(value) -> newValue} a function to apply to each element
       @return the new QueryResult
    ]]
    function QueryResult:Map(mapper)
@@ -1797,7 +1870,7 @@ __F__["QueryResult"] = function()
       
       This is a short-circuiting stateful intermediate operation.
    
-      @param mapper {function(value) => newValue} a function to apply to each element
+      @param maxSize {number}
       @return the new QueryResult
    ]]
    function QueryResult:Limit(maxSize)
@@ -1816,7 +1889,7 @@ __F__["QueryResult"] = function()
    --[[
       Returns whether any elements of this result match the provided predicate.
    
-      @param predicate { function(Entity) => bool} a predicate to apply to elements of this result
+      @param predicate { function(value) -> bool} a predicate to apply to elements of this result
       @returns true if any elements of the result match the provided predicate, otherwise false
    ]]
    function QueryResult:AnyMatch(predicate)
@@ -1834,7 +1907,7 @@ __F__["QueryResult"] = function()
    --[[
       Returns whether all elements of this result match the provided predicate.
    
-      @param predicate { function(Entity) => bool} a predicate to apply to elements of this result
+      @param predicate { function(value) -> bool} a predicate to apply to elements of this result
       @returns true if either all elements of the result match the provided predicate or the result is empty, otherwise false
    ]]
    function QueryResult:AllMatch(predicate)
@@ -1858,7 +1931,7 @@ __F__["QueryResult"] = function()
       
       Multiple invocations on the same result may not return the same value.
    
-      @param predicate { function(Entity) => bool} a predicate to apply to elements of this result
+      @return {any}
    ]]
    function QueryResult:FindAny()
       local out
@@ -1878,11 +1951,11 @@ __F__["QueryResult"] = function()
       The behavior of this operation is explicitly nondeterministic. This operation does not guarantee to respect the 
       encounter order of the QueryResult.
    
-      @param action {function(value) => bool} A action to perform on the elements, breaks execution case returns true
+      @param action {function(value, count) -> bool} A action to perform on the elements, breaks execution case returns true
    ]]
    function QueryResult:ForEach(action)
-      self:Run(function(value)
-         return action(value) == true
+      self:Run(function(value, count)
+         return action(value, count) == true
       end)
    end
    
@@ -1902,7 +1975,7 @@ __F__["QueryResult"] = function()
    --[[
       Returns an Iterator, to use in for loop
    
-      for entity, count in result:Iterator() do
+      for count, entity in result:Iterator() do
          print(entity.id)
       end
    ]]
@@ -1924,7 +1997,7 @@ __F__["QueryResult"] = function()
    --[[
       Pipeline this QueryResult, applying callback to each value
    
-      @param callback {function(value, count) => bool} Break execution case returns true
+      @param callback {function(value, count) -> bool} Break execution case returns true
    ]]
    function QueryResult:Run(callback)
       local count = 1
@@ -1987,30 +2060,33 @@ __F__["RobloxLoopManager"] = function()
    -- src/RobloxLoopManager.lua
    local function InitManager()
       local RunService = game:GetService("RunService")
+      
       return {
          Register = function(world)         
             -- if not RunService:IsRunning() then
             --    return
             -- end
-            local processConn = RunService.Stepped:Connect(function()
+            local beforePhysics = RunService.Stepped:Connect(function()
                world:Update("process", os.clock())
             end)
       
-            local transformConn = RunService.Heartbeat:Connect(function()
+            local afterPhysics = RunService.Heartbeat:Connect(function()
                world:Update("transform", os.clock())
             end)
       
-            local renderConn
+            local beforeRender
             if (not RunService:IsServer()) then
-               renderConn = RunService.RenderStepped:Connect(function()
+               beforeRender = RunService.RenderStepped:Connect(function()
                   world:Update("render", os.clock())
                end)
             end
       
             return function()
-               processConn:Disconnect()
-               processConn:Disconnect()
-               processConn:Disconnect()
+               beforePhysics:Disconnect()
+               afterPhysics:Disconnect()
+               if beforeRender then
+                  beforeRender:Disconnect()
+               end
             end
          end
       }
@@ -2023,19 +2099,18 @@ end
 __F__["System"] = function()
    -- src/System.lua
    
-   local SYSTEM_ID_SEQ = 0
-   
    local STEPS = { "task", "render", "process", "transform" }
    
    local System = {}
    
    --[[
-      Allow to create new System Class Type
+      Create new System Class
    
-      @param step {task|process|transform|render}
-      @param order {number} (Optional)
-      @param query {Query|QueryConfig} (Optional)
-      @param updateFn {function} (Optional)
+      @param step {process|transform|render|task}
+      @param order {number} (Optional) Allows you to set an execution order (for systems that are not `task`). Default 50
+      @param query {Query|QueryBuilder} (Optional) Filters the entities that will be processed by this system
+      @param updateFn {function(self, Time)} (Optional) A shortcut for creating systems that only have the Update method
+      @return SystemClass
    ]]
    function System.Create(step, order, query, updateFn)
    
@@ -2061,30 +2136,32 @@ __F__["System"] = function()
          query = query.Build()
       end
    
-      SYSTEM_ID_SEQ = SYSTEM_ID_SEQ + 1
-   
-      local Id = SYSTEM_ID_SEQ
       local SystemClass = {
-         Id = Id,
          Step = step,
          -- Allows you to define the execution priority level for this system
          Order = order,
          Query = query,
-         -- After = {SystemC, SystemD}, An update order that requests ECS update this system after it updates another specified system.
-         -- Before = {SystemA, SystemB}, An update order that requests ECS update this system before it updates another specified system.
+         -- After = {SystemC, SystemD}, When the system is a task, it allows you to define that this system should run AFTER other specific systems.
+         -- Before = {SystemA, SystemB}, When the system is a task, it allows you to define that this system should run BEFORE other specific systems.
          --[[
-            ShouldUpdate(Time): void - It allows informing if the update methods of this system should be invoked
-            Update: function(Time, dirty) -> boolean -Invoked in updates, limited to the value set in the "Frequency" attribute
+   
+            ShouldUpdate(Time) -> bool - Invoked before 'Update', allows you to control the execution of the update
+            Update(Time)
    
             [QuerySystem]
                OnRemove(Time, enity)
-               OnExit(Time, entity) -> boolean
-               OnEnter(Time, entity) -> boolean
+               OnExit(Time, entity)
+               OnEnter(Time, entity)
          ]]
       }
       SystemClass.__index = SystemClass
    
-      -- Cria uma instancia desse system
+      --[[
+         Create an instance of this system
+   
+         @param world {World}
+         @param config {table}
+      ]]
       function SystemClass.New(world, config)
          local system = setmetatable({
             version = 0,
@@ -2108,10 +2185,19 @@ __F__["System"] = function()
          return SystemClass
       end
    
+      --[[
+         Run a query in the world. A shortcut to `self._world:Exec(query)`
+   
+         @query {Query|QueryBuilder} Optional If nil, use default query
+         @return QueryResult
+      ]]
       function SystemClass:Result(query)
          return self._world:Exec(query or SystemClass.Query)
       end
    
+      --[[
+         destroy this instance
+      ]]
       function SystemClass:Destroy() 
          if self.OnDestroy then
             self.OnDestroy()
@@ -2255,7 +2341,7 @@ __F__["SystemExecutor"] = function()
       table.sort(updateTransform, orderSystems)
    
       -- tasks = resolveDependecy(systems)
-      return setmetatable({
+      local executor =  setmetatable({
          _world = world,
          _onExit = onExit,
          _onEnter = onEnter,
@@ -2265,7 +2351,15 @@ __F__["SystemExecutor"] = function()
          _process = updateProcess,
          _transform = updateTransform,
          _schedulers = {},
+         _lastFrameMatchQueries = {},
+         _currentFrameMatchQueries = {},
       }, SystemExecutor)
+   
+      world:OnQueryMatch(function(query)
+         executor._currentFrameMatchQueries[query] = true
+      end)
+   
+      return executor
    end
    
    --[[
@@ -2390,26 +2484,45 @@ __F__["SystemExecutor"] = function()
       end
    end
    
-   local function execUpdate(world, systems, Time)
+   local function execUpdate(executor, systems, Time)
+      local world = executor._world
+      local lastFrameMatchQueries = executor._lastFrameMatchQueries
+      local currentFrameMatchQueries = executor._currentFrameMatchQueries
       for j, system in ipairs(systems) do
-         if (system.ShouldUpdate == nil or system.ShouldUpdate(Time)) then
-            world.version = world.version + 1   -- increment Global System Version (GSV)
-            system:Update(Time)                 -- local dirty = entity.version > system.version
-            system.version = world.version      -- update last system version with GSV
+         local canExec = true
+         if system.Query then
+            local query = system.Query
+            if lastFrameMatchQueries[query] == true or currentFrameMatchQueries[query] == true then
+               -- If the query ran in the last frame, it is likely to run successfully on this
+               canExec = true
+            else
+               -- Always revalidates, the repository undergoes constant change
+               canExec = world:FastCheck(query)
+               currentFrameMatchQueries[query] = canExec
+            end
+         end
+         if canExec then
+            if (system.ShouldUpdate == nil or system.ShouldUpdate(Time)) then
+               world.version = world.version + 1   -- increment Global System Version (GSV)
+               system:Update(Time)                 -- local dirty = entity.version > system.version
+               system.version = world.version      -- update last system version with GSV
+            end
          end
       end
    end
    
    function SystemExecutor:ExecProcess(Time)
-      execUpdate(self._world, self._process, Time)
+      self._currentFrameMatchQueries = {}
+      execUpdate(self, self._process, Time)   
    end
    
    function SystemExecutor:ExecTransform(Time)
-      execUpdate(self._world, self._transform, Time)
+      execUpdate(self, self._transform, Time)
    end
    
    function SystemExecutor:ExecRender(Time)
-      execUpdate(self._world, self._render, Time)
+      execUpdate(self, self._render, Time)
+      self._lastFrameMatchQueries = self._currentFrameMatchQueries
    end
    
    --[[
@@ -2838,13 +2951,48 @@ __F__["World"] = function()
    World.__index = World
    
    --[[  
-      @param systemClasses {SystemClass[]}
-      @param frequency {number} (Optional)
-      @param disableAutoUpdate {bool} (Optional)
+      Create a new world instance
+   
+      @param systemClasses {SystemClass[]} (Optional) Array of system classes
+      @param frequency {number} (Optional) define the frequency that the `process` step will be executed. Default 30
+      @param disableAutoUpdate {bool} (Optional) when `~= false`, the world automatically registers in the `LoopManager`, 
+      receiving the `World:Update()` method from it. Default false
    ]]
    function World.New(systemClasses, frequency, disableAutoUpdate)   
       local world = setmetatable({
+         --[[
+            Global System Version (GSV).
+   
+            Before executing the Update method of each system, the world version is incremented, so at this point, the 
+            world version will always be higher than the running system version.
+   
+            Whenever an entity archetype is changed (received or lost component) the entity's version is updated to the 
+            current version of the world.
+   
+            After executing the System Update method, the version of this system is updated to the current world version.
+   
+            This mechanism allows a system to know if an entity has been modified after the last execution of this same 
+            system, as the entity's version is superior to the version of the last system execution. Thus, a system can 
+            contain logic if it only operates on "dirty" entities, which have undergone changes. The code for this 
+            validation on a system is `local isDirty = entity.version > self.version`
+         ]]
          version = 0,
+         --[[
+            Allows you to define the maximum time that the JobSystem can operate in each step. This value is a percentage 
+            of the expected time for each frame (see World:SetFrequency(frequency)).
+   
+            The default value is 0.7
+   
+            Ex1. If the world has a frequency set to 30Hz (30 fps), then the JobSystem will try to run a maximum of 0.0077 
+            seconds in each step, totaling 0.023 seconds of processing per frame. A game that runs at 30fps has 0.0333 
+            seconds to do all the processing for each frame, including rendering (1000/30/1000)
+               - 30FPS = ((1000/30/1000)*0.7)/3 = 0.007777777777777777
+   
+            Ex2. If the world has the frequency set to 60Hz (60 fps), then the JobSystem will try to run a maximum of 0.0038 
+            seconds in each step, totaling 0.011 seconds of processing per frame. A game that runs at 60fps has 0.0166 
+            seconds to do all the processing for each frame, including rendering (1000/60/1000)
+               - 60FPS = ((1000/60/1000)*0.7)/3 = 0.0038888888888888883
+         ]]
          maxScheduleExecTimePercent = 0.7,
          _dirty = false, -- True when create/remove entity, add/remove entity component (change archetype)
          _timer = Timer.New(frequency),
@@ -2853,6 +3001,7 @@ __F__["World"] = function()
          _entitiesCreated = {}, -- created during the execution of the Update
          _entitiesRemoved = {}, -- removed during execution (only removed after the last execution step)
          _entitiesUpdated = {}, -- changed during execution (received or lost components, therefore, changed the archetype)
+         _onQueryMatch = Event.New(),
          _onChangeArchetypeEvent = Event.New(),
       }, World)
    
@@ -2896,11 +3045,13 @@ __F__["World"] = function()
    end
    
    --[[
-      Add a new system to the world
+      Add a new system to the world.
    
-      @param systemClass {SystemClass}
-      @param order {number}
-      @param config {Object}
+      Only one instance per type is accepted. If there is already another instance of this system in the world, any new 
+      invocation of this method will be ignored.
+   
+      @param systemClass {SystemClass} The system to be added in the world
+      @param config {table} (Optional) System instance configuration
    ]]
    function World:AddSystem(systemClass, config)
       if systemClass then
@@ -2916,9 +3067,13 @@ __F__["World"] = function()
    end
    
    --[[
-      Create a new entity
+      Create a new entity.
+   
+      The entity is created in DEAD state (entity.isAlive == false) and will only be visible for queries after the 
+      cleaning step (OnRemove, OnEnter, OnExit) of the current step
    
       @param args {Component[]}
+      @return Entity
    ]]
    function World:Entity(...)
       local entity = Entity.New(self._onChangeArchetypeEvent, {...})
@@ -2933,7 +3088,13 @@ __F__["World"] = function()
    end
    
    --[[
-      Removing a entity at runtime
+      Performs immediate removal of an entity.
+   
+      If the entity was created in this step and the cleanup process has not happened yet (therefore the entity is 
+      inactive, entity.isAlive == false), the `OnRemove` event will never be fired.
+   
+      If the entity is alive (entity.isAlive == true), even though it is removed immediately, the `OnRemove` event will be 
+      fired at the end of the current step.
    
       @param entity {Entity}
    ]]
@@ -2969,14 +3130,48 @@ __F__["World"] = function()
          query = query.Build()
       end
    
-      return self._repository:Query(query)
+      local result, match = self._repository:Query(query)
+   
+      if match then
+         self._onQueryMatch:Fire(query)
+      end
+   
+      return result
    end
    
    --[[
-      Execute world update
+      Quick check to find out if a query is applicable.
+   
+      @param query {Query|QueryBuilder}
+      @return QueryResult
+   ]]
+   function World:FastCheck(query)
+      if (query.isQueryBuilder) then
+         query = query.Build()
+      end
+   
+      return self._repository:FastCheck(query)
+   end
+   
+   --[[
+      Add a callback that is reported whenever a query has been successfully executed. Used internally 
+      to quickly find out if a QuerySystem will run.
+   ]]
+   function World:OnQueryMatch(callback)
+      return self._onQueryMatch:Connect(callback)
+   end
+   
+   --[[
+      Perform world update.
+   
+      When registered, LoopManager will invoke World Update for each step in the sequence.
+   
+      - process At the beginning of each frame
+      - transform After the game engine's physics engine runs
+      - render Before rendering the current frame
    
       @param step {"process"|"transform"|"render"}
-      @param now {number}
+      @param now {number} Usually os.clock()
    ]]
    function World:Update(step, now)
    
@@ -3055,7 +3250,7 @@ __F__["World"] = function()
    end
    
    --[[
-      Remove all entities and systems
+      Destroy this instance, removing all entities, systems and events
    ]]
    function World:Destroy()
    

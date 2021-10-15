@@ -1,17 +1,16 @@
 
-local SYSTEM_ID_SEQ = 0
-
 local STEPS = { "task", "render", "process", "transform" }
 
 local System = {}
 
 --[[
-   Allow to create new System Class Type
+   Create new System Class
 
-   @param step {task|process|transform|render}
-   @param order {number} (Optional)
-   @param query {Query|QueryConfig} (Optional)
-   @param updateFn {function} (Optional)
+   @param step {process|transform|render|task}
+   @param order {number} (Optional) Allows you to set an execution order (for systems that are not `task`). Default 50
+   @param query {Query|QueryBuilder} (Optional) Filters the entities that will be processed by this system
+   @param updateFn {function(self, Time)} (Optional) A shortcut for creating systems that only have the Update method
+   @return SystemClass
 ]]
 function System.Create(step, order, query, updateFn)
 
@@ -37,30 +36,32 @@ function System.Create(step, order, query, updateFn)
       query = query.Build()
    end
 
-   SYSTEM_ID_SEQ = SYSTEM_ID_SEQ + 1
-
-   local Id = SYSTEM_ID_SEQ
    local SystemClass = {
-      Id = Id,
       Step = step,
       -- Allows you to define the execution priority level for this system
       Order = order,
       Query = query,
-      -- After = {SystemC, SystemD}, An update order that requests ECS update this system after it updates another specified system.
-      -- Before = {SystemA, SystemB}, An update order that requests ECS update this system before it updates another specified system.
+      -- After = {SystemC, SystemD}, When the system is a task, it allows you to define that this system should run AFTER other specific systems.
+      -- Before = {SystemA, SystemB}, When the system is a task, it allows you to define that this system should run BEFORE other specific systems.
       --[[
-         ShouldUpdate(Time): void - It allows informing if the update methods of this system should be invoked
-         Update: function(Time, dirty) -> boolean -Invoked in updates, limited to the value set in the "Frequency" attribute
+
+         ShouldUpdate(Time) -> bool - Invoked before 'Update', allows you to control the execution of the update
+         Update(Time)
 
          [QuerySystem]
             OnRemove(Time, enity)
-            OnExit(Time, entity) -> boolean
-            OnEnter(Time, entity) -> boolean
+            OnExit(Time, entity)
+            OnEnter(Time, entity)
       ]]
    }
    SystemClass.__index = SystemClass
 
-   -- Cria uma instancia desse system
+   --[[
+      Create an instance of this system
+
+      @param world {World}
+      @param config {table}
+   ]]
    function SystemClass.New(world, config)
       local system = setmetatable({
          version = 0,
@@ -84,10 +85,19 @@ function System.Create(step, order, query, updateFn)
       return SystemClass
    end
 
+   --[[
+      Run a query in the world. A shortcut to `self._world:Exec(query)`
+
+      @query {Query|QueryBuilder} Optional If nil, use default query
+      @return QueryResult
+   ]]
    function SystemClass:Result(query)
       return self._world:Exec(query or SystemClass.Query)
    end
 
+   --[[
+      destroy this instance
+   ]]
    function SystemClass:Destroy() 
       if self.OnDestroy then
          self.OnDestroy()

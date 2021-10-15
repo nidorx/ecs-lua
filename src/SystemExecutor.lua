@@ -118,7 +118,7 @@ function SystemExecutor.New(world, systems)
    table.sort(updateTransform, orderSystems)
 
    -- tasks = resolveDependecy(systems)
-   return setmetatable({
+   local executor =  setmetatable({
       _world = world,
       _onExit = onExit,
       _onEnter = onEnter,
@@ -128,7 +128,15 @@ function SystemExecutor.New(world, systems)
       _process = updateProcess,
       _transform = updateTransform,
       _schedulers = {},
+      _lastFrameMatchQueries = {},
+      _currentFrameMatchQueries = {},
    }, SystemExecutor)
+
+   world:OnQueryMatch(function(query)
+      executor._currentFrameMatchQueries[query] = true
+   end)
+
+   return executor
 end
 
 --[[
@@ -253,26 +261,45 @@ function SystemExecutor:ExecOnRemove(Time, removedEntities)
    end
 end
 
-local function execUpdate(world, systems, Time)
+local function execUpdate(executor, systems, Time)
+   local world = executor._world
+   local lastFrameMatchQueries = executor._lastFrameMatchQueries
+   local currentFrameMatchQueries = executor._currentFrameMatchQueries
    for j, system in ipairs(systems) do
-      if (system.ShouldUpdate == nil or system.ShouldUpdate(Time)) then
-         world.version = world.version + 1   -- increment Global System Version (GSV)
-         system:Update(Time)                 -- local dirty = entity.version > system.version
-         system.version = world.version      -- update last system version with GSV
+      local canExec = true
+      if system.Query then
+         local query = system.Query
+         if lastFrameMatchQueries[query] == true or currentFrameMatchQueries[query] == true then
+            -- If the query ran in the last frame, it is likely to run successfully on this
+            canExec = true
+         else
+            -- Always revalidates, the repository undergoes constant change
+            canExec = world:FastCheck(query)
+            currentFrameMatchQueries[query] = canExec
+         end
+      end
+      if canExec then
+         if (system.ShouldUpdate == nil or system.ShouldUpdate(Time)) then
+            world.version = world.version + 1   -- increment Global System Version (GSV)
+            system:Update(Time)                 -- local dirty = entity.version > system.version
+            system.version = world.version      -- update last system version with GSV
+         end
       end
    end
 end
 
 function SystemExecutor:ExecProcess(Time)
-   execUpdate(self._world, self._process, Time)
+   self._currentFrameMatchQueries = {}
+   execUpdate(self, self._process, Time)   
 end
 
 function SystemExecutor:ExecTransform(Time)
-   execUpdate(self._world, self._transform, Time)
+   execUpdate(self, self._transform, Time)
 end
 
 function SystemExecutor:ExecRender(Time)
-   execUpdate(self._world, self._render, Time)
+   execUpdate(self, self._render, Time)
+   self._lastFrameMatchQueries = self._currentFrameMatchQueries
 end
 
 --[[

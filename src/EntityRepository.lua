@@ -1,3 +1,4 @@
+local Event = require("Event")
 
 --[[
    The repository (database) of entities in a world.
@@ -17,6 +18,7 @@ function EntityRepository.New()
    return setmetatable({
       _archetypes = {},
       _entitiesArchetype = {},
+      
    }, EntityRepository)
 end
 
@@ -93,7 +95,22 @@ function EntityRepository:Query(query)
          table.insert(chunks, storage.Entities)
       end
    end
-   return query:Result(chunks)
+   return query:Result(chunks), #chunks > 0
+end
+
+--[[
+   Quick check to find out if a query is applicable.
+
+   @param query {Query}
+   @return bool
+]]
+function EntityRepository:FastCheck(query)
+   for archetype, storage in pairs(self._archetypes) do
+      if query:Match(archetype) then
+         return true
+      end
+   end
+   return false
 end
 
 return EntityRepository

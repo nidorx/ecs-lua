@@ -30,6 +30,7 @@ local function createComponentClass(initializer, superClass)
    else
       superClass.HasQualifier = true
       ComponentClass.IsQualifier = true
+      ComponentClass.HasQualifier = true
    end
 
    local Qualifiers = superClass._Qualifiers
@@ -103,7 +104,7 @@ local function createComponentClass(initializer, superClass)
    --[[
       Get all qualified class
 
-      @param ... {string|ComponentClass} (Optional) filter 
+      @param ... {string|ComponentClass} (Optional) Allows to filter the specific qualifiers
       @return ComponentClass[]
    ]]
    function ComponentClass.Qualifiers(...)
@@ -157,10 +158,11 @@ local function createComponentClass(initializer, superClass)
    --[[
       Check if this component is of the type informed
 
+      @param componentClass {ComponentClass}
       @return bool
    ]]
-   function ComponentClass:Is(cType)
-      return cType == ComponentClass or cType == superClass
+   function ComponentClass:Is(componentClass)
+      return componentClass == ComponentClass or componentClass == superClass
    end
 
    --[[
@@ -193,21 +195,6 @@ local function createComponentClass(initializer, superClass)
          qualifiedAll[name] = self._qualifiers[qualifiedClass]
       end
       return qualifiedAll
-   end
-
-   --[[
-      Unlink this component with the other qualifiers
-   ]]
-   function ComponentClass:Detach()
-      if not superClass.HasQualifier then
-         return
-      end
-
-      -- remove old unlink
-      self._qualifiers[ComponentClass] = nil
-
-      -- new link
-      self._qualifiers = { [ComponentClass] = self }
    end
 
    --[[
@@ -275,6 +262,21 @@ local function createComponentClass(initializer, superClass)
       end
    end
 
+   --[[
+      Unlink this component with the other qualifiers
+   ]]
+   function ComponentClass:Detach()
+      if not superClass.HasQualifier then
+         return
+      end
+
+      -- remove old unlink
+      self._qualifiers[ComponentClass] = nil
+
+      -- new link
+      self._qualifiers = { [ComponentClass] = self }
+   end
+
    return ComponentClass
 end
 
@@ -288,9 +290,14 @@ end
 local Component = {}
 
 --[[
-   Register a new component
+   Register a new ComponentClass
 
-   @param template {table|function(table?) -> table}
+   @param template {table|function(table?) -> table} 
+      When `table`, this template will be used for creating component instances
+      When it's a `function`, it will be invoked when a new component is instantiated. The creation parameter of the 
+         component is passed to template function
+      If the template type is different from `table` and `function`, **ECS Lua** will generate a template in the format 
+         `{ value = template }`.
    @return ComponentClass  
 ]]
 function Component.Create(template)

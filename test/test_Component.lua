@@ -10,10 +10,6 @@ local Component = require('Component')
 
 TestComponent = {}
 
--- function TestComponent:setUp()      
---    self.em = EntityManager.New()
--- end
-
 function TestComponent:test_GetType()
    local Comp_A = Component.Create()
    local Comp_B = Component.Create()
@@ -424,8 +420,8 @@ function TestComponent:test_Should_QueryFSM_InState()
    lu.assertIsFalse(execClause(clause_b_Walking_Running, ett_Standing))
 
    -- clause all
-   lu.assertEquals(Movement.In(), { Components = {Movement} })
-   lu.assertEquals(MovementB.In(), { Components = {MovementB} })
+   lu.assertEquals(Movement.In(), {})
+   lu.assertEquals(MovementB.In(), {})
 
    -- ignores OtherComponent
    local OtherComponent = Component.Create({ Percent = 0 })

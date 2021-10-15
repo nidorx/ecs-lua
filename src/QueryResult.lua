@@ -122,7 +122,7 @@ end
 --[[
    Returns a QueryResult consisting of the elements of this QueryResult with a new pipeline operation
 
-   @param operation {function(param, value, count) => newValue, accept, continues}
+   @param operation {function(param, value, count) -> newValue, accept, continues}
    @param param {any}
    @return the new QueryResult
 ]]
@@ -142,7 +142,7 @@ end
 --[[
    Returns a QueryResult consisting of the elements of this QueryResult that match the given predicate.
 
-   @param predicate {function(value) => bool} a predicate to apply to each element to determine if it should be included
+   @param predicate {function(value) -> bool} a predicate to apply to each element to determine if it should be included
    @return the new QueryResult
 ]]
 function QueryResult:Filter(predicate)
@@ -152,7 +152,7 @@ end
 --[[
    Returns a QueryResult consisting of the results of applying the given function to the elements of this QueryResult.
 
-   @param mapper {function(value) => newValue} a function to apply to each element
+   @param mapper {function(value) -> newValue} a function to apply to each element
    @return the new QueryResult
 ]]
 function QueryResult:Map(mapper)
@@ -164,7 +164,7 @@ end
    
    This is a short-circuiting stateful intermediate operation.
 
-   @param mapper {function(value) => newValue} a function to apply to each element
+   @param maxSize {number}
    @return the new QueryResult
 ]]
 function QueryResult:Limit(maxSize)
@@ -183,7 +183,7 @@ end
 --[[
    Returns whether any elements of this result match the provided predicate.
 
-   @param predicate { function(Entity) => bool} a predicate to apply to elements of this result
+   @param predicate { function(value) -> bool} a predicate to apply to elements of this result
    @returns true if any elements of the result match the provided predicate, otherwise false
 ]]
 function QueryResult:AnyMatch(predicate)
@@ -201,7 +201,7 @@ end
 --[[
    Returns whether all elements of this result match the provided predicate.
 
-   @param predicate { function(Entity) => bool} a predicate to apply to elements of this result
+   @param predicate { function(value) -> bool} a predicate to apply to elements of this result
    @returns true if either all elements of the result match the provided predicate or the result is empty, otherwise false
 ]]
 function QueryResult:AllMatch(predicate)
@@ -225,7 +225,7 @@ end
    
    Multiple invocations on the same result may not return the same value.
 
-   @param predicate { function(Entity) => bool} a predicate to apply to elements of this result
+   @return {any}
 ]]
 function QueryResult:FindAny()
    local out
@@ -245,11 +245,11 @@ end
    The behavior of this operation is explicitly nondeterministic. This operation does not guarantee to respect the 
    encounter order of the QueryResult.
 
-   @param action {function(value) => bool} A action to perform on the elements, breaks execution case returns true
+   @param action {function(value, count) -> bool} A action to perform on the elements, breaks execution case returns true
 ]]
 function QueryResult:ForEach(action)
-   self:Run(function(value)
-      return action(value) == true
+   self:Run(function(value, count)
+      return action(value, count) == true
    end)
 end
 
@@ -269,7 +269,7 @@ end
 --[[
    Returns an Iterator, to use in for loop
 
-   for entity, count in result:Iterator() do
+   for count, entity in result:Iterator() do
       print(entity.id)
    end
 ]]
@@ -291,7 +291,7 @@ end
 --[[
    Pipeline this QueryResult, applying callback to each value
 
-   @param callback {function(value, count) => bool} Break execution case returns true
+   @param callback {function(value, count) -> bool} Break execution case returns true
 ]]
 function QueryResult:Run(callback)
    local count = 1
