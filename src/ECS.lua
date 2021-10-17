@@ -1,5 +1,5 @@
 --[[
-   ECS Lua v2.1.0 [2021-10-15 11:00]
+   ECS Lua v2.1.2
 
    ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
 

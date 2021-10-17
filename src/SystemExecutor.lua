@@ -65,7 +65,29 @@ end
 local SystemExecutor = {}
 SystemExecutor.__index = SystemExecutor
 
-function SystemExecutor.New(world, systems)   
+function SystemExecutor.New(world)   
+   local executor =  setmetatable({
+      _world = world,
+      _onExit = {},
+      _onEnter = {},
+      _onRemove = {},
+      _task = {},
+      _render = {},
+      _process = {},
+      _transform = {},
+      _schedulers = {},
+      _lastFrameMatchQueries = {},
+      _currentFrameMatchQueries = {},
+   }, SystemExecutor)
+
+   world:OnQueryMatch(function(query)
+      executor._currentFrameMatchQueries[query] = true
+   end)
+
+   return executor
+end
+
+function SystemExecutor:SetSystems(systems)
    local onExit = {}
    local onEnter = {}
    local onRemove = {}
@@ -117,26 +139,13 @@ function SystemExecutor.New(world, systems)
    table.sort(updateProcess, orderSystems)
    table.sort(updateTransform, orderSystems)
 
-   -- tasks = resolveDependecy(systems)
-   local executor =  setmetatable({
-      _world = world,
-      _onExit = onExit,
-      _onEnter = onEnter,
-      _onRemove = onRemove,
-      _task = updateTask,
-      _render = updateRender,
-      _process = updateProcess,
-      _transform = updateTransform,
-      _schedulers = {},
-      _lastFrameMatchQueries = {},
-      _currentFrameMatchQueries = {},
-   }, SystemExecutor)
-
-   world:OnQueryMatch(function(query)
-      executor._currentFrameMatchQueries[query] = true
-   end)
-
-   return executor
+   self._onExit = onExit
+   self._onEnter = onEnter
+   self._onRemove = onRemove
+   self._task = updateTask
+   self._render = updateRender
+   self._process = updateProcess
+   self._transform = updateTransform
 end
 
 --[[

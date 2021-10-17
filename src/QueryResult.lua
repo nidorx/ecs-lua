@@ -188,7 +188,7 @@ end
 ]]
 function QueryResult:AnyMatch(predicate)
    local anyMatch = false
-   self:Run(function(value)
+   self:ForEach(function(value)
       if predicate(value) then
          anyMatch = true
       end
@@ -206,7 +206,7 @@ end
 ]]
 function QueryResult:AllMatch(predicate)
    local allMatch = true
-   self:Run(function(value)
+   self:ForEach(function(value)
       if (not predicate(value)) then
          allMatch = false
       end
@@ -229,28 +229,12 @@ end
 ]]
 function QueryResult:FindAny()
    local out
-   self:Run(function(value)
+   self:ForEach(function(value)
       out = value
       -- break
       return true
    end)
    return out
-end
-
---[[
-   Performs an action for each element of this QueryResult.
-
-   This is a terminal operation.
-
-   The behavior of this operation is explicitly nondeterministic. This operation does not guarantee to respect the 
-   encounter order of the QueryResult.
-
-   @param action {function(value, count) -> bool} A action to perform on the elements, breaks execution case returns true
-]]
-function QueryResult:ForEach(action)
-   self:Run(function(value, count)
-      return action(value, count) == true
-   end)
 end
 
 --[[
@@ -260,7 +244,7 @@ end
 ]]
 function QueryResult:ToArray()
    local array = {}
-   self:Run(function(value)
+   self:ForEach(function(value)
       table.insert(array, value)
    end)
    return array
@@ -275,7 +259,7 @@ end
 ]]
 function QueryResult:Iterator()
    local thread = coroutine.create(function()
-      self:Run(function(value, count)
+      self:ForEach(function(value, count)
          -- These will be passed back again next iteration
          coroutine.yield(value, count)
       end)
@@ -287,13 +271,17 @@ function QueryResult:Iterator()
    end
 end
 
-
 --[[
-   Pipeline this QueryResult, applying callback to each value
+   Performs an action for each element of this QueryResult.
 
-   @param callback {function(value, count) -> bool} Break execution case returns true
+   This is a terminal operation.
+
+   The behavior of this operation is explicitly nondeterministic. This operation does not guarantee to respect the 
+   encounter order of the QueryResult.
+
+   @param action {function(value, count) -> bool} A action to perform on the elements, breaks execution case returns true
 ]]
-function QueryResult:Run(callback)
+function QueryResult:ForEach(action)
    local count = 1
    local pipeline = self._pipeline
 
@@ -302,13 +290,14 @@ function QueryResult:Run(callback)
       -- faster
       for _, entities in ipairs(self.chunks) do
          for entity, _ in pairs(entities) do
-            if (callback(entity, count) == true) then
+            if (action(entity, count) == true) then
                return
             end
             count = count + 1  
          end
       end
    else
+      -- Pipeline this QueryResult, applying callback to each value
       for i, entities in ipairs(self.chunks) do
          for entity,_ in pairs(entities) do
             local mustStop = false
@@ -332,7 +321,7 @@ function QueryResult:Run(callback)
             end
             
             if itemAccepted then
-               if (callback(value, count) == true) then
+               if (action(value, count) == true) then
                   return
                end
                count = count + 1

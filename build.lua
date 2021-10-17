@@ -23,7 +23,7 @@ local SRC_FILES = {
 }
 
 local HEADER = [[
-	ECS Lua v2.1.1
+	ECS Lua v2.1.2
 
 	ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
 

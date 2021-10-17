@@ -36,22 +36,17 @@ function World.New(systemClasses, frequency, disableAutoUpdate)
       ]]
       version = 0,
       --[[
-         Allows you to define the maximum time that the JobSystem can operate in each step. This value is a percentage 
-         of the expected time for each frame (see World:SetFrequency(frequency)).
+         Allows you to define the maximum time that the JobSystem can operate in each frame.
 
-         The default value is 0.7
+         The default value is 0.011666666666666665 = ((1000/60/1000)*0.7)
 
-         Ex1. If the world has a frequency set to 30Hz (30 fps), then the JobSystem will try to run a maximum of 0.0077 
-         seconds in each step, totaling 0.023 seconds of processing per frame. A game that runs at 30fps has 0.0333 
-         seconds to do all the processing for each frame, including rendering (1000/30/1000)
+         A game that runs at 30fps has 0.0333 seconds to do all the processing for each frame, including rendering
             - 30FPS = ((1000/30/1000)*0.7)/3 = 0.007777777777777777
 
-         Ex2. If the world has the frequency set to 60Hz (60 fps), then the JobSystem will try to run a maximum of 0.0038 
-         seconds in each step, totaling 0.011 seconds of processing per frame. A game that runs at 60fps has 0.0166 
-         seconds to do all the processing for each frame, including rendering (1000/60/1000)
+         A game that runs at 60fps has 0.0166 seconds to do all the processing for each frame, including rendering
             - 60FPS = ((1000/60/1000)*0.7)/3 = 0.0038888888888888883
       ]]
-      maxScheduleExecTimePercent = 0.7,
+      maxTasksExecTime = 0.013333333333333334,
       _dirty = false, -- True when create/remove entity, add/remove entity component (change archetype)
       _timer = Timer.New(frequency),
       _systems = {}, -- systems in this world
@@ -64,7 +59,7 @@ function World.New(systemClasses, frequency, disableAutoUpdate)
    }, World)
 
    -- System execution plan
-   world._executor = SystemExecutor.New(world, {})
+   world._executor = SystemExecutor.New(world)
 
    world._onChangeArchetypeEvent:Connect(function(entity, archetypeOld, archetypeNew)      
       world:_OnChangeArchetype(entity, archetypeOld, archetypeNew)
@@ -119,7 +114,8 @@ function World:AddSystem(systemClass, config)
      
       if self._systems[systemClass] == nil then
          self._systems[systemClass] = systemClass.New(self, config)
-         self._executor = SystemExecutor.New(self, self._systems)
+
+         self._executor:SetSystems(self._systems)
       end
    end
 end
@@ -233,32 +229,39 @@ end
 ]]
 function World:Update(step, now)
 
-   --[[
-      .-------------------------------------.
-      |----- process|transform|render ------| 
-      |                  |                  |
-      | s:ShouldUpdate() | <                |
-      | s:Update()       |     s:OnRemove() |
-      |                  |     s:OnExit()   |
-      |                  |     s:OnEnter()  |
-      |                  | >{0...n}         |
-      |                  |                  |
-      '-------------------------------------'
-   ]]
-
+   
    self._timer:Update(
       now, step,
       function(Time)
+         --[[
+            JobSystem
+            .------------------.
+            |     pipeline     |
+            |------------------| 
+            | s:ShouldUpdate() |
+            | s:Update()       |
+            '------------------'
+         ]]
          if step == "process" then
             self._executor:ScheduleTasks(Time)
          end
          -- run suspended Tasks
-         -- 60FPS = ((1000/60/1000)*0.7)/3 = 0.0038888888888888883
-         -- 30FPS = ((1000/30/1000)*0.7)/3 = 0.007777777777777777
-         local maxScheduleExecTime = (self._timer.Time.DeltaFixed * (self.maxScheduleExecTimePercent or 0.7))/3
-         self._executor:ExecTasks(maxScheduleExecTime)
+         self._executor:ExecTasks(self.maxTasksExecTime)
       end,
       function(Time)
+         --[[
+            .------------------.
+            |     pipeline     |
+            |------------------| 
+            | s:ShouldUpdate() |
+            | s:Update()       |
+            |                  |
+            |-- CLEAR ---------|
+            | s:OnRemove()     |
+            | s:OnExit()       |
+            | s:OnEnter()      |
+            '------------------'
+         ]]
          if step == "process" then
             self._executor:ExecProcess(Time)
          elseif step == "transform" then

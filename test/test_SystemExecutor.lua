@@ -56,7 +56,9 @@ function TestSystemExecutor:test_ExecProcessTransformRender()
          end
       }
    
-      local executor = SystemExecutor.New(world, {system1, system2, system3})   
+      local executor = SystemExecutor.New(world)   
+      executor:SetSystems({system1, system2, system3})
+
       executor[method](executor, {})
    
       lu.assertEquals(log, {1, 3})  
@@ -212,7 +214,8 @@ function TestSystemExecutor:test_ExecTasks()
    local task_g = Task_G.New(world, {})
    local task_h = Task_H.New(world, {})
 
-   local executor = SystemExecutor.New(world, {task_a, task_b, task_c, task_d, task_e, task_f, task_g, task_h})
+   local executor = SystemExecutor.New(world)
+   executor:SetSystems({task_a, task_b, task_c, task_d, task_e, task_f, task_g, task_h})
 
    executor:ScheduleTasks({})
    
@@ -289,7 +292,8 @@ function TestSystemExecutor:test_ExecOnEnter()
       }
    }
 
-   local executor = SystemExecutor.New(world, {systemArch1, systemNoQuery, systemArch3})   
+   local executor = SystemExecutor.New(world)   
+   executor:SetSystems({systemArch1, systemNoQuery, systemArch3})
 
    executor:ExecOnExitEnter({}, changedEntities)
    lu.assertEquals(log, logExpected)  
@@ -379,7 +383,8 @@ function TestSystemExecutor:test_ExecOnExit()
       }
    }
 
-   local executor = SystemExecutor.New(world, {systemArch1, systemNoQuery, systemArch3})   
+   local executor = SystemExecutor.New(world)   
+   executor:SetSystems({systemArch1, systemNoQuery, systemArch3})
 
    executor:ExecOnExitEnter({}, changedEntities)
    lu.assertEquals(log, logExpected)  
@@ -469,7 +474,8 @@ function TestSystemExecutor:test_ExecOnRemove()
       }
    }
 
-   local executor = SystemExecutor.New(world, {systemArch1, systemNoQuery, systemArch3})   
+   local executor = SystemExecutor.New(world)   
+   executor:SetSystems({systemArch1, systemNoQuery, systemArch3})
 
    executor:ExecOnRemove({}, removedEntities)
    lu.assertEquals(log, logExpected)  

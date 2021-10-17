@@ -1,5 +1,5 @@
 --[[
-	ECS Lua v2.1.1
+	ECS Lua v2.1.2
 
 	ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
 
@@ -818,7 +818,7 @@ end
 __F__["ECS"] = function()
    -- src/ECS.lua
    --[[
-      ECS Lua v2.1.0 [2021-10-15 11:00]
+      ECS Lua v2.1.2
    
       ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
    
@@ -1233,12 +1233,12 @@ __F__["EntityRepository"] = function()
          local archetype = entity.archetype
          local storage = self._archetypes[archetype]
          if (storage == nil) then
-            storage = { Count = 0, Entities = {} }
+            storage = { count = 0, entities = {} }
             self._archetypes[archetype] = storage
          end
       
-         storage.Entities[entity] = true
-         storage.Count = storage.Count + 1
+         storage.entities[entity] = true
+         storage.count = storage.count + 1
          
          self._entitiesArchetype[entity] = archetype
       else
@@ -1259,10 +1259,10 @@ __F__["EntityRepository"] = function()
       self._entitiesArchetype[entity] = nil
    
       local storage = self._archetypes[archetypeOld]
-      if (storage ~= nil and storage.Entities[entity] == true) then
-         storage.Entities[entity] = nil
-         storage.Count = storage.Count - 1
-         if (storage.Count == 0) then
+      if (storage ~= nil and storage.entities[entity] == true) then
+         storage.entities[entity] = nil
+         storage.count = storage.count - 1
+         if (storage.count == 0) then
             self._archetypes[archetypeOld] = nil
          end
       end
@@ -1293,7 +1293,7 @@ __F__["EntityRepository"] = function()
       local chunks = {}
       for archetype, storage in pairs(self._archetypes) do
          if query:Match(archetype) then
-            table.insert(chunks, storage.Entities)
+            table.insert(chunks, storage.entities)
          end
       end
       return query:Result(chunks), #chunks > 0
@@ -1328,14 +1328,14 @@ __F__["Event"] = function()
    Connection.__index = Connection
    
    function Connection.New(event, handler)
-      return setmetatable({ _Event = event, _Handler = handler }, Connection)
+      return setmetatable({ _event = event, _handler = handler }, Connection)
    end
    
    -- Unsubscribe
    function Connection:Disconnect()
-      local event = self._Event
+      local event = self._event
       if (event and not event.destroyed) then
-         local idx = table.find(event._handlers, self._Handler)
+         local idx = table.find(event._handlers, self._handler)
          if idx ~= nil then
             table.remove(event._handlers, idx)
          end
@@ -1492,7 +1492,6 @@ __F__["Query"] = function()
       @return QueryResult
    ]]
    function Query:Result(chunks)
-      self._lastResultChunks = chunks
       return QueryResult.New(chunks, self._clauses)
    end
    
@@ -1894,7 +1893,7 @@ __F__["QueryResult"] = function()
    ]]
    function QueryResult:AnyMatch(predicate)
       local anyMatch = false
-      self:Run(function(value)
+      self:ForEach(function(value)
          if predicate(value) then
             anyMatch = true
          end
@@ -1912,7 +1911,7 @@ __F__["QueryResult"] = function()
    ]]
    function QueryResult:AllMatch(predicate)
       local allMatch = true
-      self:Run(function(value)
+      self:ForEach(function(value)
          if (not predicate(value)) then
             allMatch = false
          end
@@ -1935,28 +1934,12 @@ __F__["QueryResult"] = function()
    ]]
    function QueryResult:FindAny()
       local out
-      self:Run(function(value)
+      self:ForEach(function(value)
          out = value
          -- break
          return true
       end)
       return out
-   end
-   
-   --[[
-      Performs an action for each element of this QueryResult.
-   
-      This is a terminal operation.
-   
-      The behavior of this operation is explicitly nondeterministic. This operation does not guarantee to respect the 
-      encounter order of the QueryResult.
-   
-      @param action {function(value, count) -> bool} A action to perform on the elements, breaks execution case returns true
-   ]]
-   function QueryResult:ForEach(action)
-      self:Run(function(value, count)
-         return action(value, count) == true
-      end)
    end
    
    --[[
@@ -1966,7 +1949,7 @@ __F__["QueryResult"] = function()
    ]]
    function QueryResult:ToArray()
       local array = {}
-      self:Run(function(value)
+      self:ForEach(function(value)
          table.insert(array, value)
       end)
       return array
@@ -1981,7 +1964,7 @@ __F__["QueryResult"] = function()
    ]]
    function QueryResult:Iterator()
       local thread = coroutine.create(function()
-         self:Run(function(value, count)
+         self:ForEach(function(value, count)
             -- These will be passed back again next iteration
             coroutine.yield(value, count)
          end)
@@ -1993,13 +1976,17 @@ __F__["QueryResult"] = function()
       end
    end
    
-   
    --[[
-      Pipeline this QueryResult, applying callback to each value
+      Performs an action for each element of this QueryResult.
    
-      @param callback {function(value, count) -> bool} Break execution case returns true
+      This is a terminal operation.
+   
+      The behavior of this operation is explicitly nondeterministic. This operation does not guarantee to respect the 
+      encounter order of the QueryResult.
+   
+      @param action {function(value, count) -> bool} A action to perform on the elements, breaks execution case returns true
    ]]
-   function QueryResult:Run(callback)
+   function QueryResult:ForEach(action)
       local count = 1
       local pipeline = self._pipeline
    
@@ -2008,13 +1995,14 @@ __F__["QueryResult"] = function()
          -- faster
          for _, entities in ipairs(self.chunks) do
             for entity, _ in pairs(entities) do
-               if (callback(entity, count) == true) then
+               if (action(entity, count) == true) then
                   return
                end
                count = count + 1  
             end
          end
       else
+         -- Pipeline this QueryResult, applying callback to each value
          for i, entities in ipairs(self.chunks) do
             for entity,_ in pairs(entities) do
                local mustStop = false
@@ -2038,7 +2026,7 @@ __F__["QueryResult"] = function()
                end
                
                if itemAccepted then
-                  if (callback(value, count) == true) then
+                  if (action(value, count) == true) then
                      return
                   end
                   count = count + 1
@@ -2296,7 +2284,29 @@ __F__["SystemExecutor"] = function()
    local SystemExecutor = {}
    SystemExecutor.__index = SystemExecutor
    
-   function SystemExecutor.New(world, systems)   
+   function SystemExecutor.New(world)   
+      local executor =  setmetatable({
+         _world = world,
+         _onExit = {},
+         _onEnter = {},
+         _onRemove = {},
+         _task = {},
+         _render = {},
+         _process = {},
+         _transform = {},
+         _schedulers = {},
+         _lastFrameMatchQueries = {},
+         _currentFrameMatchQueries = {},
+      }, SystemExecutor)
+   
+      world:OnQueryMatch(function(query)
+         executor._currentFrameMatchQueries[query] = true
+      end)
+   
+      return executor
+   end
+   
+   function SystemExecutor:SetSystems(systems)
       local onExit = {}
       local onEnter = {}
       local onRemove = {}
@@ -2348,26 +2358,13 @@ __F__["SystemExecutor"] = function()
       table.sort(updateProcess, orderSystems)
       table.sort(updateTransform, orderSystems)
    
-      -- tasks = resolveDependecy(systems)
-      local executor =  setmetatable({
-         _world = world,
-         _onExit = onExit,
-         _onEnter = onEnter,
-         _onRemove = onRemove,
-         _task = updateTask,
-         _render = updateRender,
-         _process = updateProcess,
-         _transform = updateTransform,
-         _schedulers = {},
-         _lastFrameMatchQueries = {},
-         _currentFrameMatchQueries = {},
-      }, SystemExecutor)
-   
-      world:OnQueryMatch(function(query)
-         executor._currentFrameMatchQueries[query] = true
-      end)
-   
-      return executor
+      self._onExit = onExit
+      self._onEnter = onEnter
+      self._onRemove = onRemove
+      self._task = updateTask
+      self._render = updateRender
+      self._process = updateProcess
+      self._transform = updateTransform
    end
    
    --[[
@@ -2989,22 +2986,17 @@ __F__["World"] = function()
          ]]
          version = 0,
          --[[
-            Allows you to define the maximum time that the JobSystem can operate in each step. This value is a percentage 
-            of the expected time for each frame (see World:SetFrequency(frequency)).
+            Allows you to define the maximum time that the JobSystem can operate in each frame.
    
-            The default value is 0.7
+            The default value is 0.011666666666666665 = ((1000/60/1000)*0.7)
    
-            Ex1. If the world has a frequency set to 30Hz (30 fps), then the JobSystem will try to run a maximum of 0.0077 
-            seconds in each step, totaling 0.023 seconds of processing per frame. A game that runs at 30fps has 0.0333 
-            seconds to do all the processing for each frame, including rendering (1000/30/1000)
+            A game that runs at 30fps has 0.0333 seconds to do all the processing for each frame, including rendering
                - 30FPS = ((1000/30/1000)*0.7)/3 = 0.007777777777777777
    
-            Ex2. If the world has the frequency set to 60Hz (60 fps), then the JobSystem will try to run a maximum of 0.0038 
-            seconds in each step, totaling 0.011 seconds of processing per frame. A game that runs at 60fps has 0.0166 
-            seconds to do all the processing for each frame, including rendering (1000/60/1000)
+            A game that runs at 60fps has 0.0166 seconds to do all the processing for each frame, including rendering
                - 60FPS = ((1000/60/1000)*0.7)/3 = 0.0038888888888888883
          ]]
-         maxScheduleExecTimePercent = 0.7,
+         maxTasksExecTime = 0.013333333333333334,
          _dirty = false, -- True when create/remove entity, add/remove entity component (change archetype)
          _timer = Timer.New(frequency),
          _systems = {}, -- systems in this world
@@ -3017,7 +3009,7 @@ __F__["World"] = function()
       }, World)
    
       -- System execution plan
-      world._executor = SystemExecutor.New(world, {})
+      world._executor = SystemExecutor.New(world)
    
       world._onChangeArchetypeEvent:Connect(function(entity, archetypeOld, archetypeNew)      
          world:_OnChangeArchetype(entity, archetypeOld, archetypeNew)
@@ -3072,7 +3064,8 @@ __F__["World"] = function()
         
          if self._systems[systemClass] == nil then
             self._systems[systemClass] = systemClass.New(self, config)
-            self._executor = SystemExecutor.New(self, self._systems)
+   
+            self._executor:SetSystems(self._systems)
          end
       end
    end
@@ -3186,32 +3179,39 @@ __F__["World"] = function()
    ]]
    function World:Update(step, now)
    
-      --[[
-         .-------------------------------------.
-         |----- process|transform|render ------| 
-         |                  |                  |
-         | s:ShouldUpdate() | <                |
-         | s:Update()       |     s:OnRemove() |
-         |                  |     s:OnExit()   |
-         |                  |     s:OnEnter()  |
-         |                  | >{0...n}         |
-         |                  |                  |
-         '-------------------------------------'
-      ]]
-   
+      
       self._timer:Update(
          now, step,
          function(Time)
+            --[[
+               JobSystem
+               .------------------.
+               |     pipeline     |
+               |------------------| 
+               | s:ShouldUpdate() |
+               | s:Update()       |
+               '------------------'
+            ]]
             if step == "process" then
                self._executor:ScheduleTasks(Time)
             end
             -- run suspended Tasks
-            -- 60FPS = ((1000/60/1000)*0.7)/3 = 0.0038888888888888883
-            -- 30FPS = ((1000/30/1000)*0.7)/3 = 0.007777777777777777
-            local maxScheduleExecTime = (self._timer.Time.DeltaFixed * (self.maxScheduleExecTimePercent or 0.7))/3
-            self._executor:ExecTasks(maxScheduleExecTime)
+            self._executor:ExecTasks(self.maxTasksExecTime)
          end,
          function(Time)
+            --[[
+               .------------------.
+               |     pipeline     |
+               |------------------| 
+               | s:ShouldUpdate() |
+               | s:Update()       |
+               |                  |
+               |-- CLEAR ---------|
+               | s:OnRemove()     |
+               | s:OnExit()       |
+               | s:OnEnter()      |
+               '------------------'
+            ]]
             if step == "process" then
                self._executor:ExecProcess(Time)
             elseif step == "transform" then

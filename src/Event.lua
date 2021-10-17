@@ -6,14 +6,14 @@ local Connection = {}
 Connection.__index = Connection
 
 function Connection.New(event, handler)
-   return setmetatable({ _Event = event, _Handler = handler }, Connection)
+   return setmetatable({ _event = event, _handler = handler }, Connection)
 end
 
 -- Unsubscribe
 function Connection:Disconnect()
-   local event = self._Event
+   local event = self._event
    if (event and not event.destroyed) then
-      local idx = table.find(event._handlers, self._Handler)
+      local idx = table.find(event._handlers, self._handler)
       if idx ~= nil then
          table.remove(event._handlers, idx)
       end

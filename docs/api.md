@@ -431,9 +431,6 @@ QueryResult provides several methods to facilitate the filtering of entities res
       end
       ```  
    - _@return_ `Iterator`
-- `QueryResult:Run(callback)`
-   - Pipeline this QueryResult, applying callback to each value
-   - _@param_ `callback` `function(value, count) -> bool` Break execution case returns true
 
 # System
 
@@ -628,22 +625,14 @@ Singleton, reference to the world's global processing time.
    it only operates on "dirty" entities, which have undergone changes. The code for this validation on a system is: 
       - `local isDirty = entity.version > self.version`
    - _@type_ `number`
-- `World.maxScheduleExecTimePercent`
-   - Allows you to define the maximum time that the `JobSystem` can operate in each step _(`process`, `transform`, 
-   `render`)_. This value is a percentage of the expected time for each frame (see `World:SetFrequency(frequency)`).
-
-   The default value is 0.7
-
-      - Ex1. If the world has a frequency set to 30Hz (30 fps), then the JobSystem will try to run a maximum of 0.0077 
-      seconds in each step, totaling 0.023 seconds of processing per frame. A game that runs at 30fps has 0.0333 seconds 
-      to do all the processing for each frame, including rendering _(`1000/30/1000`)_
-         - 30FPS = `((1000/30/1000)*0.7)/3` = `0.007777777777777777`
-
-      - Ex2. If the world has the frequency set to 60Hz (60 fps), then the JobSystem will try to run a maximum of 0.0038 
-      seconds in each step, totaling 0.011 seconds of processing per frame. A game that runs at 60fps has 0.0166 seconds 
-      to do all the processing for each frame, including rendering _(`1000/60/1000`)_
-         - 60FPS = `((1000/60/1000)*0.7)/3` = `0.0038888888888888883`
-   - _@type_ `number` Default 0.7
+- `World.maxTasksExecTime`
+   - Allows you to define the maximum time that the `JobSystem` can operate in each frame. The default value is 
+   `0.011666666666666665` = `((1000/60/1000)*0.7)`
+      - A game that runs at 30fps has 0.0333 seconds to do all the processing for each frame, including rendering
+         - 30FPS = `(1000/30/1000)` = `0.03333333333333333`
+      - A game that runs at 60fps has 0.0166 seconds to do all the processing for each frame, including rendering
+         - 60FPS = `(1000/60/1000)` = `0.016666666666666666`
+   - _@type_ `number` Default `0.011666666666666665`
 - `World:SetFrequency(frequency)`
    - Define the frequency that the `process` step will be executed
    - _@param_ `frequency` `number` _optional_ Default 30

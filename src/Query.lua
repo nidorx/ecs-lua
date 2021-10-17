@@ -106,7 +106,6 @@ end
    @return QueryResult
 ]]
 function Query:Result(chunks)
-   self._lastResultChunks = chunks
    return QueryResult.New(chunks, self._clauses)
 end
 

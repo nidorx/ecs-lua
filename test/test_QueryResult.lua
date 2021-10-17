@@ -162,10 +162,10 @@ function TestQueryResult:test_AnyMatch_AllMatch_FindAny()
 
    -- short-circuiting terminal
    local count = 0
-   result.Run = spy(result.Run, function(runOriginal, result, callback)
-      return runOriginal(result, function(value)
+   result.ForEach = spy(result.ForEach, function(forEachOriginal, result, callback)
+      return forEachOriginal(result, function(value)
          count = count + 1
-         return callback(value)
+         return callback(value, count)
       end)
    end)
    

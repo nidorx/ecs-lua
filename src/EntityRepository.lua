@@ -32,12 +32,12 @@ function EntityRepository:Insert(entity)
       local archetype = entity.archetype
       local storage = self._archetypes[archetype]
       if (storage == nil) then
-         storage = { Count = 0, Entities = {} }
+         storage = { count = 0, entities = {} }
          self._archetypes[archetype] = storage
       end
    
-      storage.Entities[entity] = true
-      storage.Count = storage.Count + 1
+      storage.entities[entity] = true
+      storage.count = storage.count + 1
       
       self._entitiesArchetype[entity] = archetype
    else
@@ -58,10 +58,10 @@ function EntityRepository:Remove(entity)
    self._entitiesArchetype[entity] = nil
 
    local storage = self._archetypes[archetypeOld]
-   if (storage ~= nil and storage.Entities[entity] == true) then
-      storage.Entities[entity] = nil
-      storage.Count = storage.Count - 1
-      if (storage.Count == 0) then
+   if (storage ~= nil and storage.entities[entity] == true) then
+      storage.entities[entity] = nil
+      storage.count = storage.count - 1
+      if (storage.count == 0) then
          self._archetypes[archetypeOld] = nil
       end
    end
@@ -92,7 +92,7 @@ function EntityRepository:Query(query)
    local chunks = {}
    for archetype, storage in pairs(self._archetypes) do
       if query:Match(archetype) then
-         table.insert(chunks, storage.Entities)
+         table.insert(chunks, storage.entities)
       end
    end
    return query:Result(chunks), #chunks > 0
