@@ -101,6 +101,8 @@ Pra criar a query, nós podems usar os métodos `Query.All(Component)`, `Query.A
 `Query.None(Component)`. Ao invocar qualquer um destes métodos um `QueryBuilder` é retornado, desse modo voce pode 
 invocar os outros métodos na sequencia Ex. `Query.All(ComponentA).Any(ComponentB).None(ComponentC).Build()`.
 
+![Pipeline](../assets/pipeline.png)
+
 Vamos começar criando um sistema que fará um loop por todas as entidades que possuem um componente `Position` e 
 registrar suas posições.
 

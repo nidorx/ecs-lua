@@ -3,3 +3,5 @@
 .vscode
 
 luacov.report.out
+
+src/*.zip

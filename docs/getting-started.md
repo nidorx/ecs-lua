@@ -94,7 +94,7 @@ To create the query, we can use the `Query.All(Component)`, `Query.Any(Component
 invoking any of these methods a `QueryBuilder` is returned, so you can invoke the other methods in sequence 
 Ex. `Query.All(ComponentA).Any(ComponentB).None(ComponentC).Build()`.
 
-![General Concepts](assets/pipeline.png)
+![Pipeline](assets/pipeline.png)
 
 Let's start by creating a system that will loop through all entities that have a `Position` component and record their 
 positions.
