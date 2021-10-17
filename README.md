@@ -66,7 +66,7 @@ end
 
 local world = World({ InAcidSystem })
 
-world.Entity(Position({ x: 5.0 }), Health())
+world:Entity(Position({ x = 5.0 }), Health())
 ```
 
 # Features
