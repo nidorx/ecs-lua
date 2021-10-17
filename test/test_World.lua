@@ -235,3 +235,106 @@ function TestWorld:test_SystemWhitoutQuery()
    lu.assertEquals(calledOnDestroy, 2)
 
 end
+
+function TestWorld:test_ExecTasks()
+ 
+   local log = {}
+   local logBeforeYield = {}
+   local logAfterYield = {}
+
+   local Task_A = System.Create('task', function()
+      -- delay execution to ensure test flow
+      local i = 0
+      while i <= 4000 do
+         i = i + 1
+         if i%1000 == 0 then
+            table.insert(logBeforeYield, i)
+            coroutine.yield()
+            table.insert(logAfterYield, i+1)
+         end
+      end
+      
+      table.insert(log, 'A')
+      lu.assertEquals(logBeforeYield, {1000, 2000, 3000, 4000})
+      lu.assertEquals(logAfterYield, {1001, 2001, 3001, 4001})
+   end)
+
+   local Task_B = System.Create('task', function()
+      table.insert(log, 'B')
+   end)
+
+   local Task_C = System.Create('task', function()
+      table.insert(log, 'C')
+   end)
+
+   local Task_D = System.Create('task', function()
+      table.insert(log, 'D')
+   end)
+
+   local Task_E = System.Create('task', function()
+      table.insert(log, 'E')
+   end)
+
+   local Task_F = System.Create('task', function()
+      table.insert(log, 'F')
+   end)
+
+   local Task_G = System.Create('task', function()
+      table.insert(log, 'G')
+   end)
+   
+
+   local Task_H = System.Create('task', function(self)
+      table.insert(log, 'H')
+   end)
+
+   --[[
+      ┌─┐      ┌─┐            ┌─┐
+      │A│◄─────┤C│◄────┬──────┤F│◄────┐
+      └─┘      └┬┘     │      └┬┘     │
+                │     ┌┴┐      │     ┌┴┐
+           ┌────┘     │E│◄─────┘     │H│
+           │          └┬┘            └┬┘
+           │           │              │
+      ┌─┐  │   ┌─┐     │      ┌─┐     │
+      │B│◄─┴───┤D│◄────┴──────┤G│◄────┘
+      └─┘      └─┘            └─┘
+
+      A - has no dependency
+      B - has no dependency
+      C - Depends on A,B
+      D - Depends on B
+      E - Depends on A,B,C,D
+      F - Depends on A,B,C,D,E
+      G - Depends on B,D
+      H - Depends on A,B,C,D,E,F,G
+
+      Completion order will be B,D,G,A,C,E,F,H      
+   ]]
+   Task_A.Before = {Task_C}
+   Task_B.Before = {Task_D}
+   Task_C.After = {Task_B}
+   Task_D.Before = {Task_G}
+   Task_F.After = {Task_E}
+   Task_E.After = {Task_D, Task_C}
+   Task_C.Before = {Task_F}
+   Task_H.After = {Task_F, Task_G}
+
+
+   local world = World.New({ Task_A, Task_B, Task_C, Task_D, Task_E, Task_F, Task_G, Task_H})   
+   world:SetFrequency(30) 
+   -- world.version = 10
+   
+   world:Update('process', 0.0334 * 1)
+   world:Update('transform', 0.0335 * 1 + 0.001)
+   world:Update('transform', 0.0335 * 2 + 0.001)
+   world:Update('transform', 0.0335 * 4 + 0.001)
+   world:Update('transform', 0.0335 * 5 + 0.001)
+   world:Update('transform', 0.0335 * 6 + 0.001)
+
+   lu.assertEquals(log, {'B','D','G','A','C','E','F','H'}) 
+   lu.assertEquals(logBeforeYield, {1000, 2000, 3000, 4000})  
+   lu.assertEquals(logAfterYield, {1001, 2001, 3001, 4001})   
+
+   world:Destroy()
+end

@@ -1,14 +1,4 @@
-# Getting Started
-
-**ECS Lua** is an Entity Component System (ECS) engine made in [Lua](https://www.lua.org/) used for game development.
-The basic idea of this pattern is to stop defining entities using a 
-[hierarchy](https://en.wikipedia.org/wiki/Inheritance_(object-oriented_programming)) of classes and start doing use of 
-[composition](https://en.wikipedia.org/wiki/Object_composition) in a Data Oriented Programming paradigm.
-([More information on Wikipedia](https://en.wikipedia.org/wiki/Entity_component_system)).
-Programming with an ECS can result in code that is more efficient and easier to extend over time.
-
-
-## Installation
+# Installation
 
 **ECS Lua** has no external dependencies, so just download the latest version available on 
 [releases page](https://github.com/nidorx/ecs-lua/releases) of the project.
@@ -28,7 +18,7 @@ After importing **ECS Lua**, it is ready to be used. **ECS Lua** registers the g
 make it easy to use, so you can use the engine in both ways `local ECS = require("ECS")`
 (in Roblox `local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))`) or simply `_G.ECS`.
 
-### LoopManager
+## LoopManager
 
 In order for the world's systems to receive an update, the `World:Update(step, now)` method must be invoked on each 
 frame. To automate this process, **ECS Lua** provides a functionality so that, at the time of instantiation of a 
@@ -40,13 +30,13 @@ The implementation of this method is very simple and more details can be seen in
 > If you use Roblox you don't need to worry, **ECS Lua** already has a default implementation when it runs on
 Roblox, more details below.
 
-### Roblox
+## Roblox
 
 You can install directly from Roblox Studio by searching the toolbox for `ECS-lua`, this is the 
 [minified engine version](https://www.roblox.com/library/5887881675). When using **ECS Lua** in Roblox, the engine 
 already automatically identifies and registers a `LoopManager`, so no additional steps are needed.
 
-## General Concepts
+# General Concepts
 
 Some common terms in ECS engines are:
 - [Entities](/architecture?id=entity): An object with a unique ID that can have multiple components attached to it.
@@ -55,11 +45,7 @@ Some common terms in ECS engines are:
 - [Queries](/architecture?id=query): Used by systems to determine which entities they are interested in, based on the components the entities have.
 - [World](/architecture?id=world): A container for entities, components, systems and queries.
 
-<div align=center>
-
-![Architecture](assets/diagram-1.png)
-
-</div>
+![General Concepts](assets/diagram-1.png)
 
 The normal workflow when building an ECS-based program:
 - Create the `Components` that shape the data you need to use in your game/application.
@@ -107,6 +93,8 @@ We're also going to define a `Query`, which is the query we'll use to get just t
 To create the query, we can use the `Query.All(Component)`, `Query.Any(Component)` or `Query.None(Component)`. When 
 invoking any of these methods a `QueryBuilder` is returned, so you can invoke the other methods in sequence 
 Ex. `Query.All(ComponentA).Any(ComponentB).None(ComponentC).Build()`.
+
+![General Concepts](assets/pipeline.png)
 
 Let's start by creating a system that will loop through all entities that have a `Position` component and record their 
 positions.
@@ -315,6 +303,6 @@ Result of the above code in Roblox Studio
 
 ![Result of the above code in Roblox Studio](assets/get-started-output.gif)
 
-## Proximos passos
+## Next steps
 This was a quick overview of how things are structured using **ECS Lua**,
 [read the architecture documentation](/architecture) for more detailed information.

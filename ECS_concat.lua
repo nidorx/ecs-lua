@@ -1,5 +1,5 @@
 --[[
-	ECS Lua v2.1.0 [2021-10-15 11:00]
+	ECS Lua v2.1.1
 
 	ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
 
@@ -2118,8 +2118,16 @@ __F__["System"] = function()
          error("The step parameter must one of ", table.concat(STEPS, ", "))
       end
    
-      if type(order) == "function" then
+      if (order and type(order) == "function") then
          updateFn = order
+         order = nil
+      elseif query and type(query) == "function" then
+         updateFn = query
+         query = nil
+      end
+   
+      if (order and type(order) == "table" and (order.isQuery or order.isQueryBuilder)) then
+         query = order
          order = nil
       end
    
@@ -2785,7 +2793,7 @@ __F__["Timer"] = function()
       self.Time.DeltaFixed = 1000/frequency/1000
    end
    
-   function Timer:Update(now, step, callback)
+   function Timer:Update(now, step, beforeUpdate, update)
       if (self.FirstUpdate == 0) then
          self.FirstUpdate = now
       end
@@ -2834,12 +2842,14 @@ __F__["Timer"] = function()
          local nLoops = 0
          local updated = false
    
+         beforeUpdate(Time)
+   
          -- Fixed time is updated in regular intervals (equal to DeltaFixed) until time property is reached.
          while (Time.Process <= Time.Frame and nLoops < MAX_SKIP_FRAMES) do
    
             updated = true
    
-            callback(Time)
+            update(Time)
    
             nLoops = nLoops + 1
             Time.Process = Time.Process + Time.DeltaFixed
@@ -2857,7 +2867,8 @@ __F__["Timer"] = function()
             Time.Interpolation = 1
          end
    
-         callback(Time)
+         beforeUpdate(Time)
+         update(Time)
    
          if step == "render" then
             -- last step, save last frame time
@@ -3187,66 +3198,71 @@ __F__["World"] = function()
          |                  |                  |
          '-------------------------------------'
       ]]
-      
-      self._timer:Update(now, step, function(Time)
-         if step == "process" then
-            self._executor:ScheduleTasks(Time)
-            self._executor:ExecProcess(Time)
-         elseif step == "transform" then
-            self._executor:ExecTransform(Time)
-         else
-            self._executor:ExecRender(Time)
-         end
    
-         -- 60FPS = ((1000/60/1000)*0.7)/3 = 0.0038888888888888883
-         -- 30FPS = ((1000/30/1000)*0.7)/3 = 0.007777777777777777
-         local maxScheduleExecTime = (Time.DeltaFixed * (self.maxScheduleExecTimePercent or 0.7))/3
-   
-         -- run suspended Tasks
-         self._executor:ExecTasks(maxScheduleExecTime)
-   
-         -- cleans up after running scripts
-         while self._dirty do
-            self._dirty = false
-         
-            -- 1: remove entities
-            local entitiesRemoved = {}
-            for entity,_ in pairs(self._entitiesRemoved) do
-               entitiesRemoved[entity] = self._entitiesUpdated[entity]
-               self._entitiesUpdated[entity] = nil
+      self._timer:Update(
+         now, step,
+         function(Time)
+            if step == "process" then
+               self._executor:ScheduleTasks(Time)
             end
-            self._entitiesRemoved = {}
-            self._executor:ExecOnRemove(Time, entitiesRemoved)
-            entitiesRemoved = nil
-         
-            local changed = {}
-            local hasChange = false
-         
-            -- 2: Update entities in memory
-            for entity, archetypeOld in pairs(self._entitiesUpdated) do
-               if (archetypeOld ~= entity.archetype) then
+            -- run suspended Tasks
+            -- 60FPS = ((1000/60/1000)*0.7)/3 = 0.0038888888888888883
+            -- 30FPS = ((1000/30/1000)*0.7)/3 = 0.007777777777777777
+            local maxScheduleExecTime = (self._timer.Time.DeltaFixed * (self.maxScheduleExecTimePercent or 0.7))/3
+            self._executor:ExecTasks(maxScheduleExecTime)
+         end,
+         function(Time)
+            if step == "process" then
+               self._executor:ExecProcess(Time)
+            elseif step == "transform" then
+               self._executor:ExecTransform(Time)
+            else
+               self._executor:ExecRender(Time)
+            end
+   
+            -- cleans up after running scripts
+            while self._dirty do
+               self._dirty = false
+            
+               -- 1: remove entities
+               local entitiesRemoved = {}
+               for entity,_ in pairs(self._entitiesRemoved) do
+                  entitiesRemoved[entity] = self._entitiesUpdated[entity]
+                  self._entitiesUpdated[entity] = nil
+               end
+               self._entitiesRemoved = {}
+               self._executor:ExecOnRemove(Time, entitiesRemoved)
+               entitiesRemoved = nil
+            
+               local changed = {}
+               local hasChange = false
+            
+               -- 2: Update entities in memory
+               for entity, archetypeOld in pairs(self._entitiesUpdated) do
+                  if (archetypeOld ~= entity.archetype) then
+                     hasChange = true
+                     changed[entity] = archetypeOld
+                  end
+               end
+               self._entitiesUpdated = {}
+            
+               -- 3: Add new entities
+               for entity, _ in pairs(self._entitiesCreated) do
                   hasChange = true
-                  changed[entity] = archetypeOld
+                  changed[entity] = Archetype.EMPTY
+            
+                  entity.isAlive = true
+                  self._repository:Insert(entity) 
+               end
+               self._entitiesCreated = {}
+            
+               if hasChange then
+                  self._executor:ExecOnExitEnter(Time, changed)
+                  changed = nil
                end
             end
-            self._entitiesUpdated = {}
-         
-            -- 3: Add new entities
-            for entity, _ in pairs(self._entitiesCreated) do
-               hasChange = true
-               changed[entity] = Archetype.EMPTY
-         
-               entity.isAlive = true
-               self._repository:Insert(entity) 
-            end
-            self._entitiesCreated = {}
-         
-            if hasChange then
-               self._executor:ExecOnExitEnter(Time, changed)
-               changed = nil
-            end
          end
-      end)
+      )
    end
    
    --[[

@@ -18,8 +18,16 @@ function System.Create(step, order, query, updateFn)
       error("The step parameter must one of ", table.concat(STEPS, ", "))
    end
 
-   if type(order) == "function" then
+   if (order and type(order) == "function") then
       updateFn = order
+      order = nil
+   elseif query and type(query) == "function" then
+      updateFn = query
+      query = nil
+   end
+
+   if (order and type(order) == "table" and (order.isQuery or order.isQueryBuilder)) then
+      query = order
       order = nil
    end
 

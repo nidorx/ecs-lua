@@ -1,14 +1,4 @@
-# Primeiros Passos
-
-O **ECS Lua** é um motor de Entity Component System (ECS) feito em [Lua](https://www.lua.org/) usado para 
-desenvolvimento de jogos.
-A ideia básica desse padrão é deixar de fazer a definição de entidades usando uma [hierarquia](https://pt.wikipedia.org/wiki/Heran%C3%A7a_(programa%C3%A7%C3%A3o_orientada_a_objetos)) de classes e passar a fazer 
-uso de [composição](https://pt.wikipedia.org/wiki/Composi%C3%A7%C3%A3o_de_objetos) em um paradigma de Programação Orientada a Dados.
-([Mais informações na Wikipedia](https://en.wikipedia.org/wiki/Entity_component_system)).
-A programação com um ECS pode resultar em um código mais eficiente e fácil de estender no longo do tempo.
-
-
-## Instalação
+# Instalação
 
 O **ECS Lua** nao possui dependencias externas, portanto, basta fazer o download da ultima versao disponível na 
 [página de releases](https://github.com/nidorx/ecs-lua/releases) do projeto.
@@ -29,7 +19,7 @@ facilitar o uso, portanto, voce pode usar o motor nas duas formas `local ECS = r
 (no Roblox `local ECS = require(game.ReplicatedStorage:WaitForChild("ECS"))`) ou simplesmente `_G.ECS`.
 
 
-### LoopManager
+## LoopManager
 
 Para que os sistemas do mundo recebam atualizacao, é necessário que o método `World:Update(step, now)` seja invocado em 
 cada frame. Para automatizar este processo, o **ECS** disponibiliza uma funcionalidade para que, no momento da 
@@ -42,13 +32,13 @@ A implementacao desse método é muito simples e mais detalhes pode ser visto na
 Roblox, mais detalhes abaixo.
 
 
-### Roblox
+## Roblox
 
 Você pode fazer a instalação diretamente do Roblox Studio, através da busca na caixa de ferramentas por `ECS-lua`, esta 
 é a versão [minificada do motor](https://www.roblox.com/library/5887881675/ecs-lua). Ao usar o **ECS Lua** no Roblox, 
 a engine já identifica e registra automaticamente um `LoopManager`, nao sendo portanto necessario nenhum passo adicional.
 
-## Conceitos Gerais
+# Conceitos Gerais
 
 Alguns termos comuns nos motores ECS são:
 - [Entidades](/pt-br/architecture?id=entidade): Um objeto com um ID exclusivo que pode ter vários componentes anexados a ele.

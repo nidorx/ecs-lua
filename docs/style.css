@@ -27,12 +27,16 @@
    list-style: none;
 }
 
+.cover-show {
+   z-index: 0;
+}
+
 main {
    z-index: 1;
 }
 
-.cover-show {
-   z-index: 0;
+.github-corner {
+   z-index: 2;
 }
 
 

@@ -61,7 +61,7 @@ function Timer:SetFrequency(frequency)
    self.Time.DeltaFixed = 1000/frequency/1000
 end
 
-function Timer:Update(now, step, callback)
+function Timer:Update(now, step, beforeUpdate, update)
    if (self.FirstUpdate == 0) then
       self.FirstUpdate = now
    end
@@ -110,12 +110,14 @@ function Timer:Update(now, step, callback)
       local nLoops = 0
       local updated = false
 
+      beforeUpdate(Time)
+
       -- Fixed time is updated in regular intervals (equal to DeltaFixed) until time property is reached.
       while (Time.Process <= Time.Frame and nLoops < MAX_SKIP_FRAMES) do
 
          updated = true
 
-         callback(Time)
+         update(Time)
 
          nLoops = nLoops + 1
          Time.Process = Time.Process + Time.DeltaFixed
@@ -133,7 +135,8 @@ function Timer:Update(now, step, callback)
          Time.Interpolation = 1
       end
 
-      callback(Time)
+      beforeUpdate(Time)
+      update(Time)
 
       if step == "render" then
          -- last step, save last frame time

@@ -57,7 +57,7 @@
 [![Build Status](https://app.travis-ci.com/nidorx/ecs-lua.svg?branch=master)](https://app.travis-ci.com/nidorx/ecs-lua)
 
 [GitHub](https://github.com/nidorx/ecs-lua)
-[Get Started](/?id=introduction)
+[Get Started](/?id=what-is-it)
 
 <!-- background color -->
 ![color](#ffffff)
