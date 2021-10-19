@@ -36,9 +36,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.7"
-     inkscape:cx="269.0602"
-     inkscape:cy="376.31352"
+     inkscape:zoom="1.4"
+     inkscape:cx="479.51082"
+     inkscape:cy="352.82693"
      inkscape:document-units="mm"
      inkscape:current-layer="svg8"
      showgrid="false"
@@ -62,12 +62,12 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <rect
-     style="opacity:1;fill:#f0f3f6;fill-opacity:1;stroke:#f7f9fa;stroke-width:5.29166603;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:stroke markers fill"
+     style="opacity:1;fill:#f0f3f6;fill-opacity:1;stroke:#f7f9fa;stroke-width:5.29166667;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:fill markers stroke"
      id="rect2953"
      width="279.31"
      height="154.79677"
@@ -107,7 +107,6 @@
            style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:7.76111126px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold';text-align:center;text-anchor:middle;fill:#777777;fill-opacity:1;stroke-width:0.26458332">World</tspan></text>
     </g>
     <g
-       sodipodi:insensitive="true"
        transform="translate(-4.0712136,-31.260385)"
        inkscape:label="system"
        id="g843">
@@ -150,7 +149,7 @@
            id="tspan836"
            x="144.41098"
            y="76.430679"
-           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold';text-align:start;letter-spacing:-0.51064581px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke-width:0.26458332">CollisionSystem</tspan></text>
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;font-family:Quicksand;-inkscape-font-specification:'Quicksand Bold';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke-width:0.26458332">CollisionSystem</tspan></text>
       <g
          transform="translate(-0.36786274)"
          inkscape:label="code"
@@ -255,7 +254,6 @@
     </g>
     <g
        transform="translate(51.788117,-1.0589283)"
-       sodipodi:insensitive="true"
        inkscape:label="entities"
        id="g946">
       <g
@@ -335,7 +333,6 @@
     </g>
     <g
        transform="translate(51.788117,-1.0589283)"
-       sodipodi:insensitive="true"
        inkscape:label="components"
        id="g961">
       <g
@@ -398,7 +395,7 @@
              x="66.32605"
              style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52777767px;line-height:0px;font-family:Quicksand;-inkscape-font-specification:Quicksand;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;fill-opacity:1"
              id="tspan968"
-             sodipodi:role="line">- int radio</tspan></text>
+             sodipodi:role="line">- int radius</tspan></text>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:8.46666622px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:inline;fill:#000000;fill-opacity:0;stroke:none;stroke-width:0.26458332"
