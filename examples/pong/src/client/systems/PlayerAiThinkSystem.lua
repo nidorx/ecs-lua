@@ -47,7 +47,7 @@ function PlayerAiThinkSystem:Update(Time)
          if tgBallPos == nil then
             tgBallPos = ballPos
          else
-            -- o alvo é a bola que está mais proxima da raquete
+            -- the target is the ball that is closest to the racket
             if paddle.side == "right" then
                if ballPos.X > tgBallPos.X then
                   tgBallPos = ballPos

@@ -12,6 +12,7 @@ function MoveSystem:Update(Time)
       local position = entity[Position]
       local velocity = entity[Velocity]
    
+      -- interpolation
       -- position.valueOld = position.value
       position.value = position.value + velocity.value * Time.DeltaFixed
    end)

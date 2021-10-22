@@ -1,15 +1,10 @@
 local ECS = _G.ECS
 
 local Client = script.Parent.Parent
-local Constants = require(Client.Constants)
-
 local Components = Client.components
 local BasePart = require(Components.BasePart)
 local Position = require(Components.Position)
 local AudioSource = require(Components.AudioSource)
-
-local ballMaxX = Constants.COURT_WIDTH/2
-local ballMaxZ = Constants.COURT_HEIGHT/2 - Constants.BALL_RADIUS
 
 local AudioSystem = ECS.System("transform", 100, ECS.Query.All(AudioSource))
 
