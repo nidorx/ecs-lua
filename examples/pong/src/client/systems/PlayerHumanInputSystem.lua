@@ -13,6 +13,10 @@ local PlayerHuman = Player.Qualifier("Human")
 
 local PlayerHumanInputSystem = ECS.System("process", 1, ECS.Query.All(PlayerHuman, Paddle))
 
+function PlayerHumanInputSystem:Initialize()
+   UserInputService.MouseIconEnabled = false
+end
+
 function PlayerHumanInputSystem:Update(Time)
    local screenSizeY = CurrentCamera.ViewportSize.Y
    local mousePosY = UserInputService:GetMouseLocation().Y

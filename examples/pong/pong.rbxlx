@@ -1265,17 +1265,6 @@ local Paddle = require(Components.Paddle)
 local Position = require(Components.Position)
 local BasePart = require(Components.BasePart)
 
-local zPosMax = Constants.COURT_HEIGHT/2 - Constants.PADDLE_HEIGHT/2
-local function getPaddlePosition(paddle)   
-   local xPos = Constants.COURT_WIDTH/2
-   if paddle.side == "left" then
-      xPos = xPos * -1
-   end
-
-   local zPos = Utility.map(paddle.position, -1, 1, -zPosMax, zPosMax)
-   return Vector3.new(xPos, 1, zPos)
-end
-
 local PaddleSystem = ECS.System("process", 2, ECS.Query.All(Paddle))
 
 function PaddleSystem:Update(Time)
@@ -1283,7 +1272,7 @@ function PaddleSystem:Update(Time)
       local paddle = entity[Paddle]
       if paddle.target ~= paddle.position then
          paddle.position = Utility.lerp(paddle.position, paddle.target, Constants.PLAYER_SPEED * Time.DeltaFixed)
-         entity[Position].value = getPaddlePosition(paddle)
+         entity[Position].value = self:GetPaddlePosition(paddle)
       end
    end)
 end
@@ -1293,12 +1282,16 @@ function PaddleSystem:OnEnter(Time, entity)
    paddle.target = 0
    paddle.position = 0
 
+   local positionVec3 = self:GetPaddlePosition(paddle)
+   entity[Position] = Position(positionVec3)
+
    local part = Instance.new("Part")
    part.Name = "Paddle_"..paddle.side
-   part.Anchored = false
-   part.Shape = Enum.PartType.Block
-   part.Material = Enum.Material.SmoothPlastic
    part.Size = Vector3.new(Constants.PADDLE_WIDTH, 2, Constants.PADDLE_HEIGHT)
+   part.Shape = Enum.PartType.Block
+   part.Anchored = true
+   part.Position = positionVec3
+   part.Material = Enum.Material.SmoothPlastic
 
    if paddle.side == "left" then
       part.Color = Color3.fromRGB(33, 84, 185)
@@ -1306,12 +1299,20 @@ function PaddleSystem:OnEnter(Time, entity)
       part.Color = Color3.fromRGB(255, 89, 89)
    end
    
-   part.Anchored = true
-   part.Position = getPaddlePosition(paddle)
-
    part.Parent = game.Workspace
    entity[BasePart] = BasePart(part)
-   entity[Position] = Position(getPaddlePosition(paddle))
+end
+
+function PaddleSystem:GetPaddlePosition(paddle)
+
+   local xPos = Constants.COURT_WIDTH/2
+   if paddle.side == "left" then
+      xPos = xPos * -1
+   end
+   
+   local zPosMax = Constants.COURT_HEIGHT/2 - Constants.PADDLE_HEIGHT/2
+   local zPos = Utility.map(paddle.position, -1, 1, -zPosMax, zPosMax)
+   return Vector3.new(xPos, 1, zPos)
 end
 
 return PaddleSystem
@@ -1334,8 +1335,6 @@ local Constants = require(Client.Constants)
 
 local Components = Client.components
 local Ball = require(Components.Ball)
-local Paddle = require(Components.Paddle)
-local Player = require(Components.Player)
 local Position = require(Components.Position)
 local Velocity = require(Components.Velocity)
 local BasePart = require(Components.BasePart)
@@ -1345,10 +1344,6 @@ local ballMaxX = Constants.COURT_WIDTH/2
 local ballMaxZ = Constants.COURT_HEIGHT/2 - Constants.BALL_RADIUS
 
 local BallSystem = ECS.System("transform", 1, ECS.Query.All(Ball))
-
-function BallSystem:Initialize(Time)
-   self.queryPlayers = ECS.Query.All(Paddle).Build()
-end
 
 function BallSystem:Update(Time)
    local scored = false
@@ -1373,97 +1368,49 @@ function BallSystem:Update(Time)
          end
          position.value = posValue
 
-         --[[
-            4458219865  - socker
-            1837831535  - Eletronic
-            4782457802  - simples
-            rbxassetid://1843023345 - reverb
-         ]]
+         -- sound effect
          self._world:Entity(
             Position(posValue),
             AudioSource({ clip = "rbxassetid://4458219865" })
          )
       end
-   
-      -- if ball hits horizontal wall, reset the game      
-      -- if posValue.X > ballMaxX then
-      --    scored = true
-      --    scoredSide = "right"
-      -- elseif posValue.X < -ballMaxX then
-      --    scored = true
-      --    scoredSide = "left"
-      -- end
-
-      -- if scored then
-      --    -- local speed = Constants.BALL_SERVE_SPEED
-      --    -- if posValue.X < -ballMaxX then
-      --    --    speed = speed * -1
-      --    -- end
-      --    -- velocity.value = Vector3.new(speed, 0, 0)
-      --    -- position.value = Vector3.new(0, posValue.Y, 0)
-         
-        
-
-      --    -- break
-      --    return true
-      -- end
    end)
-
-   -- if scored then
-   --    -- remove all balls
-   --    self:Result():ForEach(function(entity)
-   --       self._world:Remove(entity)
-   --    end)
-
-   --    -- @TODO: Events
-   --    -- Mark the player's score
-   --    self:Result(self.queryPlayers):ForEach(function(entity)
-   --       -- reset hits
-   --       local paddle = entity[Paddle]
-   --       paddle.hits = 0
-   --       if paddle.side == scoredSide then
-   --          local player = entity:GetAny(Player)
-   --          player.score = player.score + 1
-
-   --          -- create new ball
-   --          self._world:Entity(Ball())
-   --       end
-   --    end)
-   -- end
 end
 
 function BallSystem:OnEnter(Time, entity)
+   
+   local radius = Constants.BALL_RADIUS
+   local size = radius*2
+
    local part = Instance.new("Part")
    part.Name = "Ball"
    part.Anchored = true
-   part.Shape = Enum.PartType.Ball
-
-   local size = Constants.BALL_RADIUS*2
    part.Size = Vector3.new(size, size, size)
-
+   part.Shape = Enum.PartType.Ball
    part.Color = Color3.fromRGB(255, 255, 255)
    part.Material = Enum.Material.Neon
-
    part.Parent = game.Workspace
    entity[BasePart] = BasePart(part)
 
-   entity[Position] = Position(Vector3.new(0, Constants.BALL_RADIUS, 0))
-
-   local ball = entity[Ball]
 
    local speed = Constants.BALL_SERVE_SPEED
+   local position = Vector3.new(0, radius, 0)
+   
+   local ball = entity[Ball]
+
    if ball.initialDirection then
-      local initialPosition = Vector3.new(-ballMaxX, Constants.BALL_RADIUS, 0)
+      position = Vector3.new(-ballMaxX, radius, 0)
       if ball.initialDirection == "left" then
          speed = speed * -1
-         initialPosition = Vector3.new(ballMaxX, Constants.BALL_RADIUS, 0)
+         position = Vector3.new(ballMaxX, radius, 0)
       end
-      entity[Position].value = initialPosition
    else
       if math.random() > 0.5 then
          speed = speed * -1
       end
    end
+
+   entity[Position] = Position(position)
    entity[Velocity] = Velocity(Vector3.new(speed, 0, 0))
 
    -- sound effect
@@ -1507,11 +1454,7 @@ function RenderSystem:Update(Time)
       local part = entity[BasePart].value
    
       if position.valueOld then
-         -- local alpha = Time.Interpolation
-         -- local newPosition = position.value * alpha + position.valueOld * ( 1.0 - alpha)
-         -- part.value.Position = position.value * alpha + position.valueOld * ( 1.0 - alpha)
          part.Position = position.valueOld:Lerp(position.value, Time.Interpolation)
-         -- print(alpha)
       else
          part.Position = position.value
       end
@@ -1651,7 +1594,6 @@ local CurrentCamera = game.workspace.CurrentCamera
 
 local Client = script.Parent.Parent
 local Utility = require(Client.Utility)
-local Constants = require(Client.Constants)
 
 local Components = Client.components
 local Paddle = require(Components.Paddle)
@@ -1659,6 +1601,10 @@ local Player = require(Components.Player)
 local PlayerHuman = Player.Qualifier("Human")
 
 local PlayerHumanInputSystem = ECS.System("process", 1, ECS.Query.All(PlayerHuman, Paddle))
+
+function PlayerHumanInputSystem:Initialize()
+   UserInputService.MouseIconEnabled = false
+end
 
 function PlayerHumanInputSystem:Update(Time)
    local screenSizeY = CurrentCamera.ViewportSize.Y
@@ -1796,8 +1742,6 @@ local PaddleHitSystem = ECS.System("transform", 2, ECS.Query.All(Paddle, Positio
 function PaddleHitSystem:Initialize(Time)
    self.queryBalls = ECS.Query.All(Ball, Position).Build()
 end
-
-
 
 function PaddleHitSystem:Update(Time)
    local ettsBall = self:Result(self.queryBalls):ToArray()
@@ -2170,9 +2114,7 @@ return Paddle
 						<string name="Name">Player</string>
 						<string name="ScriptGuid">{9628A125-E3F1-4B5A-88B3-651243F4A1D7}</string>
 						<ProtectedString name="Source"><![CDATA[
-local Player = _G.ECS.Component({
-   score = 0
-})
+local Player = _G.ECS.Component()
 local PlayerAI = Player.Qualifier("AI")
 local PlayerHuman = Player.Qualifier("Human")
 
@@ -2257,9 +2199,7 @@ return BasePart
 						<string name="Name">Score</string>
 						<string name="ScriptGuid">{87C823D7-7403-4393-BD3C-70DBC899E138}</string>
 						<ProtectedString name="Source"><![CDATA[
-local Score = _G.ECS.Component({
-   value = 0
-})
+local Score = _G.ECS.Component(0)
 
 return Score
 ]]></ProtectedString>
