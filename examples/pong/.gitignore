@@ -1,0 +1,13 @@
+# IDE
+.idea
+*.iml
+.vscode
+
+# Roblox Studio
+# place-dev.rbxl
+**/*.rbxl.lock
+**/*.rbxlx.lock
+**/*.blend1
+
+# misc
+build

@@ -1,0 +1,11 @@
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+[*.{lua,js,json,html,ts}]
+charset = utf-8
+indent_size = 3
+indent_style = space

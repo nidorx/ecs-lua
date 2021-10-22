@@ -1,0 +1,18 @@
+
+local BALL_SPEED = 50
+
+local constants = {
+   BALL_BOOST = 0.3,
+   BALL_RADIUS = 1,
+   BALL_SPEED = BALL_SPEED,
+   BALL_SERVE_SPEED = BALL_SPEED*0.7,
+   BALL_SPEED_SECONDARY = BALL_SPEED*0.5,
+   COURT_WIDTH = 72,
+   COURT_HEIGHT = 30,
+   PADDLE_WIDTH = 1,
+   PADDLE_HEIGHT = 10,
+   PLAYER_SPEED = 5,
+   CAMERA_DISTANCE = 30
+}
+
+return constants
