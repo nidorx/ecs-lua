@@ -1,5 +1,5 @@
 --[[
-	ECS Lua v2.1.2
+	ECS Lua v2.2.0
 
 	ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
 
@@ -818,7 +818,7 @@ end
 __F__["ECS"] = function()
    -- src/ECS.lua
    --[[
-      ECS Lua v2.1.2
+      ECS Lua v2.2.0
    
       ECS Lua is a fast and easy to use ECS (Entity Component System) engine for game development.
    
@@ -1008,7 +1008,7 @@ __F__["Entity"] = function()
             data[cType] = nil
             archetypeNew = archetypeNew:Without(cType)
    
-         elseif value.isComponent then
+         elseif (type(value) == "table" and value.isComponent) then
             local old = data[cType]         
             if (old ~= value) then
                if old then
@@ -1138,6 +1138,22 @@ __F__["Entity"] = function()
       return components
    end
    
+   --[[
+      01) comp = entity:GetAny(PrimaryClass)
+   ]]
+   local function getAny(entity, qualifier)
+      if (qualifier ~= nil and qualifier.IsCType and not qualifier.isComponent) then
+         local data = entity._data
+         local ctypes = qualifier.Qualifiers()
+         for _,cType in ipairs(ctypes) do
+            local component = data[cType]
+            if component then
+               return component
+            end
+         end
+      end
+   end
+   
    local Entity = {
       __index = function(e, key)
          if (type(key) == "table") then 
@@ -1190,6 +1206,7 @@ __F__["Entity"] = function()
          Set = setComponent,
          Unset = unsetComponent,
          GetAll = getAll,
+         GetAny = getAny,
       }, Entity)
    end
    
@@ -2731,32 +2748,79 @@ __F__["Timer"] = function()
    -- if execution is slow, perform a maximum of 4 simultaneous updates in order to keep the fixrate
    local MAX_SKIP_FRAMES = 4
    
-   local Time = {}
-   Time.__index = Time
+   local function loop(Time)
+   
+      local accumulator = 0.0
+      local lastStepTime = 0.0
+   
+      return function (newTime, stepName, beforeUpdateFn, updateFn)
+         local dtFixed = Time.DeltaFixed
+         local stepTime = newTime - lastStepTime
+         if stepTime > 0.25 then
+            stepTime = 0.25
+         end
+         lastStepTime = newTime
+   
+         Time.Now = newTime
+   
+         -- 1000/30/1000 = 0.03333333333333333
+         accumulator = accumulator + stepTime
+         
+         --[[
+            Adjusting the framerate, the world must run on the same frequency,
+            this ensures determinism in the execution of the scripts
+   
+            Each system in "transform" step is executed at a predetermined frequency (in Hz).
+   
+            Ex. If the game is running on the client at 30FPS but a system needs to be run at
+            120Hz or 240Hz, this logic will ensure that this frequency is reached
+   
+            @see https://gafferongames.com/post/fix_your_timestep/
+            @see https://gameprogrammingpatterns.com/game-loop.html
+            @see https://bell0bytes.eu/the-game-loop/
+         ]]
+         if stepName == "process" then
+            if accumulator >= dtFixed then       
+               Time.Interpolation = 1
+   
+               beforeUpdateFn(Time)
+               local nLoops = 0
+               while (accumulator >= dtFixed and nLoops < MAX_SKIP_FRAMES) do
+                  updateFn(Time)
+                  nLoops = nLoops + 1
+                  Time.Process = Time.Process + dtFixed
+                  accumulator = accumulator - dtFixed
+               end
+            end
+         else
+            Time.Interpolation = math.min(math.max(accumulator/dtFixed, 0), 1)
+            beforeUpdateFn(Time)
+            updateFn(Time)
+         end
+      end
+   end
    
    local Timer = {}
    Timer.__index = Timer
    
    function Timer.New(frequency)
+      local Time = {
+         Now = 0,
+         -- The time at the beginning of this frame. The world receives the current time at the beginning
+         -- of each frame, with the value increasing per frame.
+         Frame = 0,         
+         Process = 0, -- The time the latest process step has started.
+         Delta = 0, -- The completion time in seconds since the last frame.
+         DeltaFixed = 0,
+         -- INTERPOLATION: The proportion of time since the previous transform relative to processDeltaTime
+         Interpolation = 0
+      }
+   
       local timer = setmetatable({
          -- Public, visible by systems
-         Time = setmetatable({
-            Now = 0,
-            NowReal = 0,
-            -- The time at the beginning of this frame. The world receives the current time at the beginning
-            -- of each frame, with the value increasing per frame.
-            Frame = 0,         
-            FrameReal = 0, -- The REAL time at the beginning of this frame.
-            Process = 0, -- The time the latest process step has started.
-            Delta = 0, -- The completion time in seconds since the last frame.
-            DeltaFixed = 0,
-            -- INTERPOLATION: The proportion of time since the previous transform relative to processDeltaTime
-            Interpolation = 0
-         }, Time),
+         Time = Time,
          Frequency = 0,
-         LastFrame = 0,
-         ProcessOld = 0,
-         FirstUpdate = 0,
+         _update = loop(Time)
       }, Timer)
    
       timer:SetFrequency(frequency)
@@ -2791,87 +2855,7 @@ __F__["Timer"] = function()
    end
    
    function Timer:Update(now, step, beforeUpdate, update)
-      if (self.FirstUpdate == 0) then
-         self.FirstUpdate = now
-      end
-   
-      -- corrects for internal time
-      local nowReal = now
-      now = now - self.FirstUpdate
-   
-      local Time = self.Time
-   
-      Time.Now = now
-      Time.NowReal = nowReal
-   
-      if step == "process" then
-         local processOldTmp = Time.Process
-   
-         -- first step, initialize current frame time
-         Time.Frame = now
-         Time.FrameReal = nowReal
-   
-         if self.LastFrame == 0 then
-            self.LastFrame = Time.Frame
-         end
-   
-         if Time.Process == 0 then
-            Time.Process = Time.Frame
-            self.ProcessOld = Time.Frame
-         end
-   
-         Time.Delta = Time.Frame - self.LastFrame
-         Time.Interpolation = 1
-   
-         --[[
-            Adjusting the framerate, the world must run on the same frequency,
-            this ensures determinism in the execution of the scripts
-   
-            Each system in "transform" step is executed at a predetermined frequency (in Hz).
-   
-            Ex. If the game is running on the client at 30FPS but a system needs to be run at
-            120Hz or 240Hz, this logic will ensure that this frequency is reached
-   
-            @see https://gafferongames.com/post/fix_your_timestep/
-            @see https://gameprogrammingpatterns.com/game-loop.html
-            @see https://bell0bytes.eu/the-game-loop/
-         ]]
-         local nLoops = 0
-         local updated = false
-   
-         beforeUpdate(Time)
-   
-         -- Fixed time is updated in regular intervals (equal to DeltaFixed) until time property is reached.
-         while (Time.Process <= Time.Frame and nLoops < MAX_SKIP_FRAMES) do
-   
-            updated = true
-   
-            update(Time)
-   
-            nLoops = nLoops + 1
-            Time.Process = Time.Process + Time.DeltaFixed
-         end
-   
-         if updated then
-            self.ProcessOld = processOldTmp
-         end
-      else
-         -- executed only once per frame
-   
-         if Time.Process ~= self.ProcessOld then
-            Time.Interpolation = 1 + (now - Time.Process)/Time.Delta
-         else
-            Time.Interpolation = 1
-         end
-   
-         beforeUpdate(Time)
-         update(Time)
-   
-         if step == "render" then
-            -- last step, save last frame time
-            self.LastFrame = Time.Frame
-         end      
-      end
+      self._update(now, step, beforeUpdate, update)
    end
    
    return Timer

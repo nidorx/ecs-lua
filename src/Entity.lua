@@ -100,7 +100,7 @@ local function setComponent(entity, ...)
          data[cType] = nil
          archetypeNew = archetypeNew:Without(cType)
 
-      elseif value.isComponent then
+      elseif (type(value) == "table" and value.isComponent) then
          local old = data[cType]         
          if (old ~= value) then
             if old then
@@ -230,6 +230,22 @@ local function getAll(entity, qualifier)
    return components
 end
 
+--[[
+   01) comp = entity:GetAny(PrimaryClass)
+]]
+local function getAny(entity, qualifier)
+   if (qualifier ~= nil and qualifier.IsCType and not qualifier.isComponent) then
+      local data = entity._data
+      local ctypes = qualifier.Qualifiers()
+      for _,cType in ipairs(ctypes) do
+         local component = data[cType]
+         if component then
+            return component
+         end
+      end
+   end
+end
+
 local Entity = {
    __index = function(e, key)
       if (type(key) == "table") then 
@@ -282,6 +298,7 @@ function Entity.New(onChange, components)
       Set = setComponent,
       Unset = unsetComponent,
       GetAll = getAll,
+      GetAny = getAny,
    }, Entity)
 end
 
